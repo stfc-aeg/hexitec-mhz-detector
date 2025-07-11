@@ -1,2 +1,2 @@
 # hexitec-mhz-detector
-HEXITECH-MHz top level control and general DAQ software
+HEXITEC-MHz top level control and general DAQ software

@@ -7,7 +7,6 @@ from .base.base_controller import BaseController, BaseError
 class HexitecError(BaseError):
     """Simple exception class to wrap lower-level exceptions."""
 
-
 class HexitecController(BaseController):
     """Controller class for HEXITEC."""
 
