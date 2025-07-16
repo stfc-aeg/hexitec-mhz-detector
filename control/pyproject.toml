@@ -14,7 +14,8 @@ classifiers = [
 ]
 dependencies = [
     "odin-control @ git+https://github.com/odin-detector/odin-control@1.6.0#egg=odin-control",
-    "requests"
+    "requests",
+    "python-statemachine"
 ]
 readme = "README.md"
 
