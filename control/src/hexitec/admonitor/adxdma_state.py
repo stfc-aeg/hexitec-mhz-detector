@@ -51,8 +51,12 @@ class AdxdmaMonitor(StateMachine):
         self.rebond_timeout = rebond_timeout
         self.stat_path = "adxdma/registers/adm_pcie_9v5_stat/"
         self.ctrl_path = "adxdma/registers/adm_pcie_9v5_ctrl/"
+        self.mhz_top_path = "adxdma/registers/hexitec_mhz_top/"
+        self.fields_path = "hexitec_mhz_front_end_hexitec_hist_frame_generator_acq_ctrl/fields/"
+        self.frame_counter_lower_path = "hexitec_mhz_front_end_hexitec_hist_frame_generator_frame_number_lower/value"
         self.proxy = self.ctrl.adapters['proxy']
         self.up = hex(0xfffff)
+        self.last_frame_number_lower = None
         self.cleanup = False
         self.max_retries = 2
         self.current_retry = 0
@@ -71,6 +75,33 @@ class AdxdmaMonitor(StateMachine):
         except Exception as e:
             logging.error(f"Failed to get adxdma status: {e}")
 
+    def _get_frame_number_lower(self):
+        """Get current frame number lower value"""
+        try:
+            get = iac_get(self.proxy, self.mhz_top_path + self.frame_counter_lower_path)
+            frame_num = int(get)
+            logging.debug(f"got frame number: {frame_num}")
+            return frame_num
+        except Exception as e:
+            logging.error(f"Failed to get frame number: {e}")
+            return None
+        
+    def _check_frame_variation(self):
+        """Check if frame number is varying by taking two samples"""
+        try:
+            frame1 = self._get_frame_number_lower()
+            if frame1 is None:
+                return False
+            time.sleep(self.check_interval)
+            frame2 = self._get_frame_number_lower()
+            if frame2 is None:
+                return False
+            logging.debug(f"Returning {(frame1 != frame2)} with frames {frame1}, {frame2}")
+            return (frame1 != frame2)
+        except Exception as e:
+            logging.error(f"Error checking frame variation: {e}")
+            return False
+
     def _reset_retries(self, value):
         if self.current_retry >= self.max_retries:
             self.current_retry = 0
@@ -88,6 +119,8 @@ class AdxdmaMonitor(StateMachine):
             if self.current_retry < self.max_retries:
                 stat = iac_get(self.proxy, self.stat_path, as_dict=True)
                 chan = (stat['adm_pcie_9v5_stat']['aurora_chan_up']['value'])
+                self.last_frame_number_lower = int(iac_get(self.proxy, self.mhz_top_path + self.frame_counter_lower_path))
+                logging.debug(f"frame_count: {self.last_frame_number_lower}")
                 self.current_retry = 0
                 self.init_success()
         except:
@@ -109,7 +142,15 @@ class AdxdmaMonitor(StateMachine):
                 self.reset()
             else:
                 logging.info("ADXDMA bonded to hexitecmhz packets")
-                time.sleep(self.check_interval)
+                varying = self._check_frame_variation()
+                current_frame = self._get_frame_number_lower()
+
+                if not varying:
+                    logging.info(f"ADXDMA Bonded but not sending new frames")
+                    self.reset()
+                else:
+                    time.sleep(self.check_interval)
+                # time.sleep(self.check_interval)
             self.chan_up, self.lane_up = hex(int(chan)), hex(int(lane))
         except Exception as e:
             logging.error(f"Error in monitoring: {e}")
@@ -121,7 +162,25 @@ class AdxdmaMonitor(StateMachine):
             to clear the data path, begins state transistion to waiting
         """
         try:
-            for register in ['aurora_reset', 'data_path_reset', 'cmac_0_reset']:
+            # Data SYNC off
+            iac_set(
+                self.proxy,
+                'loki/application/system_state',
+                {'SYNC': False}
+            )
+            # Manual trigger and acquire off
+            iac_set(
+                self.proxy,
+                self.mhz_top_path+self.fields_path,
+                {'manual_trig': False}
+            )
+            iac_set(
+                self.proxy,
+                self.mhz_top_path+self.fields_path,
+                {'acquire': False}
+            )           
+            
+            for register in ['data_path_reset', 'aurora_reset', 'cmac_0_reset']:
                 iac_set(self.proxy, self.ctrl_path + "domain_resets/fields/", register, 1)
                 iac_set(self.proxy, self.ctrl_path + "domain_resets/fields/", register, 0)
             self.start_wait()
@@ -144,13 +203,14 @@ class AdxdmaMonitor(StateMachine):
                     (not self.cleanup)):
                 chan, lane = self._get_status()
                 logging.debug(f"chan:{chan} | lane:{lane}")
-                if ((chan != '0') or (lane != '0')):
-                    logging.debug("ADXDMA channels receiving data, re-bonding")
+                if (hex(int(lane)) == self.up):
+                    logging.debug("ADXDMA channels up, re-bonding")
                     self.try_bond()
                     return
                 time.sleep(1)
             logging.error("No values detected from ADXDMA channels, restarting reset cycle")
             self.reset_from_values()
+            return
         except Exception as e:
             logging.error(f"Error in waiting for values: {e}")
             self.error_from_waiting()
@@ -162,11 +222,6 @@ class AdxdmaMonitor(StateMachine):
             for bond state.
         """ 
         try:   
-            iac_set(
-                self.proxy,
-                'loki/application/system_state',
-                {'SYNC': False}
-            )
             iac_set(
                 self.proxy,
                 'loki/application/system_state',
@@ -195,14 +250,30 @@ class AdxdmaMonitor(StateMachine):
                 self.bonded = ((hex(int(chan)) == self.up) & (hex(int(lane)) == self.up))
                 if self.bonded:
                     logging.info("ADXDMA successfully bonded after rebond")
+                    iac_set(
+                        self.proxy,
+                        self.mhz_top_path+self.fields_path,
+                        {'acquire': True}
+                    )
+                    iac_set(
+                        self.proxy,
+                        self.mhz_top_path+self.fields_path,
+                        {'manual_trig': True}
+                    )
                     # Tell loki to start sending data after bonding is complete
                     iac_set(
                         self.proxy,
                         'loki/application/system_state',
                         {'SYNC': True}
-                    ) 
-                    self.monitor()
-                    return
+                    )
+                    time.sleep(self.check_interval)
+                    if self._check_frame_variation():
+
+                        self.monitor()
+                        return
+                    else:
+                        self.reset_from_bond()
+                        return
                 time.sleep(1)
             
             logging.warning("Rebond timeout - restarting reset cycle")

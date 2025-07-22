@@ -90,6 +90,7 @@ class HexitecController(BaseController):
         self.background_task()
         self.admonitor_task()
 
+
     def cleanup(self):
         """Cleanly shutdown adapter services"""
         logging.info("Cleaning up Controller")
