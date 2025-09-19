@@ -30,10 +30,17 @@ class HexitecController(BaseController):
         logging.debug(f"Adapters initialized: {list(adapters.keys())}")
 
         #add self.options here
+        logging.debug(f"creatin sm")
         try:
-            self.adxdma_monitor = AdxdmaMonitor(controller=self, check_interval=5, bond_timeout=100)
+            self.adxdma_monitor = AdxdmaMonitor(
+                controller=self,
+                check_interval=5,
+                lane_timeout=100,
+                channel_timeout=100,
+            )
         except Exception as e:
             logging.debug(f"Error: {e}")
+            self.adxdma_monitor = None
 
         try:
             if self.adxdma_monitor:
@@ -55,6 +62,8 @@ class HexitecController(BaseController):
                         for state in self.adxdma_monitor.states_map.values()
                         for t in state.transitions
                     ], None),
+                    'reset_events': (lambda: list(self.adxdma_monitor.reset_history), None),
+                    'total_resets': (lambda: self.adxdma_monitor.reset_counter, None),
                     'available_from_current': (lambda: [
                         {
                             'name': t.event,
@@ -73,6 +82,7 @@ class HexitecController(BaseController):
         except Exception as e:
             logging.debug(f"Error: {e}")
 
+        logging.debug(f"created sm")
         # all_transitions = [
         #     t
         #     for state in self.adxdma_monitor.states_map.values()     
@@ -84,12 +94,16 @@ class HexitecController(BaseController):
         # for t in all_transitions:
         #     logging.debug(f"{t.source.id} -> {t.target.id}")
 
-        self.param_tree = ParameterTree({
-            'adxdma_monitor': self.adxdma_tree
-        })
+        try:
+            self.param_tree = ParameterTree({
+                'adxdma_monitor': self.adxdma_tree, 
+                'user_type': (lambda: self.options['user_level'], None)
+            })
+        except Exception as e:
+            logging.debug(f"failed :{e}")
+
         self.background_task()
         self.admonitor_task()
-
 
     def cleanup(self):
         """Cleanly shutdown adapter services"""
@@ -121,13 +135,22 @@ class HexitecController(BaseController):
 
     @run_on_executor
     def admonitor_task(self):
-        """"""
+        """Start the state machine and run monitoring loop"""
         while self.executor_threads_en:
             time.sleep(1)
-            # only cll loop if the statemachine created successfully
-            if self.adxdma_monitor:
-                try:
-                    if self.adxdma_monitor.current_state.name == 'Monitoring':
-                        self.adxdma_monitor.loop()
-                except Exception as e:
-                    logging.error(f"ADXDMA monitor error:{e}")
+
+            if not self.adxdma_monitor:
+                continue
+
+            try:
+                state_name = self.adxdma_monitor.current_state.name
+
+                if state_name == "Idle":
+                    logging.info("Starting ADXDMA monitoring")
+                    self.adxdma_monitor.start()
+
+                elif state_name == "Monitoring":
+                    self.adxdma_monitor.loop()
+
+            except Exception as e:
+                logging.error(f"ADXDMA monitor error: {e}")
