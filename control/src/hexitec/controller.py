@@ -6,9 +6,7 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from .base.base_controller import BaseController, BaseError
 
-from .util.iac import iac_set, iac_get
-from .admonitor.adxdma_flags import AdxdmaFlags
-from .admonitor.adxdma_state import AdxdmaMonitor
+from .mhz_monitor.mhz_fm_state_machine import MHZMonitor
 
 
 class HexitecError(BaseError):
@@ -20,97 +18,79 @@ class HexitecController(BaseController):
 
     def __init__(self, options):
         self.options = options
+        self.task_interval = float(options["task_interval"])
         self.executor_threads_en = True
-        self.ad_flags = AdxdmaFlags()
-        self.adxdma_monitor = None
+        self.mhz_monitor = None
         self.param_tree = None
 
     def initialize(self, adapters):
         self.adapters = adapters
         logging.debug(f"Adapters initialized: {list(adapters.keys())}")
 
-        #add self.options here
-        logging.debug(f"creatin sm")
         try:
-            self.adxdma_monitor = AdxdmaMonitor(
+            self.mhz_monitor = MHZMonitor(
                 controller=self,
-                check_interval=5,
-                lane_timeout=100,
-                channel_timeout=100,
+                check_interval = float(self.options["check_interval"]),
+                lane_timeout = float(self.options["lane_timeout"]),
+                channel_timeout = float(self.options["channel_timeout"]),
+                max_retries = int(self.options["max_retries"]),
+                frame_check_interval = float(self.options["frame_check_interval"]),
+                event_history = int(self.options["event_history"]),
             )
-        except Exception as e:
-            logging.debug(f"Error: {e}")
-            self.adxdma_monitor = None
-
-        try:
-            if self.adxdma_monitor:
-                self.adxdma_tree = ParameterTree({
-                    'current_retry': (lambda: self.adxdma_monitor.current_retry, None),
-                    'max_retries': (lambda: self.adxdma_monitor.max_retries, None),
-                    'reset_retries': (lambda: None, self.adxdma_monitor._reset_retries),
-                    'chan_up': (lambda: self.adxdma_monitor.chan_up, None),
-                    'lane_up': (lambda: self.adxdma_monitor.lane_up, None),
-                    'bonded': (lambda: self.adxdma_monitor.bonded, None),
-                    'current_state': (lambda: self.adxdma_monitor.current_state.name, None),
-                    'all_states': (lambda: [state.name for state in self.adxdma_monitor.states], None),
+            self.adxdma_tree = ParameterTree({
+                    'current_retry': (lambda: self.mhz_monitor.current_retry, None),
+                    'max_retries': (lambda: self.mhz_monitor.max_retries, None),
+                    'reset_retries': (lambda: None, self.mhz_monitor._reset_retries),
+                    'chan_up': (lambda: self.mhz_monitor.chan_up, None),
+                    'lane_up': (lambda: self.mhz_monitor.lane_up, None),
+                    'bonded': (lambda: self.mhz_monitor.bonded, None),
+                    'current_state': (lambda: self.mhz_monitor.current_state.name, None),
+                    'all_states': (lambda: [state.name for state in self.mhz_monitor.states], None),
                     'transition_details': (lambda: [
                         {
                             'name': t.event,
                             'from': t.source.id,
                             'to': t.target.id
                         }
-                        for state in self.adxdma_monitor.states_map.values()
+                        for state in self.mhz_monitor.states_map.values()
                         for t in state.transitions
                     ], None),
-                    'reset_events': (lambda: list(self.adxdma_monitor.reset_history), None),
-                    'total_resets': (lambda: self.adxdma_monitor.reset_counter, None),
+                    'reset_events': (lambda: list(self.mhz_monitor.reset_history), None),
+                    'total_resets': (lambda: self.mhz_monitor.reset_counter, None),
                     'available_from_current': (lambda: [
                         {
                             'name': t.event,
                             'to': t.target.id
                         }
-                        for t in self.adxdma_monitor.current_state.transitions
-                    ] if self.adxdma_monitor.current_state else [], None)
-                })
-            else:
-                self.adxdma_tree = ParameterTree({
-                    'current_state': (lambda: "Not Available", None),
-                    'all_states': (lambda: [], None),
-                    'transition_details': (lambda: [], None),
-                    'available_from_current': (lambda: [], None)
+                        for t in self.mhz_monitor.current_state.transitions
+                    ] if self.mhz_monitor.current_state else [], None)
                 })
         except Exception as e:
             logging.debug(f"Error: {e}")
-
-        logging.debug(f"created sm")
-        # all_transitions = [
-        #     t
-        #     for state in self.adxdma_monitor.states_map.values()     
-        #     for t in state.transitions
-        # ]
-
-
-        # logging.debug(f"{all_transitions}")
-        # for t in all_transitions:
-        #     logging.debug(f"{t.source.id} -> {t.target.id}")
-
-        try:
-            self.param_tree = ParameterTree({
-                'adxdma_monitor': self.adxdma_tree, 
-                'user_type': (lambda: self.options['user_level'], None)
+            self.mhz_monitor = None
+            self.adxdma_tree = ParameterTree({
+                'current_state': (lambda: "Not Available", None),
+                'all_states': (lambda: [], None),
+                'transition_details': (lambda: [], None),
+                'available_from_current': (lambda: [], None)
             })
-        except Exception as e:
-            logging.debug(f"failed :{e}")
 
+        self.param_tree = ParameterTree({
+            'mhz_monitor': self.adxdma_tree, 
+            'user_type': (lambda: self.options['user_type'], None)
+        })
+        
+        # Start background and statemachine tasks
         self.background_task()
-        self.admonitor_task()
+        if self.mhz_monitor:
+            self.mhz_monitor_task()
 
     def cleanup(self):
         """Cleanly shutdown adapter services"""
         logging.info("Cleaning up Controller")
         self.executor_threads_en = False
-        if self.adxdma_monitor:
-            self.adxdma_monitor.cleanup = True
+        if self.mhz_monitor:
+            self.mhz_monitor.cleanup = True
 
     def get(self, path, with_metadata=False):
         try:
@@ -134,23 +114,20 @@ class HexitecController(BaseController):
             time.sleep(1)
 
     @run_on_executor
-    def admonitor_task(self):
+    def mhz_monitor_task(self):
         """Start the state machine and run monitoring loop"""
         while self.executor_threads_en:
             time.sleep(1)
 
-            if not self.adxdma_monitor:
-                continue
-
             try:
-                state_name = self.adxdma_monitor.current_state.name
+                state_name = self.mhz_monitor.current_state.name
 
                 if state_name == "Idle":
                     logging.info("Starting ADXDMA monitoring")
-                    self.adxdma_monitor.start()
+                    self.mhz_monitor.start()
 
                 elif state_name == "Monitoring":
-                    self.adxdma_monitor.loop()
+                    self.mhz_monitor.monitor()
 
             except Exception as e:
                 logging.error(f"ADXDMA monitor error: {e}")

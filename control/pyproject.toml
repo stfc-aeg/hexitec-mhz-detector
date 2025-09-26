@@ -15,7 +15,8 @@ classifiers = [
 dependencies = [
     "munir @ git+https://github.com/stfc-aeg/munir.git@odin-data_refactored#egg=munir",
     "requests",
-    "python-statemachine"
+    "python-statemachine",
+    "mhz-control @ git+ssh://git@github.com/stfc-aeg/odin-xdma.git@load-reg-from-config#subdirectory=control"
 ]
 readme = "README.md"
 
@@ -40,9 +41,4 @@ root = ".."
 write_to = "control/src/hexitec/_version.py"
 version_scheme = "no-guess-dev"
 local_scheme = "node-and-date"
-
-
-
-
-
 
