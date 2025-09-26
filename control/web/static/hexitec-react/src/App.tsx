@@ -1,15 +1,35 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-
-import { OdinApp, TitleCard } from 'odin-react'
+import { OdinApp } from 'odin-react';
+import CameraControl from './pages/CameraControl';
+import Processing from './pages/Processing';
+import Acquisition from './pages/Acquisition';
+import LiveView from './pages/LiveView';
+import AsicControl from './pages/AsicControl';
+import RegisterMap from './pages/RegisterMap';
 
 function App() {
+  const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
   return (
-    <OdinApp title={'Test'} navLinks={['Test']}>
-      <TitleCard title='Test'>
-      </TitleCard>
+    <OdinApp 
+      title={'Hexitec-MHZ'} 
+      navLinks={[
+        'Camera Control', 
+        'Processing', 
+        'Acquisition', 
+        'Live View', 
+        'ASIC Control', 
+        'Register Map'
+      ]}
+    >
+      <CameraControl endpoint_url={endpoint_url} />
+      <Processing endpoint_url={endpoint_url} />
+      <Acquisition endpoint_url={endpoint_url} />
+      <LiveView endpoint_url={endpoint_url} />
+      <AsicControl endpoint_url={endpoint_url} />
+      <RegisterMap endpoint_url={endpoint_url} />
     </OdinApp>
-  )
+  );
 }
 
-export default App
+export default App;

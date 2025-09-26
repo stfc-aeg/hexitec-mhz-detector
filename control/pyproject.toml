@@ -13,10 +13,17 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "odin-control @ git+https://github.com/odin-detector/odin-control@1.6.0#egg=odin-control",
-    "requests"
+    "munir @ git+https://github.com/stfc-aeg/munir.git@odin-data_refactored#egg=munir",
+    "requests",
+    "python-statemachine",
+    "mhz-control @ git+ssh://git@github.com/stfc-aeg/odin-xdma.git@load-reg-from-config#subdirectory=control"
 ]
 readme = "README.md"
+
+[project.optional-dependencies]
+odin_control = [
+    "odin-control @ git+https://github.com/odin-detector/odin-control@1.6.0#egg=odin-control"
+]
 
 [[project.authors]] 
 email = "josh.harris@stfc.ac.uk"
@@ -34,9 +41,4 @@ root = ".."
 write_to = "control/src/hexitec/_version.py"
 version_scheme = "no-guess-dev"
 local_scheme = "node-and-date"
-
-
-
-
-
 
