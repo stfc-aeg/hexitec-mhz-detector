@@ -133,9 +133,8 @@ class MHZMonitor(StateMachine):
 
     def on_monitor(self):
         """
-        Called by the controller to perform the monitor loop.
         Checks lane and channel status, looks for frame count varying to indicate compelete 
-        datapath.
+        datapath, performs remedial actions if an error is detected.
         """
         try:
             # Check aurora status
@@ -157,14 +156,17 @@ class MHZMonitor(StateMachine):
                 )
                 logging.warning(reason)
                 self.log_reset_event(reason)
-                self.trigger_reset()
+                # start the reset if the cleanup flag has not been set
+                self.trigger_reset() if not self.cleanup else None
                 return
+
             # Check if the frame count is varying, indicating data flowing
             if not self._check_frame_variation():
                 reason = "Frames not varying despite good lane/channel status"
                 logging.warning(reason)
                 self.log_reset_event(reason)
-                self.trigger_reset()
+                # start the reset if the cleanup flag has not been set  
+                self.trigger_reset() if not self.cleanup else None
                 return
 
         except Exception as e:
@@ -358,6 +360,10 @@ class MHZMonitor(StateMachine):
         Get aurora status and update self.chan_up / self.lane_up / self.bonded.
         Returns (chan_up, lane_up) or (None, None) on error.
         """
+        # if cleanup is in progress, return None values
+        if self.cleanup:
+            return None, None
+        
         try:
             stat = iac_get(self.xdma, self.stat_path, as_dict=True)
             chan_up = int(stat["adm_pcie_9v5_stat"]["aurora_chan_up"]["value"])
@@ -391,6 +397,9 @@ class MHZMonitor(StateMachine):
         # workout while duration
         timeout_tstamp = time.time() + self.frame_check_duration
         while time.time() < timeout_tstamp:
+            # If the adapter is being cleaned up, return true to exit the check and to prevent a false-reset from occuring
+            if self.cleanup is True:
+                return True
             # get a new frame number to compare
             current = self._get_frame_number()
             if current is None:
