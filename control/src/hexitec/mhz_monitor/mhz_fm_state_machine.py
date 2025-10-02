@@ -86,7 +86,7 @@ class MHZMonitor(StateMachine):
 
         # Adapters
         self.proxy = self.ctrl.adapters["proxy"]
-        self.xdma = self.ctrl.adapters["xdma"]
+        self.xdma = self.ctrl.adapters["xdmaAdapter"]
         
         # Status parameters
         self.current_retry = 0
@@ -295,8 +295,8 @@ class MHZMonitor(StateMachine):
             self.retry_reset_from_channels()
 
     def on_enter_reactivating(self):
-        """Set  back on and verify."""
-        logging.info("Reactivating data acquisition...")
+        """Set back on and verify."""
+        logging.info("Reactivating data acquisition")
 
         try:
             # Acquire and manual trigger ON

@@ -10,7 +10,7 @@ function AppWithSystemMonitor() {
   const endpoint = useAdapterEndpoint('hexitec', url, 500);
   
   const isCriticalState = () => {
-    const adxdmaData = endpoint.data?.adxdma_monitor;
+    const adxdmaData = endpoint.data?.mhz_monitor;
     if (!adxdmaData) return false;
     
     const { current_state, current_retry, max_retries } = adxdmaData;

@@ -8,7 +8,7 @@ interface DiagnosticInfoProps {
 }
 
 export function DiagnosticInfo({ endpoint }: DiagnosticInfoProps) {
-  const adxdmaData = endpoint.data?.adxdma_monitor || {};
+  const adxdmaData = endpoint.data?.mhz_monitor || {};
   const { 
     current_state = "Unknown", 
     chan_up, 
@@ -173,7 +173,7 @@ export function DiagnosticInfo({ endpoint }: DiagnosticInfoProps) {
                 variant="warning"
                 size="sm"
                 endpoint={endpoint}
-                fullpath="/adxdma_monitor/reset_retries"
+                fullpath="/mhz_monitor/reset_retries"
                 value={true}
                 event_type="click"
               >

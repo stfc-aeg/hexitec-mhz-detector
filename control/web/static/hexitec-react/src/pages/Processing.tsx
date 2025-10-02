@@ -1,4 +1,3 @@
-import React from 'react';
 import { Container, Row, Col, Card, Form, Button, ProgressBar } from 'react-bootstrap';
 import { UserAware } from '../components/UserAware';
 
