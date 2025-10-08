@@ -16,7 +16,8 @@ dependencies = [
     "munir @ git+https://github.com/stfc-aeg/munir.git@odin-data_refactored#egg=munir",
     "requests",
     "python-statemachine",
-    "mhz-control @ git+ssh://git@github.com/stfc-aeg/odin-xdma.git@load-reg-from-config#subdirectory=control"
+    "RegisterAccessor @ git+ssh://git@github.com/stfc-aeg/memory-accessor.git#subdirectory=control"
+
 ]
 readme = "README.md"
 

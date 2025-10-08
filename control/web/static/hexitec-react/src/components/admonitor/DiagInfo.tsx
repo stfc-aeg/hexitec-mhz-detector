@@ -23,7 +23,7 @@ export function DiagnosticInfo({ endpoint }: DiagnosticInfoProps) {
   const getNextAction = () => {
     switch(current_state) {
       case 'Idle': return 'Waiting to start monitoring';
-      case 'Initialising': return 'Testing ADXDMA connection';
+      case 'Initialising': return 'Testing XDMA connection';
       case 'Monitoring': return 'Monitoring data flow and lanes/channels';
       case 'Resetting': return 'Executing reset sequence';
       case 'WaitingForLanes': return 'Waiting for aurora lanes to come up';
@@ -111,7 +111,7 @@ export function DiagnosticInfo({ endpoint }: DiagnosticInfoProps) {
           </Table>
         ) : (
           <Alert variant="info" className="mb-3">
-            <strong>Hardware Status:</strong> Data not available - state machine may be initializing
+            <strong>Hardware Status:</strong> Data not available
           </Alert>
         )}
         
