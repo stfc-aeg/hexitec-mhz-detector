@@ -30,21 +30,10 @@ class HexitecController(BaseController):
         try:
             self.adapters = adapters
             logging.debug(f"Adapters initialized: {list(adapters.keys())}")
-
             #open xdma device
             iac_set(adapters["registerAccessor"], "control", {'open':'true'})
-
-            stat = iac_get(adapters["registerAccessor"], "registers/adm_pcie_9v5_stat/", as_dict=True)
-            
-            chan_up = hex(int(stat["adm_pcie_9v5_stat"]["aurora_chan_up"]["value"]))
-            lane_up = hex(int(stat["adm_pcie_9v5_stat"]["aurora_lane_up"]["value"]))
-            logging.debug(f"Chan: {chan_up}, Lane: {lane_up}")
-
-            logging.debug(f"{(lane_up != self.expected_value or chan_up != self.expected_value)}")
-
         except Exception as e:
             logging.error(f"{e}")
-
 
         try:
             self.mhz_monitor = MHZMonitor(
@@ -101,7 +90,6 @@ class HexitecController(BaseController):
         
         # Start background and statemachine tasks
         self.background_task()
-        
         if self.mhz_monitor:
             self.mhz_monitor_task()
 
