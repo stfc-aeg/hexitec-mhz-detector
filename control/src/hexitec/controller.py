@@ -8,6 +8,8 @@ from .base.base_controller import BaseController, BaseError
 
 from .mhz_monitor.mhz_fm_state_machine import MHZMonitor
 
+from .util.iac import iac_get, iac_set
+
 
 class HexitecError(BaseError):
     """Simple exception class to wrap lower-level exceptions."""
@@ -22,10 +24,16 @@ class HexitecController(BaseController):
         self.executor_threads_en = True
         self.mhz_monitor = None
         self.param_tree = None
+        self.expected_value = 0xFFFFF
 
     def initialize(self, adapters):
-        self.adapters = adapters
-        logging.debug(f"Adapters initialized: {list(adapters.keys())}")
+        try:
+            self.adapters = adapters
+            logging.debug(f"Adapters initialized: {list(adapters.keys())}")
+            #open xdma device
+            iac_set(adapters["registerAccessor"], "control", {'open':'true'})
+        except Exception as e:
+            logging.error(f"{e}")
 
         try:
             self.mhz_monitor = MHZMonitor(

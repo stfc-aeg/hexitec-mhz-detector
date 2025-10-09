@@ -1,0 +1,26 @@
+{
+    "hexitec_mhz_front_end_hexitec_hist_frame_generator_frame_number_lower": {
+        "policy": "immediate",
+        "frequency": 500
+    },
+    "hexitec_mhz_front_end_hexitec_hist_frame_generator_frame_number_upper": {
+        "policy": "polled",
+        "frequency": 500
+    },
+    "domain_resets": {
+        "policy": "polled",
+        "frequency": 500
+    },
+    "aurora_chan_up": {
+        "policy": "polled",
+        "frequency": 500
+    },
+    "aurora_lane_up": {
+        "policy": "polled",
+        "frequency": 500
+    },
+    "hexitec_mhz_front_end_hexitec_hist_frame_generator_acq_ctrl": {
+        "policy": "polled",
+        "frequency": 500
+    }
+}

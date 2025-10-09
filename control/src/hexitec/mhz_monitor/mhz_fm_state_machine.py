@@ -86,7 +86,7 @@ class MHZMonitor(StateMachine):
 
         # Adapters
         self.proxy = self.ctrl.adapters["proxy"]
-        self.xdma = self.ctrl.adapters["xdma"]
+        self.xdma = self.ctrl.adapters["registerAccessor"]
         
         # Status parameters
         self.current_retry = 0
@@ -136,6 +136,8 @@ class MHZMonitor(StateMachine):
         Checks lane and channel status, looks for frame count varying to indicate compelete 
         datapath, performs remedial actions if an error is detected.
         """
+        if self.cleanup:
+            return
         try:
             # Check aurora status
             chan_up, lane_up = self._get_status()
@@ -295,8 +297,8 @@ class MHZMonitor(StateMachine):
             self.retry_reset_from_channels()
 
     def on_enter_reactivating(self):
-        """Set  back on and verify."""
-        logging.info("Reactivating data acquisition...")
+        """Set back on and verify."""
+        logging.info("Reactivating data acquisition")
 
         try:
             # Acquire and manual trigger ON
@@ -368,9 +370,11 @@ class MHZMonitor(StateMachine):
             stat = iac_get(self.xdma, self.stat_path, as_dict=True)
             chan_up = int(stat["adm_pcie_9v5_stat"]["aurora_chan_up"]["value"])
             lane_up = int(stat["adm_pcie_9v5_stat"]["aurora_lane_up"]["value"])
+            logging.debug(f"chan: {chan_up}, lane:{lane_up}, expected:{self.expected_value}")
             self.chan_up = chan_up
             self.lane_up = lane_up
             self.bonded = (chan_up == self.expected_value) and (lane_up == self.expected_value)
+            logging.debug(f"bonded: {self.bonded}")
             return chan_up, lane_up
         except Exception as e:
             logging.error(f"Failed to get status: {e}")
@@ -397,7 +401,8 @@ class MHZMonitor(StateMachine):
         # workout while duration
         timeout_tstamp = time.time() + self.frame_check_duration
         while time.time() < timeout_tstamp:
-            # If the adapter is being cleaned up, return true to exit the check and to prevent a false-reset from occuring
+            # If the adapter is being cleaned up, return true to exit the check and 
+            # to prevent a false-reset from occuring
             if self.cleanup is True:
                 return True
             # get a new frame number to compare

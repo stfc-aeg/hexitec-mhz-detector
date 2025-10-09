@@ -5,7 +5,7 @@ interface StatusOverviewProps {
 }
 
 export function StatusOverview({ endpoint }: StatusOverviewProps) {
-  const adxdmaData = endpoint.data?.adxdma_monitor || {};
+  const adxdmaData = endpoint.data?.mhz_monitor || {};
   const { current_state = "Unknown" } = adxdmaData;
 
   const getUserFriendlyState = () => {
