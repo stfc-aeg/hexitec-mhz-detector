@@ -13,7 +13,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "munir @ git+https://github.com/stfc-aeg/munir.git@odin-data_refactored#egg=munir",
+    "munir @ git+https://github.com/stfc-aeg/munir.git#egg=munir",
     "requests",
     "python-statemachine",
     "RegisterAccessor @ git+ssh://git@github.com/stfc-aeg/memory-accessor.git#subdirectory=control"
