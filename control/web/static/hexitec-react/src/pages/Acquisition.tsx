@@ -1,8 +1,9 @@
-import { Container, Row, Col, Card, Form, Button, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, ProgressBar, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../components/UserAware';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import { floatingInputStyle, checkNullNoDp } from '../utils.js'
 
-const EndPointInput = WithEndpoint(Form.Control);
+const EndpointFormControl = WithEndpoint(Form.Control);
 
 interface AcquisitionProps {
   endpoint_url: string;
@@ -11,7 +12,7 @@ interface AcquisitionProps {
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const munirEndpoint = useAdapterEndpoint('munir', endpoint_url, 500);
-  console.log(munirEndpoint?.data?.subsystems?.hexitec_mhz?.args)
+  // console.log(munirEndpoint?.data?.subsystems?.hexitec_mhz?.args)
 
   return (
     <Container>
@@ -25,46 +26,44 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 {/* Acquisition Length (frames) */}
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Acquisition Length</Form.Label>
-                    <EndPointInput
-                      endpoint={munirEndpoint}
-                      event_type="change"
-                      fullpath="subsystems/hexitec_mhz/args/num_frames"  // frames length
-                      type="number"
-                      inputMode="numeric"
-                    />
-                    <Form.Text className="text-muted">Value (frames)</Form.Text>
+                    <FloatingLabel 
+                      label="Acquisition length (seconds)">
+                        <EndpointFormControl
+                          endpoint={munirEndpoint} fullpath="subsystems/hexitec_mhz/args/num_frames"  // frames length
+                          type="number"
+                          style={floatingInputStyle}
+                        />
+                    </FloatingLabel>
+                    <Form.Text>Est. {checkNullNoDp(munirEndpoint?.data.subsystems?.hexitec_mhz.args.num_frames*1000000).toLocaleString()} frames</Form.Text>
                   </Col>
                 </Row>
 
                 {/* File Name */}
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>File Name</Form.Label>
-                    <EndPointInput
-                      endpoint={munirEndpoint}
-                      event_type="change"
-                      fullpath="subsystems/hexitec_mhz/args/file_name"
-                      type="text"
-                      placeholder="acquisition_file"
-                    />
-                    <Form.Text className="text-muted">File name without .h5 extension</Form.Text>
+                    <FloatingLabel 
+                      label="File Name (without .h5 extension)">
+                        <EndpointFormControl
+                          endpoint={munirEndpoint} fullpath="subsystems/hexitec_mhz/args/file_name"
+                          type="text"
+                          style={floatingInputStyle}
+                        />
+                    </FloatingLabel>
+
                   </Col>
                 </Row>
 
                 {/* (File Path) */}
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>File Path</Form.Label>
-                    <div className="d-flex">
-                      <EndPointInput
-                        endpoint={munirEndpoint}
-                        event_type="change"
-                        fullpath="subsystems/hexitec_mhz/args/file_path"
-                        type="text"
-                        inputMode="text"
-                      />
-                    </div>
+                    <FloatingLabel 
+                      label="File Path">
+                        <EndpointFormControl
+                          endpoint={munirEndpoint} fullpath="subsystems/hexitec_mhz/args/file_path"
+                          type="text"
+                          style={floatingInputStyle}
+                        />
+                    </FloatingLabel>
                   </Col>
                 </Row>
               </UserAware>
