@@ -27,6 +27,8 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
           <Card className="mb-3">
             <Card.Header><strong>Power & Environmental</strong></Card.Header>
             <Card.Body>
+
+            <Row>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
                 <Row>
                   <Col>
@@ -82,7 +84,8 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
                   </Col>
                 </Row>
               </UserAware>
-
+            </Row>
+            <Row>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
                 <Row>
                   <Col>
@@ -98,6 +101,19 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
                     >
                       {lokiData?.peltier?.enable ? "Disable Peltier" : "Enable Peltier"}
                     </EndpointButton>
+                  </Col>
+                  <Col>
+                    <UserAware userLevel="power" endpoint_url={endpoint_url}>
+                      <FloatingLabel
+                        label="Count">
+                          <Form.Control
+                            plaintext
+                            readOnly
+                            style={floatingLabelStyle}
+                            value={checkNullNoDp(lokiData?.peltier.count)}
+                          />
+                      </FloatingLabel>
+                    </UserAware>
                   </Col>
                 </Row>
               </UserAware>
@@ -123,15 +139,6 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
                   </Col>
                   <Col>
                     <FloatingLabel
-                      label="Count">
-                        <Form.Control
-                          plaintext
-                          readOnly
-                          style={floatingLabelStyle}
-                          value={checkNullNoDp(lokiData?.peltier.count)}
-                        />
-                    </FloatingLabel>
-                    <FloatingLabel
                       label="Temperature">
                         <Form.Control
                           plaintext
@@ -143,7 +150,8 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
                   </Col>
                 </Row>
               </UserAware>
-
+            </Row>
+            <Row>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
                 <Row>
                   <Col>
@@ -186,6 +194,7 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
                   </Col>
                 </Row>
               </UserAware>
+            </Row>
             </Card.Body>
           </Card>
         </Col>
