@@ -54,7 +54,7 @@ class MHZMonitor(StateMachine):
     error_from_reactivating = reactivating.to(error)
 
     # Recovery transition
-    recover = error.to(initialising)
+    recover = error.to(resetting)
 
     def __init__(
         self,
@@ -98,9 +98,15 @@ class MHZMonitor(StateMachine):
         self.lane_up = None
         self.bonded = False
         self.expected_value = 0xFFFFF
+
+        # After max_retries, 'Reset Retry Counter' sets this flag
+        self.recover_flag = False
         
         # call the init of the StateMachine class to register all the states and transisitons
         super().__init__()
+
+    def starter(self, value=None):
+        self.start()
 
     def on_enter_idle(self):
         logging.info("ADXDMA monitor started")
@@ -340,11 +346,10 @@ class MHZMonitor(StateMachine):
                     f"  Reset #{event['count']} at {event['timestamp']}: {event['reason']}"
                 )
 
-        self.current_retry = 0
-
     def _reset_retries(self, _=None):
         """Function for controller paramtree to use to reset the current retry"""
         self.current_retry = 0
+        self.recover_flag = True
 
     def log_reset_event(self, reason="Unknown"):
         """Log a reset event."""

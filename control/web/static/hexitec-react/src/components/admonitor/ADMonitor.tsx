@@ -27,7 +27,7 @@ export function ADMonitor({ endpoint, show }: ADMonitorProps) {
           </Alert.Heading>
           
           <Alert variant="danger" className="mb-4">
-            An issue with the Alpha-Data Hardware has been detected. Below is information on the systems automatic attempts
+            An issue with the Alpha-Data Hardware has been detected. Below is information on the system's automatic attempts
             to resolve this issue. If maximum retries are attempted, contact technical support.
           </Alert>
 
