@@ -12,11 +12,11 @@
         "frequency": 500
     },
     "aurora_chan_up": {
-        "policy": "polled",
+        "policy": "immediate",
         "frequency": 500
     },
     "aurora_lane_up": {
-        "policy": "polled",
+        "policy": "immediate",
         "frequency": 500
     },
     "hexitec_mhz_front_end_hexitec_hist_frame_generator_acq_ctrl": {
