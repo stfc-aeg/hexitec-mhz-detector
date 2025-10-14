@@ -24,7 +24,7 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
       <Row>
         {/* Power and Environmental Controls */}
         <Col md={6}>
-          <Card className="mb-3">
+          <Card className="mt-3">
             <Card.Header><strong>Power & Environmental</strong></Card.Header>
             <Card.Body>
 
@@ -201,7 +201,7 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
 
         {/* Detector Controls */}
         <Col md={6}>
-          <Card className="mb-3">
+          <Card className="mt-3">
             <Card.Header><strong>Detector Controls</strong></Card.Header>
             <Card.Body>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>

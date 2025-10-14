@@ -19,7 +19,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
       <Row>
         {/* Acquisition Settings */}
         <Col md={6}>
-          <Card className="mb-3">
+          <Card className="mt-3">
             <Card.Header><strong>Acquisition Settings</strong></Card.Header>
             <Card.Body>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
@@ -73,7 +73,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
         {/* Acquisition Status */}
         <Col md={6}>
-          <Card className="mb-3">
+          <Card className="mt-3">
             <Card.Header><strong>Acquisition Status</strong></Card.Header>
             <Card.Body>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
