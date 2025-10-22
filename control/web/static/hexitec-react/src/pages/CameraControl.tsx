@@ -1,28 +1,60 @@
-import { Container, Row, Col, Card, Form, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Badge, FloatingLabel} from 'react-bootstrap';
 import { UserAware } from '../components/UserAware';
+import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../utils.js';
 
 interface CameraControlProps {
   endpoint_url: string;
 }
 
+const EndpointFormControl = WithEndpoint(Form.Control);
+const EndpointButton = WithEndpoint(Button);
+const EndpointSelect= WithEndpoint(Form.Select);
+
 function CameraControl({ endpoint_url }: CameraControlProps) {
+
+  const proxyEndpoint = useAdapterEndpoint('proxy', endpoint_url, 1000);
+  const lokiData = proxyEndpoint.data?.loki?.application;
+  const envData = proxyEndpoint.data?.loki?.environment;
+
+  const peltierSetpoints = [20, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+
   return (
     <Container>
       <Row>
         {/* Power and Environmental Controls */}
         <Col md={6}>
-          <Card className="mb-3">
+          <Card className="mt-3">
             <Card.Header><strong>Power & Environmental</strong></Card.Header>
             <Card.Body>
+
+            <Row>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
-                <Row className="mb-3">
+                <Row>
+                  <Col>
+                    <h5 className="text-center">HV Bias</h5>
+                  </Col>
+                </Row>
+                <Row className="mb-2">
                   <Col sm={6}>
-                    <Form.Label>HV Bias</Form.Label>
-                    <Form.Check type="switch" id="hv-bias" label="Off" />
+                    <EndpointButton className="w-100"
+                      endpoint={proxyEndpoint} fullpath="loki/application/HV/ENABLE"
+                      variant={lokiData?.HV?.ENABLE ? "danger" : "primary"}
+                      value={lokiData?.HV?.ENABLE ? 0 : 1}
+                    >
+                      {lokiData?.HV?.ENABLE ? "Disable HV" : "Enable HV"}
+                    </EndpointButton>
                   </Col>
                   <Col sm={6}>
-                    <Form.Label>HV Reading</Form.Label>
-                    <Form.Control type="text" value="0 V" readOnly />
+                    <FloatingLabel
+                      label="HV Reading">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={checkNull(lokiData?.HV.readback_bias)}
+                        />
+                    </FloatingLabel>
                   </Col>
                 </Row>
               </UserAware>
@@ -30,24 +62,58 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
               <UserAware userLevel="power" endpoint_url={endpoint_url}>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>HV Value</Form.Label>
-                    <Form.Control type="number" placeholder="0" />
-                    <Form.Text className="text-muted">Bias value (V)</Form.Text>
+                    <FloatingLabel 
+                      label="HV Target Bias">
+                        <EndpointFormControl
+                          endpoint={proxyEndpoint} fullpath={"loki/application/HV/target_bias"}
+                          type="number"
+                          style={floatingInputStyle}
+                        />
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel
+                      label="Current Target Bias">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={checkNull(lokiData?.HV.target_bias)}
+                        />
+                    </FloatingLabel>
                   </Col>
                 </Row>
               </UserAware>
-
+            </Row>
+            <Row>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
+                <Row>
+                  <Col>
+                    <h5 className="mt-3 text-center">Peltier</h5>
+                  </Col>
+                </Row>
                 <Row className="mb-3">
                   <Col sm={6}>
-                    <Form.Label>Peltier</Form.Label>
-                    <Form.Check type="switch" id="peltier" label="Off" />
+                    <EndpointButton className="w-100"
+                      endpoint={proxyEndpoint} fullpath="loki/application/peltier/enable"
+                      variant={lokiData?.peltier?.enable ? "danger" : "primary"}
+                      value={lokiData?.peltier?.enable ? 0 : 1}
+                    >
+                      {lokiData?.peltier?.enable ? "Disable Peltier" : "Enable Peltier"}
+                    </EndpointButton>
                   </Col>
-                  <Col sm={6}>
-                    <Form.Label>Dew Point Warning</Form.Label>
-                    <div>
-                      <Badge bg="success">OK</Badge>
-                    </div>
+                  <Col>
+                    <UserAware userLevel="power" endpoint_url={endpoint_url}>
+                      <FloatingLabel
+                        label="Count">
+                          <Form.Control
+                            plaintext
+                            readOnly
+                            style={floatingLabelStyle}
+                            value={checkNullNoDp(lokiData?.peltier.count)}
+                          />
+                      </FloatingLabel>
+                    </UserAware>
                   </Col>
                 </Row>
               </UserAware>
@@ -55,36 +121,87 @@ function CameraControl({ endpoint_url }: CameraControlProps) {
               <UserAware userLevel="power" endpoint_url={endpoint_url}>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Peltier Setpoint</Form.Label>
-                    <Form.Select>
-                      <option value="25">25%</option>
-                      <option value="50" selected>50%</option>
-                      <option value="75">75%</option>
-                      <option value="100">100%</option>
-                    </Form.Select>
+                    <FloatingLabel
+                      label="Proportion/Setpoint">
+                      <EndpointSelect
+                        endpoint={proxyEndpoint}
+                        fullpath="loki/application/peltier/proportion"
+                        variant="outline-secondary"
+                        buttonText={checkNullNoDp(lokiData?.peltier.proportion*100)}
+                        style={floatingInputStyle}>
+                          {(peltierSetpoints).map(
+                            (selection, index) => (
+                              <option value={selection} key={index}>{selection}</option>
+                            )
+                          )}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel
+                      label="Temperature">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={checkNull(lokiData?.peltier.temperature)}
+                        />
+                    </FloatingLabel>
                   </Col>
                 </Row>
               </UserAware>
-
+            </Row>
+            <Row>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
-                <Row className="mb-3">
-                  <Col sm={6}>
-                    <Form.Label>Humidity Reading</Form.Label>
-                    <Form.Control type="text" value="45%" readOnly />
+                <Row>
+                  <Col>
+                    <h5 className="mt-3 text-center">Status</h5>
                   </Col>
-                  <Col sm={6}>
-                    <Form.Label>Temperature Reading</Form.Label>
-                    <Form.Control type="text" value="22°C" readOnly />
+                </Row>
+                <Row className="mb-3">
+                  <Col sm={4}>
+                    <FloatingLabel
+                      label="Humidity">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={checkNull(envData?.humidity.BOARD)}
+                        />
+                    </FloatingLabel>
+                  </Col>
+                  <Col sm={4}>
+                    <FloatingLabel
+                      label="Diode Temp.">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={checkNull(envData?.temperature.DIODE)}
+                        />
+                    </FloatingLabel>
+                  </Col>
+                  <Col sm={4}>
+                    <FloatingLabel
+                      label="Block Temp.">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={checkNull(envData?.temperature.BLOCK)}
+                        />
+                    </FloatingLabel>
                   </Col>
                 </Row>
               </UserAware>
+            </Row>
             </Card.Body>
           </Card>
         </Col>
 
         {/* Detector Controls */}
         <Col md={6}>
-          <Card className="mb-3">
+          <Card className="mt-3">
             <Card.Header><strong>Detector Controls</strong></Card.Header>
             <Card.Body>
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>

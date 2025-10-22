@@ -154,7 +154,7 @@
       "size": 4,
       "desc": "Aurora lane up",
       "permission": "r",
-      "access_policy": "polled",
+      "access_policy": "immediate",
       "poll_rate": 500
     },
     "aurora_chan_up": {
@@ -162,7 +162,7 @@
       "size": 4,
       "desc": "Aurora channel up",
       "permission": "r",
-      "access_policy": "polled",
+      "access_policy": "immediate",
       "poll_rate": 500
     },
     "aurora_soft_err": {

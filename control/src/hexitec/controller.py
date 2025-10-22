@@ -137,5 +137,8 @@ class HexitecController(BaseController):
                 elif state_name == "Monitoring":
                     self.mhz_monitor.monitor()
 
+                elif state_name == "Error" and self.mhz_monitor.recover_flag:
+                    self.mhz_monitor.recover()
+
             except Exception as e:
                 logging.error(f"ADXDMA monitor error: {e}")

@@ -16,8 +16,6 @@ function AppWithSystemMonitor() {
     const { current_state, current_retry, max_retries } = adxdmaData;
     
     const criticalStates = [
-      'Idle',
-      'Initialising',
       'Resetting',
       'WaitingForLanes',
       'Rebonding',
