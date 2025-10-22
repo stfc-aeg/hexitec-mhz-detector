@@ -1,6 +1,6 @@
 import logging
 from hexitec.base.base_adapter import BaseAdapter
-from hexitec.liveview.adapter import HistogramLiveViewController
+from hexitec.liveview.controller import HistogramLiveViewController
 
 class HistogramError(Exception):
     """Custom exception class for histogram-related errors."""

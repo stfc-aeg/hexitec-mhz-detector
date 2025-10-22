@@ -17,7 +17,7 @@ class HistogramLiveViewController(BaseController):
         
         Args:
             options: Dictionary of configuration options
-        """
+        """       
         logging.debug("Initializing HistogramLiveViewController")
         
         # Get endpoints from config
@@ -83,7 +83,7 @@ class HistogramLiveViewController(BaseController):
                     ),
                 }
             }
-            
+   
         self.param_tree = ParameterTree(self.tree)
 
     def initialize(self, adapters):

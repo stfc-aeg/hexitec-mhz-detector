@@ -16,7 +16,9 @@ dependencies = [
     "munir @ git+https://github.com/stfc-aeg/munir.git#egg=munir",
     "requests",
     "python-statemachine",
-    "RegisterAccessor @ git+ssh://git@github.com/stfc-aeg/memory-accessor.git#subdirectory=control"
+    "RegisterAccessor @ git+ssh://git@github.com/stfc-aeg/memory-accessor.git#subdirectory=control",
+    "opencv-python",
+    "blosc"
 
 ]
 readme = "README.md"

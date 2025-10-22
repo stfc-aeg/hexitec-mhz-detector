@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAdapterEndpoint } from 'odin-react';
 import { Container, Row, Col, Form, InputGroup, Dropdown, Button } from 'react-bootstrap';
 import { 
-  TitleCard, 
-  DropdownSelector,
+  TitleCard,
   OdinDoubleSlider,
   WithEndpoint 
 } from 'odin-react';
@@ -12,7 +11,7 @@ import ValueRangeControl from './ValueRangeControl';
 import ClickableImage from './ClickableImage';
 import HistogramPlot from './HistogramPlot';
 
-const EndPointDropdownSelector = WithEndpoint(DropdownSelector);
+const EndPointDropdownSelector = WithEndpoint(Form.Select);
 const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 
 function getGridLayout(count) {

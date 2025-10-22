@@ -7,6 +7,8 @@ import LiveView from './pages/LiveView';
 import AsicControl from './pages/AsicControl';
 import RegisterMap from './pages/RegisterMap';
 
+import HistogramLiveView from './components/liveview/HistogramLiveView';
+
 function App() {
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
@@ -25,6 +27,7 @@ function App() {
       <CameraControl endpoint_url={endpoint_url} />
       <Processing endpoint_url={endpoint_url} />
       <Acquisition endpoint_url={endpoint_url} />
+      <HistogramLiveView endpoint_url={endpoint_url} name={"detector1"}></HistogramLiveView>
       <LiveView endpoint_url={endpoint_url} />
       <AsicControl endpoint_url={endpoint_url} />
       <RegisterMap endpoint_url={endpoint_url} />
