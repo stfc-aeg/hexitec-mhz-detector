@@ -170,7 +170,7 @@ class HistogramLiveViewProcessor:
             dtype = header.get('dtype', 'uint32')
             
             # Decompress if needed
-            if len(msg[1]) != 26214400:
+            if len(msg[1]) != 80*80*4096:  # 26214400 = 80*80*4096
                 data = np.frombuffer(blosc.decompress(msg[1]), dtype=dtype)
             else:
                 data = np.frombuffer(msg[1], dtype=dtype)
@@ -178,7 +178,7 @@ class HistogramLiveViewProcessor:
             # Reshape to 3D array
             data_3d = data.reshape(self.orig_dims)
             
-                        # Sum selected energy bins
+            # Sum selected energy bins
             summed_data = np.sum(data_3d[:, :, 
                                      self.energy_range['min']:self.energy_range['max'] + 1], 
                               axis=2)
@@ -230,13 +230,14 @@ class HistogramLiveViewProcessor:
             ]
 
             _, buffer = cv2.imencode('.jpg', colour_data, flags)
-            encoded_data = base64.b64encode(buffer).decode('utf-8')
+            buffer = np.array(buffer)
+            # encoded_data = base64.b64encode(buffer).decode('utf-8')
             
             # Update image queue
             while not self.image_queue.empty():
                 self.image_queue.get()
             self.image_queue.put({
-                'image': encoded_data,
+                'image': buffer,
                 'histograms': histograms
             })
             
