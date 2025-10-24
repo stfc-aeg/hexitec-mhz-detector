@@ -3,31 +3,48 @@ import { useState, useEffect, useCallback } from 'react';
 function ClickableImage(props) {
   const {
     endpoint,
-    imgSrc,
-    fullpath,
-    paramToUpdate,
+    imgPath,
+    coordsPath,
+    coordsParam,
     regions = {},
     getRegionColor,
     maximiseAxis = null,
     valuesAsPercentages = false
   } = props;
-  const [imgData, setImgData] = useState(null);
+
+  const [imgData, changeImgData] = useState(null);
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
   const [points, setPoints] = useState([]);
   const [coords, setCoords] = useState([]);
   
+  const refreshImage = useCallback(() => {
+    endpoint.get(imgPath, {responseType: "blob"})
+    .then(result => {
+      URL.revokeObjectURL(imgData);  // memory management
+      const img_url = URL.createObjectURL(result);
+      changeImgData(img_url);
+      // endpoint.refreshData();
+    }).catch((error) => {
+      console.error("IMAGE GET FAILED: ", error);
+      changeImgData(null);
+    })
+  }, [endpoint.updateFlag]);
+
   useEffect(() => {
-    if (imgSrc) {
-      setImgData(`data:image/jpg;base64,${imgSrc}`);
-      }
-  }, [imgSrc]);
+    let timer_id;
+    timer_id = setInterval(refreshImage, 950);
+
+    return () => clearInterval(timer_id);
+  }, [refreshImage]);
+
   const getPoint = useCallback(e => {
     const bounds = e.target.getBoundingClientRect();
     const x = e.clientX - bounds.left;
     const y = e.clientY - bounds.top;
     return [x, y];
   }, []);
+
   const calculateRectangle = useCallback(() => {
     if (!startPoint || !endPoint) return;
     const xCoords = [startPoint[0], endPoint[0]];
@@ -53,12 +70,31 @@ function ClickableImage(props) {
     setPoints(rectanglePoints);
     setCoords([[minX, maxX], [minY, maxY]]);
   }, [startPoint, endPoint, maximiseAxis]);
+
+  // Handle context menu = handle right click
+  const handleContextMenu = useCallback(e => {
+    const isRectangle = startPoint || endPoint || points.length > 0;
+
+    if (isRectangle)
+    {
+      // Cancel context if already rectangle
+      e.preventDefault();
+      // Reset rectangle
+      setStartPoint(null);
+      setEndPoint(null);
+      setPoints([]);
+      setCoords([]);
+    }
+    // Otherwise open context menu as normal
+  })
+
   const handleMouseDown = useCallback(e => {
     e.preventDefault();
     const point = getPoint(e);
     setStartPoint(point);
     setEndPoint(point);
   }, [getPoint]);
+
   const handleMouseMove = useCallback(e => {
     e.preventDefault();
     if (startPoint) {
@@ -67,6 +103,7 @@ function ClickableImage(props) {
       calculateRectangle();
     }
   }, [startPoint, getPoint, calculateRectangle]);
+
   const handleMouseUp = useCallback(e => {
       e.preventDefault();
       if (startPoint) {
@@ -101,16 +138,17 @@ function ClickableImage(props) {
                 ]
                 ])
             );
-          endpoint.put({ [paramToUpdate]: sendDataPercent }, fullpath);
+          endpoint.put({ [coordsParam]: sendDataPercent }, coordsPath);
         } 
         else {
-          endpoint.put({ [paramToUpdate]: sendData }, fullpath);
+          endpoint.put({ [coordsParam]: sendData }, coordsPath);
         }
         setStartPoint(null);
         setEndPoint(null);
         setPoints([]);
       }
-  }, [startPoint, coords, calculateRectangle, paramToUpdate, regions, valuesAsPercentages, endpoint, fullpath]);
+  }, [startPoint, coords, calculateRectangle, coordsParam, regions, valuesAsPercentages, endpoint, coordsPath]);
+
   return (
     <div style={{
       position: 'relative',
@@ -136,6 +174,7 @@ function ClickableImage(props) {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onContextMenu={handleContextMenu}
         alt="Detector view"
       />
       <svg

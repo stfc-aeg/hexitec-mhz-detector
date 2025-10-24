@@ -3,7 +3,6 @@ import { OdinApp } from 'odin-react';
 import CameraControl from './pages/CameraControl';
 import Processing from './pages/Processing';
 import Acquisition from './pages/Acquisition';
-import LiveView from './pages/LiveView';
 import AsicControl from './pages/AsicControl';
 import RegisterMap from './pages/RegisterMap';
 
@@ -27,8 +26,7 @@ function App() {
       <CameraControl endpoint_url={endpoint_url} />
       <Processing endpoint_url={endpoint_url} />
       <Acquisition endpoint_url={endpoint_url} />
-      <HistogramLiveView endpoint_url={endpoint_url} name={"detector1"}></HistogramLiveView>
-      <LiveView endpoint_url={endpoint_url} />
+      <HistogramLiveView endpoint_url={endpoint_url} name={"detector1"}/>
       <AsicControl endpoint_url={endpoint_url} />
       <RegisterMap endpoint_url={endpoint_url} />
     </OdinApp>

@@ -121,9 +121,9 @@ function HistogramLiveView({ endpoint_url, name }) {
                 <div className="position-relative">
                   <ClickableImage
                     endpoint={liveViewEndPoint}
-                    imgSrc={liveViewData?.image?.data}
-                    fullpath="image"
-                    paramToUpdate="regions"
+                    imgPath="image/data"
+                    coordsPath="image"
+                    coordsParam="regions"
                     regions={liveViewData?.image?.regions}
                     getRegionColor={getRegionColor}
                   />
