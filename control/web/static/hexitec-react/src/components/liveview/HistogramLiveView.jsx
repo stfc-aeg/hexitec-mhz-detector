@@ -25,7 +25,7 @@ function HistogramLiveView({ endpoint_url, name }) {
   const [timeSinceUpdate, setTimeSinceUpdate] = React.useState('');
   const [colorRange, setColorRange] = useState([0, 1000]);
 
-  const liveViewAddress = `histogram/histview/${name}`;
+  const liveViewAddress = `liveview/histview/${name}`;
   const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, endpoint_url, 1000);
   const liveViewData = liveViewEndPoint?.data[name];
 
