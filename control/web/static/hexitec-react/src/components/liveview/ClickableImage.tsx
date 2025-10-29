@@ -29,7 +29,7 @@ export function ClickableImage(props:ClickableImageProps)  {
     valuesAsPercentages = false
   } = props;
   
-  const [imgData, changeImgData] = useState<string>("");
+  const [imgData, changeImgData] = useState<string|null>(null);
   const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
   const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
   const [points, setPoints] = useState<Point[]>([]);
@@ -38,7 +38,7 @@ export function ClickableImage(props:ClickableImageProps)  {
   const refreshImage = useCallback(() => {
     endpoint.get<Blob>(imgPath, {responseType: "blob"})
     .then((result) => {
-      URL.revokeObjectURL(imgData);  // memory management
+      if (imgData) { URL.revokeObjectURL(imgData); } // memory management 
       const img_url = URL.createObjectURL(result);
       changeImgData(img_url);
       // endpoint.refreshData();
@@ -182,7 +182,7 @@ export function ClickableImage(props:ClickableImageProps)  {
       msUserSelect: 'none'
     }}>
       <img 
-        src={imgData}
+        src={imgData ? imgData : undefined}
         style={{
           display: 'block',
           width: '100%',
