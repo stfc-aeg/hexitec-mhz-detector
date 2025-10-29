@@ -1,33 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAdapterEndpoint } from 'odin-react';
-import { Container, Row, Col, Form, InputGroup, Dropdown, Button } from 'react-bootstrap';
+import { Container, Row, Col, Form, Dropdown, Button } from 'react-bootstrap';
 import { 
   TitleCard,
   OdinDoubleSlider,
   WithEndpoint 
 } from 'odin-react';
 import { getRegionColor } from './colorUtils';
-import ValueRangeControl from './ValueRangeControl';
-import ClickableImage from './ClickableImage';
-import HistogramPlot from './HistogramPlot';
+import { ValueRangeControl } from './ValueRangeControl';
+import { ClickableImage } from './ClickableImage';
+import { HistogramPlot } from './HistogramPlot';
+
+import type { ParamTree } from 'odin-react';
+
+export interface HistogramRegion {
+  x: [number, number];
+  y: [number, number];
+  width: number;
+  height: number;
+}
+
+// Derived from processor.py
+export interface HistogramData {
+  counts: number[];
+  bins: number[];
+  mean: number;
+  std: number;
+  min: number;
+  max: number;
+  region: HistogramRegion;
+}
+
+interface LiveViewTypes extends ParamTree {
+    endpoint: string;
+    image: {
+      colour: string;
+      data: any | null;
+      energy_range: number[];
+      histograms: any | null;
+      regions: any;
+      scale: number;
+      size_x: number;
+      size_y: number;
+      value_range: number[];
+    }
+}
+
 
 const EndPointDropdownSelector = WithEndpoint(Form.Select);
 const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 
-function getGridLayout(count) {
+function getGridLayout(count: number) {
   if (count <= 1) return { cols: 1 };
   if (count === 2) return { cols: 2 };
   return { cols: 2 }; // 2 columns for 3 or more histograms
 }
 
-function HistogramLiveView({ endpoint_url, name }) {
-  const [lastUpdateTime, setLastUpdateTime] = React.useState(null);
-  const [timeSinceUpdate, setTimeSinceUpdate] = React.useState('');
-  const [colorRange, setColorRange] = useState([0, 1000]);
+interface HistogramLiveViewProps {
+  endpoint_url: string;
+  name: string;
+}
+
+export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps) {
+  const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
+  const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
+  const [colorRange, setColorRange] = useState<[number, number]>([0, 1000]);
 
   const liveViewAddress = `liveview/histview/${name}`;
-  const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, endpoint_url, 1000);
-  const liveViewData = liveViewEndPoint?.data[name];
+  const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>(liveViewAddress, endpoint_url, 1000);
+  const liveViewData = liveViewEndPoint?.data?.[name] as LiveViewTypes|undefined;
 
   const colourEffects = [
     'autumn', 'bone', 'jet', 'winter', 'rainbow', 'ocean', 'summer', 'spring',
@@ -35,7 +76,7 @@ function HistogramLiveView({ endpoint_url, name }) {
     'viridis', 'cividis', 'twilight', 'twilight_shifted', 'turbo', 'deepgreen'
   ];
 
-  const handleColorRangeChange = (newRange) => {
+  const handleColorRangeChange = (newRange: [number, number]) => {
     setColorRange(newRange);
     liveViewEndPoint.put({ 
       value_range: newRange
@@ -66,7 +107,7 @@ function HistogramLiveView({ endpoint_url, name }) {
     return () => clearInterval(timer);
   }, [lastUpdateTime]);
 
-  const histograms = Object.entries(liveViewData?.image?.histograms || {});
+  const histograms = Object.entries(liveViewData?.image?.histograms || {}) as [string, HistogramData][]; // regionId is a number but JS parsing
   const layout = getGridLayout(histograms.length);
 
   return (
@@ -155,12 +196,14 @@ function HistogramLiveView({ endpoint_url, name }) {
           <Col xs={12} md={6}>
             <div className="histogram-grid">
               <Row className="g-3">
-                {histograms.map(([regionId, histData], index) => (
+                {histograms.map(([regionId, histData]) => {
+                  const regionIdNum = parseInt(regionId, 10);
+                  return (
                   <Col xs={12} md={layout.cols === 1 ? 12 : 6} key={regionId}>
                     <div className="position-relative">
                       <HistogramPlot 
                         histogramData={histData}
-                        regionId={regionId}
+                        regionId={regionIdNum}
                         color={getRegionColor(parseInt(regionId) - 1)}
                       />
                       <Button 
@@ -178,7 +221,7 @@ function HistogramLiveView({ endpoint_url, name }) {
                       </Button>
                     </div>
                   </Col>
-                ))}
+                )})}
               </Row>
             </div>
           </Col>
@@ -187,5 +230,3 @@ function HistogramLiveView({ endpoint_url, name }) {
     </TitleCard>
   );
 }
-
-export default HistogramLiveView;

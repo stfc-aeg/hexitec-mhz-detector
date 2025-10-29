@@ -1,4 +1,7 @@
 import React from 'react';
+import { type RegionColor } from './colorUtils'
+import { type HistogramData } from './HistogramLiveView'
+
 import {
   LineChart,
   Line,
@@ -9,7 +12,13 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
-function HistogramPlot({ histogramData, regionId, color }) {
+interface HistogramPlotProps {
+  histogramData: HistogramData | null;
+  regionId: number;
+  color: RegionColor;
+}
+
+export function HistogramPlot({ histogramData, regionId, color }: HistogramPlotProps) {
   if (!histogramData) return null;
 
   // Format data for recharts
@@ -85,7 +94,7 @@ function HistogramPlot({ histogramData, regionId, color }) {
             tick={{ fontSize: 10 }}
           />
           <Tooltip 
-            formatter={(value) => [value.toFixed(1), 'Counts']}
+            formatter={(value: number) => [value.toFixed(1), 'Counts']}
             labelFormatter={(value) => `Energy Bin: ${value}`}
           />
           <Line 
@@ -101,5 +110,3 @@ function HistogramPlot({ histogramData, regionId, color }) {
     </div>
   );
 }
-
-export default HistogramPlot;

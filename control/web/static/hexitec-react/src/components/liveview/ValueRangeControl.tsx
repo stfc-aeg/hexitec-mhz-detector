@@ -1,7 +1,14 @@
 import React from 'react';
 import { Form } from 'react-bootstrap';
 
-function ValueRangeControl({ min, max, colormap, onRangeChange }) {
+interface ValueRangeControlProps {
+    min: number;
+    max: number;
+    colormap: string;
+    onRangeChange: Function;
+}
+
+export function ValueRangeControl({ min, max, colormap, onRangeChange }: ValueRangeControlProps) {
     const height = 400;
     const width = 30;
     const labelWidth = 75;
@@ -9,7 +16,7 @@ function ValueRangeControl({ min, max, colormap, onRangeChange }) {
     const verticalPadding = 20;
     const totalHeight = height + (2 * verticalPadding);
 
-    const getColormapStops = (colormap) => {
+    const getColormapStops = (colormap: string) => {
         switch(colormap?.toLowerCase()) {
             case 'autumn':
                 return [
@@ -292,4 +299,3 @@ function ValueRangeControl({ min, max, colormap, onRangeChange }) {
         </div>
     );
 }
-export default ValueRangeControl;

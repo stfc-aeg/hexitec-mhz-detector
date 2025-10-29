@@ -1,35 +1,53 @@
+import type { AdapterEndpoint_t } from 'odin-react';
 import { useState, useEffect, useCallback } from 'react';
 
-function ClickableImage(props) {
+type Point = [number, number];
+type RegionCoords = [[number,number],[number,number]];
+type RegionMap = Record<string, RegionCoords>;
+
+
+interface ClickableImageProps {
+  endpoint: AdapterEndpoint_t;
+  imgPath: string;
+  coordsPath: string;
+  coordsParam: string;
+  regions?: RegionMap;
+  getRegionColor: Function;
+  maximiseAxis?: string | null;
+  valuesAsPercentages?: boolean;
+}
+
+export function ClickableImage(props:ClickableImageProps)  {
   const {
     endpoint,
     imgPath,
     coordsPath,
     coordsParam,
-    regions = {},
     getRegionColor,
+    regions = {},
     maximiseAxis = null,
     valuesAsPercentages = false
   } = props;
-
-  const [imgData, changeImgData] = useState(null);
-  const [startPoint, setStartPoint] = useState(null);
-  const [endPoint, setEndPoint] = useState(null);
-  const [points, setPoints] = useState([]);
-  const [coords, setCoords] = useState([]);
+  
+  const [imgData, changeImgData] = useState<string>("");
+  const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
+  const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
+  const [points, setPoints] = useState<Point[]>([]);
+  const [coords, setCoords] = useState<Point[]>([]);
   
   const refreshImage = useCallback(() => {
-    endpoint.get(imgPath, {responseType: "blob"})
-    .then(result => {
+    endpoint.get<Blob>(imgPath, {responseType: "blob"})
+    .then((result) => {
       URL.revokeObjectURL(imgData);  // memory management
       const img_url = URL.createObjectURL(result);
       changeImgData(img_url);
       // endpoint.refreshData();
     }).catch((error) => {
       console.error("IMAGE GET FAILED: ", error);
-      changeImgData(null);
+      changeImgData("");
     })
   }, [endpoint.updateFlag]);
+
 
   useEffect(() => {
     let timer_id;
@@ -38,11 +56,12 @@ function ClickableImage(props) {
     return () => clearInterval(timer_id);
   }, [refreshImage]);
 
-  const getPoint = useCallback(e => {
-    const bounds = e.target.getBoundingClientRect();
+  const getPoint = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    const bounds = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - bounds.left;
     const y = e.clientY - bounds.top;
-    return [x, y];
+    let point: Point = [x,y];
+    return point;
   }, []);
 
   const calculateRectangle = useCallback(() => {
@@ -53,7 +72,8 @@ function ClickableImage(props) {
     let maxX = Math.max(...xCoords);
     let minY = Math.min(...yCoords);
     let maxY = Math.max(...yCoords);
-    const canvas = document.getElementById('canvas');
+    const canvas = document.getElementById('canvas') as HTMLElement | null;
+    if (!canvas) return;  // If we can't get the canvas, no point continuing
     if (maximiseAxis === 'x') {
       minX = 0;
       maxX = canvas.clientWidth;
@@ -61,7 +81,7 @@ function ClickableImage(props) {
       minY = 0;
       maxY = canvas.clientHeight;
     }
-    const rectanglePoints = [
+    const rectanglePoints: Point[] = [
       [minX, minY],
       [maxX, minY],
       [maxX, maxY],
@@ -72,7 +92,7 @@ function ClickableImage(props) {
   }, [startPoint, endPoint, maximiseAxis]);
 
   // Handle context menu = handle right click
-  const handleContextMenu = useCallback(e => {
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
     const isRectangle = startPoint || endPoint || points.length > 0;
 
     if (isRectangle)
@@ -86,16 +106,16 @@ function ClickableImage(props) {
       setCoords([]);
     }
     // Otherwise open context menu as normal
-  })
+  }, []);
 
-  const handleMouseDown = useCallback(e => {
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
     e.preventDefault();
-    const point = getPoint(e);
+    const point: Point = getPoint(e);
     setStartPoint(point);
     setEndPoint(point);
   }, [getPoint]);
 
-  const handleMouseMove = useCallback(e => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
     e.preventDefault();
     if (startPoint) {
       const point = getPoint(e);
@@ -104,11 +124,12 @@ function ClickableImage(props) {
     }
   }, [startPoint, getPoint, calculateRectangle]);
 
-  const handleMouseUp = useCallback(e => {
+  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
       e.preventDefault();
       if (startPoint) {
         calculateRectangle();
-        const canvas = document.getElementById('canvas');
+        const canvas = document.getElementById('canvas') as HTMLElement | null;
+        if (!canvas) return;
         const width = canvas.clientWidth;
         const height = canvas.clientHeight;
         // Convert to 80x80 grid coordinates
@@ -119,13 +140,13 @@ function ClickableImage(props) {
         // Get existing regions and add new one
         const existingRegions = regions || {};
         const newRegionId = Object.keys(existingRegions).length + 1;
-        const coordinates = [
+        const coordinates: RegionCoords = [
           [Math.max(0, Math.min(x1, 79)), Math.max(0, Math.min(x2, 79))],
           [Math.max(0, Math.min(y1, 79)), Math.max(0, Math.min(y2, 79))]
         ];
         // Create updated regions dictionary
-        const sendData = {
-          ...existingRegions,
+        const sendData: RegionMap = {
+          ...regions,
           [newRegionId.toString()]: coordinates
         };
         if (valuesAsPercentages) {
@@ -167,8 +188,6 @@ function ClickableImage(props) {
           width: '100%',
           height: 'auto',
           imageRendering: 'pixelated', // Make image sharp when upscaled
-          WebkitImageRendering: 'pixelated', // Safari image sharpness
-          msImageRendering: 'pixelated' // Edge image sharpness
         }}
         draggable="false"
         onMouseDown={handleMouseDown}
@@ -190,7 +209,8 @@ function ClickableImage(props) {
           {/* Render existing regions */}
           {Object.entries(regions).map(([id, region]) => {
             const [[x1, x2], [y1, y2]] = region;
-            const canvas = document.getElementById('canvas');
+            const canvas = document.getElementById('canvas') as HTMLElement | null;
+            if (!canvas) return;
             const width = canvas.clientWidth;
             const height = canvas.clientHeight;
             
@@ -229,5 +249,3 @@ function ClickableImage(props) {
     </div>
   );
 }
-
-export default ClickableImage;
