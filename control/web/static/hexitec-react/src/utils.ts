@@ -1,7 +1,7 @@
 // Utility function that checks if a value is null or undefined. Returns 'null' if yes, value if no
-export const checkNull = (val) => val === null || val === undefined ? 'null' : val.toFixed(4);
+export const checkNull = (val: number) => val === null || val === undefined ? 'null' : val.toFixed(4);
 
-export const checkNullNoDp = (val) => val === null || val === undefined ? 'null' : val;
+export const checkNullNoDp = (val: number) => val === null || val === undefined ? 'null' : val;
 
 export const floatingLabelStyle = {
     border: '1px solid lightblue',

@@ -43,7 +43,7 @@ class HistogramLiveViewController(BaseController):
         
         self.tree = {"histview": {}}
         self.processors = []
-        
+
         # Create processor for each endpoint
         for i, endpoint in enumerate(endpoints):
             processor = HistogramLiveViewProcessor(
@@ -74,7 +74,8 @@ class HistogramLiveViewController(BaseController):
                     "size_y": (lambda p=processor: p.size_y,
                              partial(self.set_size_y, processor=processor)),
                     "colour": (lambda p=processor: p.colour,
-                             partial(self.set_colour, processor=processor)),
+                             partial(self.set_colour, processor=processor),
+                             {'allowed_values': [colour for colour in processor.colormap_dict.keys()]}),
                     "scale": (lambda p=processor: p.scale_factor,
                             partial(self.set_scale, processor=processor)),
                     "energy_range": (
