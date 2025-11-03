@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdapterEndpoint } from 'odin-react';
-import { Container, Row, Col, Form, Dropdown, Button } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button } from 'react-bootstrap';
+import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import { 
   TitleCard,
   OdinDoubleSlider,
@@ -10,6 +11,7 @@ import { getRegionColor } from './colorUtils';
 import { ValueRangeControl } from './ValueRangeControl';
 import { ClickableImage } from './ClickableImage';
 import { HistogramPlot } from './HistogramPlot';
+import { floatingInputStyle } from '../../utils'
 
 import type { ParamTree } from 'odin-react';
 
@@ -43,11 +45,9 @@ interface LiveViewTypes extends ParamTree {
       size_x: number;
       size_y: number;
       value_range: number[];
-    }
+    };
 }
 
-
-const EndPointDropdownSelector = WithEndpoint(Form.Select);
 const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 
 function getGridLayout(count: number) {
@@ -70,11 +70,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>(liveViewAddress, endpoint_url, 1000);
   const liveViewData = liveViewEndPoint?.data?.[name] as LiveViewTypes|undefined;
 
-  const colourEffects = [
-    'autumn', 'bone', 'jet', 'winter', 'rainbow', 'ocean', 'summer', 'spring',
-    'cool', 'hsv', 'pink', 'hot', 'parula', 'magma', 'inferno', 'plasma',
-    'viridis', 'cividis', 'twilight', 'twilight_shifted', 'turbo', 'deepgreen'
-  ];
+  const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
+  const colour_metadata = liveViewMetadata?.[name]?.image?.colour;
 
   const handleColorRangeChange = (newRange: [number, number]) => {
     setColorRange(newRange);
@@ -138,23 +135,21 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 colormap={liveViewData?.image?.colour || 'bone'}
                 onRangeChange={handleColorRangeChange}
               />
-
-                  <Form.Group className="mt-4">
-                    <Form.Label>Colormap</Form.Label>
-                    <EndPointDropdownSelector
-                      endpoint={liveViewEndPoint}
-                      fullpath="image/colour"
-                      buttonText={liveViewData?.image?.colour || 'Select colourmap'}
-                      event_type="select"
-                      variant="outline-secondary"
-                    >
-                      {colourEffects.map((effect, index) => (
-                        <Dropdown.Item key={index} eventKey={effect}>
+                  <FloatingLabel
+                    label="Colourmap" className="mt-3">
+                    <Form.Select
+                      style={floatingInputStyle}
+                      value={liveViewData?.image?.colour || 'Select a colour'}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
+                        liveViewEndPoint.put(e.currentTarget.value, `image/colour`);
+                      }}>
+                      {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
+                        <option key={index} value={effect}>
                           {effect}
-                        </Dropdown.Item>
+                        </option>
                       ))}
-                    </EndPointDropdownSelector>
-                  </Form.Group>
+                    </Form.Select>
+                  </FloatingLabel>
               </div>
 
               {/* Image */}
