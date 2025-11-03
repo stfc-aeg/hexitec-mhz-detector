@@ -11,7 +11,7 @@ import { getRegionColor } from './colorUtils';
 import { ValueRangeControl } from './ValueRangeControl';
 import { ClickableImage } from './ClickableImage';
 import { HistogramPlot } from './HistogramPlot';
-import { floatingInputStyle } from '../../utils'
+import { floatingInputStyle, type MetadataType } from '../../utils'
 
 import type { ParamTree } from 'odin-react';
 
@@ -70,8 +70,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>(liveViewAddress, endpoint_url, 1000);
   const liveViewData = liveViewEndPoint?.data?.[name] as LiveViewTypes|undefined;
 
-  const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
-  const colour_metadata = liveViewMetadata?.[name]?.image?.colour;
+  const liveViewMetadata = liveViewEndPoint?.metadata?.[name] as LiveViewTypes|undefined;
+  const colour_metadata = liveViewMetadata?.image?.colour as MetadataType|undefined;
 
   const handleColorRangeChange = (newRange: [number, number]) => {
     setColorRange(newRange);
@@ -141,7 +141,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       style={floatingInputStyle}
                       value={liveViewData?.image?.colour || 'Select a colour'}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
-                        liveViewEndPoint.put(e.currentTarget.value, `image/colour`);
+                        let selectedColour = e.currentTarget.value;
+                        liveViewEndPoint.put({value: selectedColour}, `image/colour`);
                       }}>
                       {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
                         <option key={index} value={effect}>
