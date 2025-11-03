@@ -93,8 +93,10 @@ export function ClickableImage(props:ClickableImageProps)  {
 
   // Handle context menu = handle right click
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
-    const isRectangle = startPoint || endPoint || points.length > 0;
-
+    const isRectangle =
+      (Array.isArray(startPoint) && startPoint.length > 0) ||
+      (Array.isArray(endPoint) && endPoint.length > 0) ||
+      points.length > 0;
     if (isRectangle)
     {
       // Cancel context if already rectangle
@@ -106,9 +108,10 @@ export function ClickableImage(props:ClickableImageProps)  {
       setCoords([]);
     }
     // Otherwise open context menu as normal
-  }, []);
+  }, [startPoint, endPoint, points]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    if (e.button !== 0) { return; }  // Only draw on left click
     e.preventDefault();
     const point: Point = getPoint(e);
     setStartPoint(point);
