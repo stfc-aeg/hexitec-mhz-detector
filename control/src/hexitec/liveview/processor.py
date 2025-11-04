@@ -27,7 +27,7 @@ class HistogramLiveViewProcessor:
         self.size_x = size_x
         self.size_y = size_y
         self.colour = colour
-        self.last_valid_image = None
+        self.last_valid_image = {}
         self.regions = {}  # Dictionary to store multiple regions
         self.last_histograms = {}  # Store last valid histograms for each region
         self.scale_factor = 1.0  # Add this line
@@ -40,8 +40,8 @@ class HistogramLiveViewProcessor:
         
         # Value range for clipping and display
         self.value_range = {
-            'min': 0,
-            'max': 65535
+            'min': 0.0,
+            'max': 65535.0
         }
 
         # Log available colormaps

@@ -1,4 +1,3 @@
-import React from 'react';
 import { type RegionColor } from './colorUtils'
 import { type HistogramData } from './HistogramLiveView'
 

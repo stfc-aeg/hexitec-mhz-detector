@@ -6,7 +6,7 @@ import Acquisition from './pages/Acquisition';
 import AsicControl from './pages/AsicControl';
 import RegisterMap from './pages/RegisterMap';
 
-import HistogramLiveView from './components/liveview/HistogramLiveView';
+  import { HistogramLiveView } from './components/liveview/HistogramLiveView';
 
 function App() {
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
