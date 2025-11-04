@@ -24,7 +24,7 @@ class HistogramLiveViewController(BaseController):
         endpoints = [
             item.strip() for item in options.get('histogram_endpoint', '').split(",")
         ]
-        names = [
+        self.names = [
             item.strip() for item in options.get('endpoint_name', '').split(",")
         ]
         
@@ -41,7 +41,10 @@ class HistogramLiveViewController(BaseController):
             'max': int(bin_range[1])
         }
         
-        self.tree = {"histview": {}}
+        self.tree = {
+            '_image': {},
+            "histview": {}
+        }
         self.processors = []
 
         # Create processor for each endpoint
@@ -54,13 +57,13 @@ class HistogramLiveViewController(BaseController):
             self.processors.append(processor)
             
             # Build parameter tree branch
-            name = names[i]
+            name = self.names[i]
             self.tree['histview'][name] = {
                 "name": (lambda: name, None),
                 "endpoint": (lambda p=processor: p.endpoint, None),
                 "image": {
-                    "data": (lambda p=processor: p.get_image()['image'] if p.get_image() else None, None),
-                    "histograms": (lambda p=processor: p.get_image()['histograms'] if p.get_image() else None, None),
+                    # "data": (lambda p=processor: p.get_image()['image'] if p.get_image() else None, None),
+                    # "histograms": (lambda p=processor: p.get_image()['histograms'] if p.get_image() else None, None),
                     "regions": (
                         lambda p=processor: p.regions,
                         partial(self.set_regions, processor=processor)
@@ -84,6 +87,12 @@ class HistogramLiveViewController(BaseController):
                     ),
                 }
             }
+            self.tree['_image'].update({
+                name: {
+                    'image': (lambda: None, None),
+                    'histograms': (lambda: None, None)
+                }
+            })
    
         self.param_tree = ParameterTree(self.tree)
 
@@ -91,6 +100,13 @@ class HistogramLiveViewController(BaseController):
         """Initialize the controller with adapters."""
         self.adapters = adapters
         logging.debug("Initialized HistogramLiveViewController with %d adapters", len(adapters))
+
+    def get_image_from_processor_name(self, name):
+        """Return the image (data/histograms) object from the named processor."""
+        if name in self.names:
+            index = self.names.index(name)
+            processor = self.processors[index]
+            return processor.get_image()
 
     def cleanup(self):
         """Clean up controller resources."""

@@ -34,17 +34,27 @@ export interface HistogramData {
 }
 
 interface LiveViewTypes extends ParamTree {
-    endpoint: string;
-    image: {
-      colour: string;
-      data: any | null;
-      energy_range: number[];
-      histograms: any | null;
-      regions: any;
-      scale: number;
-      size_x: number;
-      size_y: number;
-      value_range: number[];
+    histview: {
+      [detectorName: string]: {
+        endpoint: string;
+        image: {
+          colour: string;
+          data: any | null;
+          energy_range: number[];
+          histograms: any | null;
+          regions: any;
+          scale: number;
+          size_x: number;
+          size_y: number;
+          value_range: number[];
+        };
+      }
+    };
+    _image: {
+      [detectorName: string]: {
+        image: undefined;
+        histograms: undefined;
+      }
     };
 }
 
@@ -66,12 +76,13 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
   const [colorRange, setColorRange] = useState<[number, number]>([0, 1000]);
 
-  const liveViewAddress = `liveview/histview/${name}`;
-  const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>(liveViewAddress, endpoint_url, 1000);
-  const liveViewData = liveViewEndPoint?.data?.[name] as LiveViewTypes|undefined;
+  const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
+  const liveViewData = liveViewEndPoint?.data?.histview?.[name];
+  const liveViewHistData = liveViewEndPoint?.data?._image?.[name];
+  const imgPath = `histview/${name}/image`;
 
   const liveViewMetadata = liveViewEndPoint?.metadata?.[name] as LiveViewTypes|undefined;
-  const colour_metadata = liveViewMetadata?.image?.colour as MetadataType|undefined;
+  const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
 
   const handleColorRangeChange = (newRange: [number, number]) => {
     setColorRange(newRange);
@@ -104,7 +115,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
     return () => clearInterval(timer);
   }, [lastUpdateTime]);
 
-  const histograms = Object.entries(liveViewData?.image?.histograms || {}) as [string, HistogramData][]; // regionId is a number but JS parsing
+  const histograms = Object.entries(liveViewHistData?.histograms || {}) as [string, HistogramData][]; // regionId is a number but JS parsing
   const layout = getGridLayout(histograms.length);
 
   return (
@@ -158,8 +169,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 <div className="position-relative">
                   <ClickableImage
                     endpoint={liveViewEndPoint}
-                    imgPath="image/data"
-                    coordsPath="image"
+                    imgPath={`_image/${name}/image`}
+                    coordsPath={imgPath}
                     coordsParam="regions"
                     regions={liveViewData?.image?.regions}
                     getRegionColor={getRegionColor}
@@ -175,7 +186,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     <Form.Label>Energy Bin Range Selection (0-1023)</Form.Label>
                     <EndPointDoubleSlider
                       endpoint={liveViewEndPoint}
-                      fullpath="image/energy_range"
+                      fullpath={`${imgPath}/energy_range`}
                       min={0}
                       max={1023}
                       step={1}

@@ -170,8 +170,9 @@ class HistogramLiveViewProcessor:
             dtype = header.get('dtype', 'uint32')
             
             # Decompress if needed
-            if len(msg[1]) != 80*80*4096:  # 26214400 = 80*80*4096
-                data = np.frombuffer(blosc.decompress(msg[1]), dtype=dtype)
+            if len(msg[1]) != 80*80*1024*4:  # 26214400 = 80*80*4096
+                # data = np.frombuffer(blosc.decompress(msg[1]), dtype=dtype)
+                data = np.frombuffer(msg[1], dtype=dtype)
             else:
                 data = np.frombuffer(msg[1], dtype=dtype)
                 
@@ -231,13 +232,14 @@ class HistogramLiveViewProcessor:
 
             _, buffer = cv2.imencode('.jpg', colour_data, flags)
             buffer = np.array(buffer)
+            logging.error(f"type buffer: {type(buffer)}")
             # encoded_data = base64.b64encode(buffer).decode('utf-8')
             
             # Update image queue
             while not self.image_queue.empty():
                 self.image_queue.get()
             self.image_queue.put({
-                'image': buffer,
+                'image': buffer.tobytes(),
                 'histograms': histograms
             })
             
