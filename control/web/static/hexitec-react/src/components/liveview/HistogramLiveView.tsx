@@ -81,14 +81,14 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const liveViewHistData = liveViewEndPoint?.data?._image?.[name];
   const imgPath = `histview/${name}/image`;
 
-  const liveViewMetadata = liveViewEndPoint?.metadata?.[name] as LiveViewTypes|undefined;
+  const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
 
   const handleColorRangeChange = (newRange: [number, number]) => {
     setColorRange(newRange);
     liveViewEndPoint.put({ 
       value_range: newRange
-    }, 'image');
+    }, imgPath);
   };
 
   // Timer effects remain the same...
@@ -140,28 +140,28 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
 
               {/* Color scale */}
               <div className="me-3">
-              <ValueRangeControl 
-                min={colorRange[0]}
-                max={colorRange[1]}
-                colormap={liveViewData?.image?.colour || 'bone'}
-                onRangeChange={handleColorRangeChange}
-              />
-                  <FloatingLabel
-                    label="Colourmap" className="mt-3">
-                    <Form.Select
-                      style={floatingInputStyle}
-                      value={liveViewData?.image?.colour || 'Select a colour'}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
-                        let selectedColour = e.currentTarget.value;
-                        liveViewEndPoint.put({value: selectedColour}, `image/colour`);
-                      }}>
-                      {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
-                        <option key={index} value={effect}>
-                          {effect}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </FloatingLabel>
+                <ValueRangeControl 
+                  min={colorRange[0]}
+                  max={colorRange[1]}
+                  colormap={liveViewData?.image?.colour || 'bone'}
+                  onRangeChange={handleColorRangeChange}
+                />
+                <FloatingLabel
+                  label="Colourmap" className="mt-3">
+                  <Form.Select
+                    style={floatingInputStyle}
+                    value={liveViewData?.image?.colour || 'Select a colour'}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
+                      let selectedColour = e.currentTarget.value;
+                      liveViewEndPoint.put({value: selectedColour}, `${imgPath}/colour`);
+                    }}>
+                    {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
+                      <option key={index} value={effect}>
+                        {effect}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </FloatingLabel>
               </div>
 
               {/* Image */}
