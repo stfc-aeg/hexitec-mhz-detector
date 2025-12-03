@@ -139,6 +139,7 @@ class HexitecController(BaseController):
 
                 elif state_name == "Error" and self.mhz_monitor.recover_flag:
                     self.mhz_monitor.recover()
+                    self.mhz_monitor.recover_flag = False  # Reset to avoid repeated attempts
 
             except Exception as e:
                 logging.error(f"ADXDMA monitor error: {e}")
