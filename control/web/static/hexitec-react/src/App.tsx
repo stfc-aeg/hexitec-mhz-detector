@@ -20,7 +20,7 @@ function App() {
         'Processing', 
         'Acquisition', 
         'Live View', 
-        'Histogram Control',
+        'Histogrammer Control',
         'ASIC Control', 
         'Register Map'
       ]}

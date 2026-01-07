@@ -105,9 +105,9 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
 
   return (
     <Container>
-      <TitleCard title="Histogram Control">
+      <TitleCard title="Histogrammer Control">
         <Row>
-          <Col>
+          <Col xs={12} lg={6} className="mb-3">
             <Row>
               <Col>
                 <FloatingLabel label="Status">
@@ -207,8 +207,8 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
             </Row>
 
           </Col>
-          <Col>
-            <FloatingLabel label="Complete Time Frames">
+          <Col xs={12} lg={6} xl={3}>
+            <FloatingLabel label="Complete Time Frames" className="mb-3">
               <Form.Control
                 plaintext
                 readOnly
@@ -216,7 +216,7 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
                 value={checkNullNoDp(histogramEndpoint.data?.acquisition?.count?.complete_time_frames)}
               />
             </FloatingLabel>
-            <FloatingLabel label="Raw hits">
+            <FloatingLabel label="Raw hits" className="mb-3">
               <Form.Control
                 plaintext
                 readOnly
@@ -224,7 +224,7 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
                 value={checkNullNoDp(histogramEndpoint.data?.acquisition?.count?.raw_hits)}
               />
             </FloatingLabel>
-            <FloatingLabel label="Detector Frames">
+            <FloatingLabel label="Detector Frames" className="mb-3">
               <Form.Control
                 plaintext
                 readOnly
@@ -232,7 +232,7 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
                 value={checkNullNoDp(histogramEndpoint.data?.acquisition?.count?.detector_frames)}
               />
             </FloatingLabel>
-            <FloatingLabel label="UDP Frames">
+            <FloatingLabel label="UDP Frames" className="mb-3">
               <Form.Control
                 plaintext
                 readOnly
@@ -241,7 +241,7 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
               />
             </FloatingLabel>
           </Col>
-          <Col xs={2}></Col>
+          <Col xs={12} lg={6} xl={3}></Col>
         </Row>
       </TitleCard>
     </Container>
