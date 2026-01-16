@@ -19,7 +19,7 @@ class HistogramLiveViewController(BaseController):
             options: Dictionary of configuration options
         """       
         logging.debug("Initializing HistogramLiveViewController")
-        
+
         # Get endpoints from config
         endpoints = [
             item.strip() for item in options.get('histogram_endpoint', '').split(",")
@@ -31,7 +31,7 @@ class HistogramLiveViewController(BaseController):
         # Parse dimensions
         dimensions = [
             tuple(map(int, dims.strip().split('x')))
-            for dims in options.get('data_dimensions', '80,80,1024').split(',')
+            for dims in options.get('data_dimensions', '80x80x1024').split(',')
         ]
         
         # Parse energy bin range

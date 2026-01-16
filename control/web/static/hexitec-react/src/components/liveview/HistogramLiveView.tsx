@@ -153,7 +153,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     value={liveViewData?.image?.colour || 'Select a colour'}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
                       let selectedColour = e.currentTarget.value;
-                      liveViewEndPoint.put({value: selectedColour}, `${imgPath}/colour`);
+                      liveViewEndPoint.put(selectedColour, `${imgPath}/colour`);
                     }}>
                     {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
                       <option key={index} value={effect}>

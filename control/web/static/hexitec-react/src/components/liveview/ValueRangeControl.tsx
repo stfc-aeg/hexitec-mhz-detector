@@ -221,6 +221,7 @@ export function ValueRangeControl({ min, max, colormap, onRangeChange }: ValueRa
                         Values above this will be clipped
                     </Form.Text>
                     <Form.Control 
+                        className='mb-3'
                         type="number" 
                         value={max} 
                         onChange={(e) => {
