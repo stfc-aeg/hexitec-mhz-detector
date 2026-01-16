@@ -21,21 +21,17 @@ class HistogramLiveViewController(BaseController):
         logging.debug("Initializing HistogramLiveViewController")
 
         # Get endpoints from config
+        # Theoretically can have multiple endpoints but they will have same dimensions/bins
+        # No use case for multiple endpoints currently so this can be revisited
         endpoints = [
             item.strip() for item in options.get('histogram_endpoint', '').split(",")
         ]
         self.names = [
             item.strip() for item in options.get('endpoint_name', '').split(",")
         ]
-        
-        # Parse dimensions
-        dimensions = [
-            map(int, dims.strip().split('x'))
-            for dims in options.get('data_dimensions', '80x80x1024').split(',')
-        ]
 
+        # Parse dimensions
         dimensions = list(map(int, options.get('data_dimensions', '80x80x1024').split('x')))
-        logging.warning(f"dimensions: {dimensions}")
 
         # Last part of dimensions is energy_bins
         num_bins = dimensions[2]
@@ -60,7 +56,7 @@ class HistogramLiveViewController(BaseController):
                 energy_range=energy_range
             )
             self.processors.append(processor)
-            
+
             # Build parameter tree branch
             name = self.names[i]
             self.tree['histview'][name] = {
@@ -100,7 +96,7 @@ class HistogramLiveViewController(BaseController):
                     'histograms': (lambda: None, None)
                 }
             })
-   
+
         self.param_tree = ParameterTree(self.tree)
 
     def initialize(self, adapters):
@@ -138,11 +134,11 @@ class HistogramLiveViewController(BaseController):
         except ParameterTreeError as error:
             logging.error("Error setting parameter: %s", error)
             raise HistogramLiveViewError(str(error))
-    
+
     def update_processor(self, processor, params):
         """Send parameter updates to processor."""
         processor.update_params(params)
-    
+
     def set_regions(self, value, processor):
         """Set regions for histograms."""
         if isinstance(value, dict):
@@ -158,27 +154,27 @@ class HistogramLiveViewController(BaseController):
         if isinstance(value, list) and len(value) == 2:
             processor.set_value_range(value[0], value[1])
             self.update_processor(processor, {"value_range": processor.value_range})
-    
+
     def set_size_x(self, value, processor):
         """Set display width."""
         processor.size_x = int(value)
         self.update_processor(processor, {"size_x": processor.size_x})
-        
+
     def set_size_y(self, value, processor):
         """Set display height."""
         processor.size_y = int(value)
         self.update_processor(processor, {"size_y": processor.size_y})
-        
+
     def set_colour(self, value, processor):
         """Set colormap."""
         processor.colour = str(value)
         self.update_processor(processor, {"colour": processor.colour})
-        
+
     def set_scale(self, value, processor):
         """Set scale factor."""
         processor.scale_factor = float(value)
         self.update_processor(processor, {"scale_factor": processor.scale_factor})
-        
+
     def set_energy_range(self, value, processor):
         """Set energy bin range."""
         processor.energy_range['min'] = int(value[0])
