@@ -31,11 +31,13 @@ class HistogramLiveViewProcessor:
         self.regions = {}  # Dictionary to store multiple regions
         self.last_histograms = {}  # Store last valid histograms for each region
         self.scale_factor = 1.0  # Add this line
-        
+
+        self.num_bins = dimensions[2]
+
         # Energy bin selection range
         self.energy_range = energy_range or {
             'min': 0,
-            'max': dimensions[2] - 1
+            'max': self.num_bins - 1
         }
         
         # Value range for clipping and display
@@ -66,7 +68,7 @@ class HistogramLiveViewProcessor:
         # Start processing in background
         self.process = Process(target=self.process_data, args=(self,))
         self.process.start()
-        
+
         logging.debug("Initialized HistogramLiveDataProcessor on %s", endpoint)
 
 

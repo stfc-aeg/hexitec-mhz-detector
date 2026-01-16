@@ -30,15 +30,20 @@ class HistogramLiveViewController(BaseController):
         
         # Parse dimensions
         dimensions = [
-            tuple(map(int, dims.strip().split('x')))
+            map(int, dims.strip().split('x'))
             for dims in options.get('data_dimensions', '80x80x1024').split(',')
         ]
-        
-        # Parse energy bin range
-        bin_range = options.get('energy_bin_range', '0:1023').split(':')
+
+        dimensions = list(map(int, options.get('data_dimensions', '80x80x1024').split('x')))
+        logging.warning(f"dimensions: {dimensions}")
+
+        # Last part of dimensions is energy_bins
+        num_bins = dimensions[2]
+
+        # Default energy bin range is full range
         energy_range = {
-            'min': int(bin_range[0]),
-            'max': int(bin_range[1])
+            'min': 0,
+            'max': num_bins - 1
         }
         
         self.tree = {
@@ -51,7 +56,7 @@ class HistogramLiveViewController(BaseController):
         for i, endpoint in enumerate(endpoints):
             processor = HistogramLiveViewProcessor(
                 endpoint,
-                dimensions=dimensions[i],
+                dimensions=dimensions,
                 energy_range=energy_range
             )
             self.processors.append(processor)
@@ -85,6 +90,8 @@ class HistogramLiveViewController(BaseController):
                         lambda p=processor: [p.energy_range['min'], p.energy_range['max']],
                         partial(self.set_energy_range, processor=processor)
                     ),
+                    "num_bins": (lambda p=processor: p.num_bins,
+                                 partial(self.set_num_bins, processor=processor))
                 }
             }
             self.tree['_image'].update({
@@ -177,3 +184,13 @@ class HistogramLiveViewController(BaseController):
         processor.energy_range['min'] = int(value[0])
         processor.energy_range['max'] = int(value[1])
         self.update_processor(processor, {"energy_range": processor.energy_range})
+
+    def set_num_bins(self, value, processor):
+        """Set number of energy bins."""
+        processor.num_bins = int(value)
+        update = {"num_bins": processor.num_bins}
+        # Check this hasn't invalidated the energy range
+        if processor.num_bins <= processor.energy_range['max']:
+            processor.energy_range['max'] = processor.num_bins - 1
+            update["energy_range"] = processor.energy_range  # Update whole thing just in case
+        self.update_processor(processor, update)

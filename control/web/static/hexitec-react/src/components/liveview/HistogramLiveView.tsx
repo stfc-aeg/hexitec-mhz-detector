@@ -41,6 +41,7 @@ interface LiveViewTypes extends ParamTree {
           colour: string;
           data: any | null;
           energy_range: number[];
+          num_bins: number;
           histograms: any | null;
           regions: any;
           scale: number;
@@ -80,6 +81,9 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const liveViewData = liveViewEndPoint?.data?.histview?.[name];
   const liveViewHistData = liveViewEndPoint?.data?._image?.[name];
   const imgPath = `histview/${name}/image`;
+
+  // This appears as the ranges stuck together so it needs formatting into (x - y)
+  const energyRange = `(0- ${liveViewData?.image['num_bins'] -1})`;
 
   const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
@@ -183,15 +187,15 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 {/* Image Controls */}
                 <div className="mt-3">
                   <Form.Group>
-                    <Form.Label>Energy Bin Range Selection (0-1023)</Form.Label>
+                    <Form.Label>Energy Bin Range Selection {energyRange}</Form.Label>
                     <EndPointDoubleSlider
                       endpoint={liveViewEndPoint}
                       fullpath={`${imgPath}/energy_range`}
                       min={0}
-                      max={1023}
+                      max={liveViewData?.image['num_bins'] - 1}
                       step={1}
                       title="Energy Bins"
-                      value={liveViewData?.image?.energy_range || [0, 1023]}
+                      value={liveViewData?.image?.energy_range}
                     />
                   </Form.Group>
                 </div>
