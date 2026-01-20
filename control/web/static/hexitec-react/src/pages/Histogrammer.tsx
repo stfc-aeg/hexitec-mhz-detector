@@ -1,97 +1,11 @@
-import { Container, Row, Col, Card, Form, Button, FloatingLabel } from 'react-bootstrap';
-import { UserAware } from '../components/UserAware';
+import { Container, Row, Col, Form, Button, FloatingLabel } from 'react-bootstrap';
 import { useAdapterEndpoint, WithEndpoint, TitleCard } from 'odin-react';
-import { checkNullNoDp, floatingInputStyle, floatingLabelStyle, type MetadataType } from '../utils.js';
-import type { ParamTree } from 'odin-react';
+import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../utils.js';
+import type { HistogramTypes, MetadataType } from '../EndpointTypes';
 
 interface HistogramProps {
   endpoint_url: string;
 }
-
-interface HistogramTypes extends ParamTree {
-  acquisition: {
-    count: {
-      complete_time_frames: number;
-      detector_frames: number;
-      raw_hits: number;
-      udp_frames: number;
-    };
-    input_frames: number;
-    itfg: {
-      input_frames: number;
-      output_frames: number;
-      status: string;
-    };
-    mode: string;
-    output_frames: number;
-    run: boolean;
-    timer: number;
-  };
-  config: {
-    baseline: {
-      dither: boolean;
-      divide: number;
-      mask: string;
-    };
-    clustering: {
-      auto_trig_mode: string;
-      mode: string;
-      types: {
-        diag1: boolean;
-        diag1nl: boolean;
-        diag1nr: boolean;
-        diag2: boolean;
-        diag2nl: boolean;
-        diag2nr: boolean;
-        hoz: boolean;
-        "hoz nl": boolean;
-        "hoz nr": boolean;
-        l1: boolean;
-        l2: boolean;
-        l3: boolean;
-        l4: boolean;
-        lone: boolean;
-        quad: boolean;
-        vert: boolean;
-        "vert na": boolean;
-        "vert nb": boolean;
-      };
-    };
-    hist_format: {
-      mapped_mode: string;
-      num_bins: number;
-      run_mode: string;
-    };
-    thresholds: {
-      absolute: number[];
-      low: number[];
-      main: number[];
-    };
-  };
-  device: {
-    connect: boolean;
-    device_num: number;
-    status: string;
-  };
-  udp: {
-    accelerator: {
-      port: number;
-      rx_ip: string;
-      tx_ip: string;
-    };
-    destination: {
-      ip: string;
-      port: number;
-    };
-    setup: any;
-    source: {
-      ip: string;
-      port: number;
-    };
-    udp_threads: number;
-  };
-}
-
 
 const EndpointButton = WithEndpoint(Button);
 const EndpointFormControl = WithEndpoint(Form.Control);
@@ -146,7 +60,7 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
                 <FloatingLabel label="Duration (s)">
                   <EndpointFormControl
                     endpoint={histogramEndpoint}
-                    fullpath="acquisition/timer"
+                    fullpath="acquisition/duration"
                     type="number"
                     style={floatingInputStyle}
                   />
@@ -179,7 +93,7 @@ function HistogramControl({ endpoint_url }: HistogramProps) {
               <Col>
                 <EndpointButton
                   endpoint={histogramEndpoint} fullpath="acquisition/run"
-                  value={true}
+                  value={histogramEndpoint.data?.acquisition?.run ? false : true}
                   variant={histogramEndpoint.data?.acquisition?.run ? 'danger' : 'primary'}
                 >
                   {histogramEndpoint.data?.acquisition?.run ? 'Stop Histogrammer' : 'Start Histogrammer'}
