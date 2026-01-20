@@ -83,7 +83,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const imgPath = `histview/${name}/image`;
 
   // This appears as the ranges stuck together so it needs formatting into (x - y)
-  const energyRange = `(0- ${liveViewData?.image['num_bins'] -1})`;
+  const energyRange = `(0 - ${liveViewData?.image['num_bins'] -1})`;
 
   const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
