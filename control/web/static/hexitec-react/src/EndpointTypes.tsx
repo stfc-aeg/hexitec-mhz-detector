@@ -81,6 +81,10 @@ export interface HistogramTypes extends ParamTree {
       };
     };
     hist_format: {
+      bad_pixel_mask: {
+        filename: string;
+        load: null;
+      };
       mapped_mode: string;
       num_bins: number;
       run_mode: string;
@@ -89,6 +93,10 @@ export interface HistogramTypes extends ParamTree {
       absolute: number[];
       low: number[];
       main: number[];
+      bad_pixel: {
+        filename: string;
+        load: null;
+      };
     };
   };
   device: {

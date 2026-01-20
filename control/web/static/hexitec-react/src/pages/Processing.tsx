@@ -1,8 +1,9 @@
 import { Container, Row, Col, Card, Form, Button, InputGroup } from 'react-bootstrap';
 import { useAdapterEndpoint, WithEndpoint } from 'odin-react';
-import type { HistogramTypes } from '../EndpointTypes';
+import type { HistogramTypes, MetadataType } from '../EndpointTypes';
 import { UserAware } from '../components/UserAware';
 import React, { useState, useEffect } from "react";
+import { FilePicker } from '../components/FilePicker';
 
 interface ProcessingProps {
   endpoint_url: string;
@@ -93,6 +94,11 @@ const EndpointCheck = WithEndpoint(Form.Check);
 function Processing({ endpoint_url }: ProcessingProps) {
   const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
 
+  const histogramMetadata = histogramEndpoint.metadata as HistogramTypes|undefined;
+  // The allowed values here usually match but are separated for consistency
+  const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename as MetadataType|undefined;  
+  const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename as MetadataType|undefined;
+
   return (
     <Container>
       <Row>
@@ -105,25 +111,39 @@ function Processing({ endpoint_url }: ProcessingProps) {
                 <Row className="mb-3">
                   <Col>
                     <Form.Label>Gradients Upload</Form.Label>
-                    <Form.Control type="file" accept=".csv" />
+                    <Form.Control type="file" accept=".csv" disabled/>
                   </Col>
                 </Row>
                 <Row className="mb-3">
                   <Col>
                     <Form.Label>Intercepts Upload</Form.Label>
-                    <Form.Control type="file" accept=".csv" />
+                    <Form.Control type="file" accept=".csv" disabled/>
                   </Col>
                 </Row>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Thresholds Upload</Form.Label>
-                    <Form.Control type="file" accept=".csv" />
+                    <Form.Label>Bad Pixel Thresholds Upload</Form.Label>
+                    <FilePicker
+                      endpoint={histogramEndpoint}
+                      fullpath={"config/thresholds/bad_pixel/filename"}
+                      buttonText={histogramEndpoint.data?.config?.thresholds?.bad_pixel?.filename}
+                      param_metadata={badpixthres_metadata}
+                      loadButton={true}
+                      loadPath={"config/thresholds/bad_pixel/load"}
+                    />
                   </Col>
                 </Row>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Pixel Mask Upload</Form.Label>
-                    <Form.Control type="file" accept=".csv" />
+                    <Form.Label>Bad Pixel Mask Upload</Form.Label>
+                    <FilePicker
+                      endpoint={histogramEndpoint}
+                      fullpath={"config/hist_format/bad_pixel_mask/filename"}
+                      buttonText={histogramEndpoint.data?.config?.hist_format?.bad_pixel_mask?.filename}
+                      param_metadata={badpixmask_metadata}
+                      loadButton={true}
+                      loadPath={"config/hist_format/bad_pixel_mask/load"}
+                    />
                   </Col>
                 </Row>
               </Card.Body>
