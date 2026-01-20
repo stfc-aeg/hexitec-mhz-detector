@@ -13,11 +13,3 @@ export const floatingInputStyle = {
   border: "1px solid #ced4da", // thin Bootstrap-like grey border
   borderRadius: "0.375rem",    // Bootstrap default rounded corners
 };
-
-export interface MetadataType {
-  value: any;
-  writeable: boolean;
-  min?: number;
-  max?: number;
-  allowed_values?: any[]
-}
