@@ -1,11 +1,96 @@
-import { Container, Row, Col, Card, Form, Button, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, InputGroup } from 'react-bootstrap';
+import { useAdapterEndpoint } from 'odin-react';
+import type { HistogramTypes } from '../EndpointTypes';
 import { UserAware } from '../components/UserAware';
+import React, { useState, useEffect } from "react";
 
 interface ProcessingProps {
   endpoint_url: string;
 }
 
+interface ThresholdPairProps {
+  label: string;
+  endpoint: any;
+  path: string;
+  initialMin?: number;
+  initialMax?: number;
+}
+
+// Component for editing a pair of thresholds (min and max) to save space
+function ThresholdPair({
+  label,  // low, main, absolute
+  endpoint,
+  path,
+  // initial values are optional - used if no value can be found on endpoint
+  initialMin=0,
+  initialMax=10
+}: ThresholdPairProps) {
+  const endpointPair = endpoint?.data?.config?.thresholds?.[label.toLowerCase()];
+
+  const [min, setMin] = useState(endpointPair?.[0] ?? initialMin);
+  const [max, setMax] = useState(endpointPair?.[1] ?? initialMax);
+  const [changed, setChanged] = useState(false);
+
+  const changedStyle: React.CSSProperties = {
+    backgroundColor: "var(--bs-highlight-bg)",
+    color: "var(--bs-body-color)",
+  };
+
+  const componentPair: [number, number] = [min, max];
+
+  useEffect(() => {
+    if (!endpointPair || min == null || max == null) {
+      setChanged(false);
+      return;
+    }
+
+  setChanged(
+    min !== endpointPair[0] ||
+    max !== endpointPair[1]
+  );
+  }, [min, max, endpointPair]);
+
+  // Would do this with EndpointButton but need to pass both min and max together
+  const submitPair = () => {
+    console.log(min, max);
+    endpoint.put(componentPair, path)
+  };
+
+  return (
+    <InputGroup className="mb-2 align-items-center">
+      <Form.Control
+        type="number"
+        value={min}
+        style={changed ? changedStyle : {}}
+        onChange={(e) => {
+          setMin(Number(e.target.value));
+        }}
+      />
+      <InputGroup.Text className="fw-semibold">
+        {label}
+      </InputGroup.Text>
+      <Form.Control
+        type="number"
+        value={max}
+        style={changed ? changedStyle : {}}
+        onChange={(e) => {
+          setMax(Number(e.target.value));
+        }}
+      />
+      <Button
+        variant={changed ? "primary" : "outline-secondary"}
+        onClick={submitPair}
+        disabled={!changed}
+      >
+        Apply Pair
+      </Button>
+    </InputGroup>
+  );
+}
+
 function Processing({ endpoint_url }: ProcessingProps) {
+  const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
+
   return (
     <Container>
       <Row>
@@ -72,12 +157,25 @@ function Processing({ endpoint_url }: ProcessingProps) {
                 <Row className="mb-3">
                   <Col>
                     <Form.Label>Thresholds Global</Form.Label>
-                    <Form.Control type="number" defaultValue="50" />
-                    <Form.Text className="text-muted">Value (ADU)</Form.Text>
+                    {/* These are min/max pairs */}
+                     <ThresholdPair
+                      label="Low"
+                      endpoint={histogramEndpoint}
+                      path="config/thresholds/low"
+                    />
+                    <ThresholdPair
+                      label="Main"
+                      endpoint={histogramEndpoint}
+                      path="config/thresholds/main"
+                    />
+                    <ThresholdPair
+                      label="Absolute"
+                      endpoint={histogramEndpoint}
+                      path="config/thresholds/absolute"
+                    />
                   </Col>
                 </Row>
               </UserAware>
-
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
                 <Row className="mb-3">
                   <Col>
