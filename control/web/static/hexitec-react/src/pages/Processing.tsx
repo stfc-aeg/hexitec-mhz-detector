@@ -1,5 +1,5 @@
 import { Container, Row, Col, Card, Form, Button, InputGroup } from 'react-bootstrap';
-import { useAdapterEndpoint } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint } from 'odin-react';
 import type { HistogramTypes } from '../EndpointTypes';
 import { UserAware } from '../components/UserAware';
 import React, { useState, useEffect } from "react";
@@ -88,6 +88,8 @@ function ThresholdPair({
   );
 }
 
+const EndpointCheck = WithEndpoint(Form.Check);
+
 function Processing({ endpoint_url }: ProcessingProps) {
   const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
 
@@ -137,12 +139,31 @@ function Processing({ endpoint_url }: ProcessingProps) {
               <UserAware userLevel="basic" endpoint_url={endpoint_url}>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Charge-sharing Options</Form.Label>
-                    <Form.Select>
-                      <option value="off" selected>Off</option>
-                      <option value="csd">CSD</option>
-                      <option value="csa">CSA</option>
-                    </Form.Select>
+                    <Form.Label><b>Charge-sharing Options</b></Form.Label>
+                    <EndpointCheck
+                      endpoint={histogramEndpoint}
+                      fullpath="config/charge_sharing/positive_edge"
+                      type="switch"
+                      label="Positive Edge"
+                    />
+                    <EndpointCheck
+                      endpoint={histogramEndpoint}
+                      fullpath="config/charge_sharing/negative_neighbour"
+                      type="switch"
+                      label="Negative Neighbour"
+                    />
+                    <EndpointCheck
+                      endpoint={histogramEndpoint}
+                      fullpath="config/charge_sharing/position_adjust"
+                      type="switch"
+                      label="Position Adjust"
+                    />
+                    <EndpointCheck
+                      endpoint={histogramEndpoint}
+                      fullpath="config/charge_sharing/sum_enable"
+                      type="switch"
+                      label="Sum Enable"
+                    />
                   </Col>
                 </Row>
               </UserAware>
@@ -151,12 +172,12 @@ function Processing({ endpoint_url }: ProcessingProps) {
                 <Row className="mb-3">
                   <Col sm={6}>
                     <Form.Label>Dark Tracking</Form.Label>
-                    <Form.Check type="switch" id="dark-tracking" label="On" defaultChecked />
+                    <Form.Check type="switch" id="dark-tracking" label="On" defaultChecked disabled/>
                   </Col>
                 </Row>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Thresholds Global</Form.Label>
+                    <Form.Label><b>Thresholds Global</b></Form.Label>
                     {/* These are min/max pairs */}
                      <ThresholdPair
                       label="Low"
