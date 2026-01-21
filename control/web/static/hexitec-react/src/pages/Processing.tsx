@@ -12,17 +12,22 @@ interface ProcessingProps {
 
 const EndpointCheck = WithEndpoint(Form.Check);
 const EndpointFormControl = WithEndpoint(Form.Control);
+const EndpointSelect = WithEndpoint(Form.Select);
 
 function Processing({ endpoint_url }: ProcessingProps) {
   const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
 
   const histogramMetadata = histogramEndpoint.metadata as HistogramTypes|undefined;
-  // The allowed values here usually match but are separated for consistency
+  // File uploads: the allowed values here usually match but are separated for consistency
   const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename as MetadataType|undefined;  
   const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename as MetadataType|undefined;
   const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename as MetadataType|undefined;
   const posfile_metadata = histogramMetadata?.config?.charge_sharing?.mc_filename as MetadataType|undefined;
   const mcfile_metadata = histogramMetadata?.config?.charge_sharing?.pos_filename as MetadataType|undefined;
+
+  // Baseline tracking
+  const baselinedivide_metadata = histogramMetadata?.config?.baseline?.divide as MetadataType|undefined;
+  const baselinemask_metadata = histogramMetadata?.config?.baseline?.mask as MetadataType|undefined;
 
   return (
     <Container>
@@ -160,9 +165,58 @@ function Processing({ endpoint_url }: ProcessingProps) {
 
               <UserAware userLevel="power" endpoint_url={endpoint_url}>
                 <Row className="mb-3">
-                  <Col sm={6}>
-                    <Form.Label>Dark Tracking</Form.Label>
-                    <Form.Check type="switch" id="dark-tracking" label="On" defaultChecked disabled/>
+                  <Col>
+                    <Form.Label><b>Dark Tracking / Baseline Load</b></Form.Label>
+                    <Row className="mb-3">
+                      <Col>
+                        <EndpointCheck
+                          endpoint={histogramEndpoint}
+                          fullpath={"config/baseline/dither"}
+                          label="Dither"
+                          type="switch"
+                        />
+                      </Col>
+                    </Row>
+                    <Row className="mb-3">
+                      <Col>
+                        <InputGroup>
+                          <InputGroup.Text className="justify-content-center" style={{width:'33%'}}>Baseline Divide</InputGroup.Text>
+                          <EndpointSelect
+                            endpoint={histogramEndpoint}
+                            fullpath={"config/baseline/divide"}
+                            value={histogramEndpoint.data?.config.baseline?.divide}
+                          >
+                            {(baselinedivide_metadata?.allowed_values ?? []).map(
+                              (selection, index) => (
+                                <option value={selection} key={selection}>
+                                  {selection}
+                                </option>
+                              )
+                            )}
+                          </EndpointSelect>
+                        </InputGroup>
+                      </Col>
+                    </Row>
+                    <Row className="mb-3">
+                      <Col>
+                        <InputGroup>
+                          <InputGroup.Text className="justify-content-center" style={{width:'33%'}}>Baseline Mask</InputGroup.Text>
+                          <EndpointSelect
+                            endpoint={histogramEndpoint}
+                            fullpath={"config/baseline/mask"}
+                            value={histogramEndpoint.data?.config.baseline?.mask}
+                          >
+                            {(baselinemask_metadata?.allowed_values ?? []).map(
+                              (selection, index) => (
+                                <option value={selection} key={selection}>
+                                  {selection}
+                                </option>
+                              )
+                            )}
+                          </EndpointSelect>
+                        </InputGroup>
+                      </Col>
+                    </Row>
                   </Col>
                 </Row>
                 <Row className="mb-3">
