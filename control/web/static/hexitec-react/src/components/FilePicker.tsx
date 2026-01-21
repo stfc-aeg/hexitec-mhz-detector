@@ -10,7 +10,7 @@ interface FilePickerProps {
   fullpath: string;
   buttonText: any;  // e.g. endpoint.data.path_a.path_b.param
   param_metadata: MetadataType | undefined;
-  label?: string;
+  defaultLabel?: string;
   loadButton?: boolean;  // Do you need a button to load the file
   loadPath?: string;  // Optional as is the button
 }
@@ -18,17 +18,19 @@ interface FilePickerProps {
 const EndpointSelect = WithEndpoint(Form.Select);
 const EndpointButton = WithEndpoint(Button);
 
-export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, label="Select file:", loadButton=true, loadPath=fullpath }: FilePickerProps) {
+export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, defaultLabel="Select file...", loadButton=true, loadPath=fullpath }: FilePickerProps) {
   return (
     <InputGroup>
-      <InputGroup.Text>{label}</InputGroup.Text>
       <EndpointSelect
         endpoint={endpoint}
         fullpath={fullpath}
         variant='outline-secondary'
         value={buttonText}
       >
-        {(param_metadata?.allowed_values ?? []).map(
+        <option value="" disabled>{defaultLabel}</option>
+        {(param_metadata?.allowed_values ?? [])
+          .filter((selection): selection is string => Boolean(selection))  // Removes non-truthy options like "" or null
+          .map(
           (selection, index) => (
             <option value={selection} key={selection}>
               {selection}

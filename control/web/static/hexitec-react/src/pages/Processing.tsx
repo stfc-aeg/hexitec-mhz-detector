@@ -20,6 +20,9 @@ function Processing({ endpoint_url }: ProcessingProps) {
   // The allowed values here usually match but are separated for consistency
   const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename as MetadataType|undefined;  
   const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename as MetadataType|undefined;
+  const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename as MetadataType|undefined;
+  const posfile_metadata = histogramMetadata?.config?.charge_sharing?.mc_filename as MetadataType|undefined;
+  const mcfile_metadata = histogramMetadata?.config?.charge_sharing?.pos_filename as MetadataType|undefined;
 
   return (
     <Container>
@@ -44,7 +47,7 @@ function Processing({ endpoint_url }: ProcessingProps) {
                 </Row>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Bad Pixel Thresholds Upload</Form.Label>
+                    <Form.Label>Bad Pixel Thresholds File load</Form.Label>
                     <FilePicker
                       endpoint={histogramEndpoint}
                       fullpath={"config/thresholds/bad_pixel/filename"}
@@ -57,7 +60,7 @@ function Processing({ endpoint_url }: ProcessingProps) {
                 </Row>
                 <Row className="mb-3">
                   <Col>
-                    <Form.Label>Bad Pixel Mask Upload</Form.Label>
+                    <Form.Label>Bad Pixel Mask File load</Form.Label>
                     <FilePicker
                       endpoint={histogramEndpoint}
                       fullpath={"config/hist_format/bad_pixel_mask/filename"}
@@ -82,30 +85,75 @@ function Processing({ endpoint_url }: ProcessingProps) {
                 <Row className="mb-3">
                   <Col>
                     <Form.Label><b>Charge-sharing Options</b></Form.Label>
-                    <EndpointCheck
-                      endpoint={histogramEndpoint}
-                      fullpath="config/charge_sharing/positive_edge"
-                      type="switch"
-                      label="Positive Edge"
-                    />
-                    <EndpointCheck
-                      endpoint={histogramEndpoint}
-                      fullpath="config/charge_sharing/negative_neighbour"
-                      type="switch"
-                      label="Negative Neighbour"
-                    />
-                    <EndpointCheck
-                      endpoint={histogramEndpoint}
-                      fullpath="config/charge_sharing/position_adjust"
-                      type="switch"
-                      label="Position Adjust"
-                    />
-                    <EndpointCheck
-                      endpoint={histogramEndpoint}
-                      fullpath="config/charge_sharing/sum_enable"
-                      type="switch"
-                      label="Sum Enable"
-                    />
+                    <Row>
+                      <Col>
+                        <EndpointCheck
+                          endpoint={histogramEndpoint}
+                          fullpath="config/charge_sharing/positive_edge"
+                          type="switch"
+                          label="Positive Edge"
+                        />
+                      </Col>
+                      <Col>
+                        <EndpointCheck
+                          endpoint={histogramEndpoint}
+                          fullpath="config/charge_sharing/sum_enable"
+                          type="switch"
+                          label="Sum Enable"
+                        />
+                      </Col>
+                    </Row>
+                    <Row className="mb-3">
+                      <Col>
+                        <EndpointCheck
+                          endpoint={histogramEndpoint}
+                          fullpath="config/charge_sharing/negative_neighbour"
+                          type="switch"
+                          label="Negative Neighbour"
+                        />
+                      </Col>
+                      <Col>
+                        <EndpointCheck
+                          endpoint={histogramEndpoint}
+                          fullpath="config/charge_sharing/position_adjust"
+                          type="switch"
+                          label="Position Adjust"
+                        />
+                      </Col>
+                    </Row>
+                    <Row className="mb-2">
+                      <Form.Label>L3 File load</Form.Label>
+                      <FilePicker
+                        endpoint={histogramEndpoint}
+                        fullpath={"config/charge_sharing/l3_filename"}
+                        buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename}
+                        param_metadata={l3file_metadata}
+                        loadButton={true}
+                        loadPath={"config/charge_sharing/l3_load"}
+                      />
+                    </Row>
+                    <Row className="mb-2">
+                      <Form.Label>MC File load</Form.Label>
+                      <FilePicker
+                        endpoint={histogramEndpoint}
+                        fullpath={"config/charge_sharing/mc_filename"}
+                        buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename}
+                        param_metadata={mcfile_metadata}
+                        loadButton={true}
+                        loadPath={"config/charge_sharing/mc_load"}
+                      />
+                    </Row>
+                    <Row className="mb-2">
+                      <Form.Label>Pos File load</Form.Label>
+                      <FilePicker
+                        endpoint={histogramEndpoint}
+                        fullpath={"config/charge_sharing/pos_filename"}
+                        buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename}
+                        param_metadata={posfile_metadata}
+                        loadButton={true}
+                        loadPath={"config/charge_sharing/pos_load"}
+                      />
+                    </Row>
                   </Col>
                 </Row>
               </UserAware>
