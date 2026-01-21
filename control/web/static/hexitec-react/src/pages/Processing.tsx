@@ -1,95 +1,17 @@
-import { Container, Row, Col, Card, Form, Button, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, InputGroup, FloatingLabel } from 'react-bootstrap';
 import { useAdapterEndpoint, WithEndpoint } from 'odin-react';
 import type { HistogramTypes, MetadataType } from '../EndpointTypes';
 import { UserAware } from '../components/UserAware';
 import React, { useState, useEffect } from "react";
 import { FilePicker } from '../components/FilePicker';
+import { floatingInputStyle } from '../utils';
 
 interface ProcessingProps {
   endpoint_url: string;
 }
 
-interface ThresholdPairProps {
-  label: string;
-  endpoint: any;
-  path: string;
-  initialMin?: number;
-  initialMax?: number;
-}
-
-// Component for editing a pair of thresholds (min and max) to save space
-function ThresholdPair({
-  label,  // low, main, absolute
-  endpoint,
-  path,
-  // initial values are optional - used if no value can be found on endpoint
-  initialMin=0,
-  initialMax=10
-}: ThresholdPairProps) {
-  const endpointPair = endpoint?.data?.config?.thresholds?.[label.toLowerCase()];
-
-  const [min, setMin] = useState(endpointPair?.[0] ?? initialMin);
-  const [max, setMax] = useState(endpointPair?.[1] ?? initialMax);
-  const [changed, setChanged] = useState(false);
-
-  const changedStyle: React.CSSProperties = {
-    backgroundColor: "var(--bs-highlight-bg)",
-    color: "var(--bs-body-color)",
-  };
-
-  const componentPair: [number, number] = [min, max];
-
-  useEffect(() => {
-    if (!endpointPair || min == null || max == null) {
-      setChanged(false);
-      return;
-    }
-
-  setChanged(
-    min !== endpointPair[0] ||
-    max !== endpointPair[1]
-  );
-  }, [min, max, endpointPair]);
-
-  // Would do this with EndpointButton but need to pass both min and max together
-  const submitPair = () => {
-    console.log(min, max);
-    endpoint.put(componentPair, path)
-  };
-
-  return (
-    <InputGroup className="mb-2 align-items-center">
-      <Form.Control
-        type="number"
-        value={min}
-        style={changed ? changedStyle : {}}
-        onChange={(e) => {
-          setMin(Number(e.target.value));
-        }}
-      />
-      <InputGroup.Text className="fw-semibold">
-        {label}
-      </InputGroup.Text>
-      <Form.Control
-        type="number"
-        value={max}
-        style={changed ? changedStyle : {}}
-        onChange={(e) => {
-          setMax(Number(e.target.value));
-        }}
-      />
-      <Button
-        variant={changed ? "primary" : "outline-secondary"}
-        onClick={submitPair}
-        disabled={!changed}
-      >
-        Apply Pair
-      </Button>
-    </InputGroup>
-  );
-}
-
 const EndpointCheck = WithEndpoint(Form.Check);
+const EndpointFormControl = WithEndpoint(Form.Control);
 
 function Processing({ endpoint_url }: ProcessingProps) {
   const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
@@ -199,21 +121,57 @@ function Processing({ endpoint_url }: ProcessingProps) {
                   <Col>
                     <Form.Label><b>Thresholds Global</b></Form.Label>
                     {/* These are min/max pairs */}
-                     <ThresholdPair
-                      label="Low"
-                      endpoint={histogramEndpoint}
-                      path="config/thresholds/low"
-                    />
-                    <ThresholdPair
-                      label="Main"
-                      endpoint={histogramEndpoint}
-                      path="config/thresholds/main"
-                    />
-                    <ThresholdPair
-                      label="Absolute"
-                      endpoint={histogramEndpoint}
-                      path="config/thresholds/absolute"
-                    />
+                    <InputGroup>
+                      <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Low</InputGroup.Text>
+                      <FloatingLabel label="Negative">
+                        <EndpointFormControl 
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/low/neg"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                      <FloatingLabel label="Positive">
+                        <EndpointFormControl 
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/low/pos"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                    </InputGroup>
+                    <InputGroup>
+                      <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Main</InputGroup.Text>
+                      <FloatingLabel label="Negative">
+                        <EndpointFormControl 
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/main/neg"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                      <FloatingLabel label="Positive">
+                        <EndpointFormControl 
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/main/pos"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                    </InputGroup>
+                    <InputGroup>
+                      <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Absolute</InputGroup.Text>
+                      <FloatingLabel label="Low">
+                        <EndpointFormControl 
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/absolute/low"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                      <FloatingLabel label="High">
+                        <EndpointFormControl 
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/absolute/high"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                    </InputGroup>
                   </Col>
                 </Row>
               </UserAware>
