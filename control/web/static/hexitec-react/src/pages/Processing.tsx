@@ -184,7 +184,7 @@ function Processing({ endpoint_url }: ProcessingProps) {
                           <EndpointSelect
                             endpoint={histogramEndpoint}
                             fullpath={"config/baseline/divide"}
-                            value={histogramEndpoint.data?.config.baseline?.divide}
+                            value={histogramEndpoint.data?.config?.baseline?.divide}
                           >
                             {(baselinedivide_metadata?.allowed_values ?? []).map(
                               (selection, index) => (
@@ -204,7 +204,7 @@ function Processing({ endpoint_url }: ProcessingProps) {
                           <EndpointSelect
                             endpoint={histogramEndpoint}
                             fullpath={"config/baseline/mask"}
-                            value={histogramEndpoint.data?.config.baseline?.mask}
+                            value={histogramEndpoint.data?.config?.baseline?.mask}
                           >
                             {(baselinemask_metadata?.allowed_values ?? []).map(
                               (selection, index) => (
