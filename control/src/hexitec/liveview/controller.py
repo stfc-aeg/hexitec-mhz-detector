@@ -183,10 +183,20 @@ class HistogramLiveViewController(BaseController):
 
     def set_num_bins(self, value, processor):
         """Set number of energy bins."""
-        processor.num_bins = int(value)
-        update = {"num_bins": processor.num_bins}
+        value = int(value)
+        update = {}
+        processor.num_bins = value
+
+        # Also update the dataset dimensions
+        processor.orig_dims = (80,80,value)
+        update = {
+            'num_bins': processor.num_bins,
+            'orig_dims': processor.orig_dims
+        }        
+
         # Check this hasn't invalidated the energy range
         if processor.num_bins <= processor.energy_range['max']:
             processor.energy_range['max'] = processor.num_bins - 1
             update["energy_range"] = processor.energy_range  # Update whole thing just in case
+
         self.update_processor(processor, update)
