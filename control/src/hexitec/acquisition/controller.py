@@ -82,6 +82,7 @@ class AcquisitionController(BaseController):
         :param bin_mode: string representing the operating mode, typically a number of bins. See allowed values metadata
         """
         munir_odindata_controller = self.munir_hexitec.odin_data_instances[0]
+        was_executing = False
 
         # Done this way for futureproofing, e.g. mapped modes might be 'histogram_1024_map' and need different handling
         match bin_mode:
@@ -106,24 +107,6 @@ class AcquisitionController(BaseController):
         # Change via histogrammer
         self.histogrammer.setHistFormat(setting=hist_mode, value=hist_value)
 
-        not_cfg={
-            'HexitecMhz': {
-                'mode': 'histogram_2048'
-            }, 
-            'hdf': {
-                'dataset': {
-                    'dummy': {
-                            'datatype': 'uint32', 
-                            'dims': [80, 80, 2048], 
-                            'compression': 'none'
-                        }
-                    }, 
-                'file': {
-                    'path': '/tmp/'
-                }
-            }
-        }
-
         # Change in odin data
         cfg = {
             "HexitecMhz": {
@@ -141,7 +124,6 @@ class AcquisitionController(BaseController):
                 }
         }
         response = munir_odindata_controller.set_config(cfg)
-        logging.warning(f"Odin-data config response: {response}")
 
         # Change in liveview
         self.liveview.set_num_bins(depth, self.liveview.processors[0])  # Only anticipate one endpoint
