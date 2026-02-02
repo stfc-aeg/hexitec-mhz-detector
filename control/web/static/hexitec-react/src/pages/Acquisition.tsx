@@ -2,6 +2,7 @@ import { Container, Row, Col, Card, Form, Button, ProgressBar, FloatingLabel } f
 import { UserAware } from '../components/UserAware';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import { floatingInputStyle, checkNullNoDp } from '../utils.js'
+import type { MunirTypes } from '../EndpointTypes';
 
 const EndpointFormControl = WithEndpoint(Form.Control);
 
@@ -11,7 +12,7 @@ interface AcquisitionProps {
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
-  const munirEndpoint = useAdapterEndpoint('munir', endpoint_url, 500);
+  const munirEndpoint = useAdapterEndpoint<MunirTypes>('munir', endpoint_url, 500);
   // console.log(munirEndpoint?.data?.subsystems?.hexitec_mhz?.args)
 
   return (
