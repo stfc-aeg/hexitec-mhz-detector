@@ -63,25 +63,17 @@ class HistogramLiveViewController(BaseController):
                 "name": (lambda: name, None),
                 "endpoint": (lambda p=processor: p.endpoint, None),
                 "image": {
-                    # "data": (lambda p=processor: p.get_image()['image'] if p.get_image() else None, None),
-                    # "histograms": (lambda p=processor: p.get_image()['histograms'] if p.get_image() else None, None),
-                    "regions": (
-                        lambda p=processor: p.regions,
-                        partial(self.set_regions, processor=processor)
+                    "region": (
+                        lambda p=processor: p.region,
+                        partial(self.set_region, processor=processor)
                     ),
                     "value_range": (
                         lambda p=processor: [p.value_range['min'], p.value_range['max']],
                         partial(self.set_value_range, processor=processor)
                     ),
-                    "size_x": (lambda p=processor: p.size_x,
-                             partial(self.set_size_x, processor=processor)),
-                    "size_y": (lambda p=processor: p.size_y,
-                             partial(self.set_size_y, processor=processor)),
                     "colour": (lambda p=processor: p.colour,
                              partial(self.set_colour, processor=processor),
                              {'allowed_values': [colour for colour in processor.colormap_dict.keys()]}),
-                    "scale": (lambda p=processor: p.scale_factor,
-                            partial(self.set_scale, processor=processor)),
                     "energy_range": (
                         lambda p=processor: [p.energy_range['min'], p.energy_range['max']],
                         partial(self.set_energy_range, processor=processor)
@@ -93,7 +85,7 @@ class HistogramLiveViewController(BaseController):
             self.tree['_image'].update({
                 name: {
                     'image': (lambda: None, None),
-                    'histograms': (lambda: None, None)
+                    'histogram': (lambda: None, None)
                 }
             })
 
@@ -139,15 +131,12 @@ class HistogramLiveViewController(BaseController):
         """Send parameter updates to processor."""
         processor.update_params(params)
 
-    def set_regions(self, value, processor):
-        """Set regions for histograms."""
-        if isinstance(value, dict):
-            processor.regions = value
-            self.update_processor(processor, {"regions": value})
-        else:
-            # Handle single region addition
-            region_id = len(processor.regions) + 1
-            processor.set_region(value, region_id)
+    def set_region(self, value, processor):
+        """Set region for the histogram.
+        :param value: array of coordinations as such: [[x_min,x_max],[y_min,y_max']]
+        """
+        processor.region = value
+        self.update_processor(processor, {"region": value})
 
     def set_value_range(self, value, processor):
         """Set value range for clipping and display."""
@@ -155,25 +144,10 @@ class HistogramLiveViewController(BaseController):
             processor.set_value_range(value[0], value[1])
             self.update_processor(processor, {"value_range": processor.value_range})
 
-    def set_size_x(self, value, processor):
-        """Set display width."""
-        processor.size_x = int(value)
-        self.update_processor(processor, {"size_x": processor.size_x})
-
-    def set_size_y(self, value, processor):
-        """Set display height."""
-        processor.size_y = int(value)
-        self.update_processor(processor, {"size_y": processor.size_y})
-
     def set_colour(self, value, processor):
         """Set colormap."""
         processor.colour = str(value)
         self.update_processor(processor, {"colour": processor.colour})
-
-    def set_scale(self, value, processor):
-        """Set scale factor."""
-        processor.scale_factor = float(value)
-        self.update_processor(processor, {"scale_factor": processor.scale_factor})
 
     def set_energy_range(self, value, processor):
         """Set energy bin range."""

@@ -2,66 +2,51 @@ import type { AdapterEndpoint_t } from 'odin-react';
 import { useState, useEffect, useCallback } from 'react';
 
 type Point = [number, number];
-type RegionCoords = [[number,number],[number,number]];
-type RegionMap = Record<string, RegionCoords>;
-
 
 interface ClickableImageProps {
   endpoint: AdapterEndpoint_t;
   imgPath: string;
-  coordsPath: string;
-  coordsParam: string;
-  regions?: RegionMap;
-  getRegionColor: Function;
+  coordsPath?: string;
+  coordsParam?: string;
+  onSelection?: (coords: [[number, number], [number, number]]) => void;
   maximiseAxis?: string | null;
-  valuesAsPercentages?: boolean;
 }
 
-export function ClickableImage(props:ClickableImageProps)  {
+export function ClickableImage(props: ClickableImageProps) {
   const {
     endpoint,
     imgPath,
     coordsPath,
     coordsParam,
-    getRegionColor,
-    regions = {},
+    onSelection,
     maximiseAxis = null,
-    valuesAsPercentages = false
   } = props;
   
-  const [imgData, changeImgData] = useState<string|null>(null);
-  const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
-  const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
+  const [imgData, changeImgData] = useState<string | null>(null);
+  const [startPoint, setStartPoint] = useState<Point | null>(null);
+  const [endPoint, setEndPoint] = useState<Point | null>(null);
   const [points, setPoints] = useState<Point[]>([]);
-  const [coords, setCoords] = useState<Point[]>([]);
   
   const refreshImage = useCallback(() => {
-    endpoint.get<Blob>(imgPath, {responseType: "blob"})
-    .then((result) => {
-      if (imgData) { URL.revokeObjectURL(imgData); } // memory management 
-      const img_url = URL.createObjectURL(result);
-      changeImgData(img_url);
-      // endpoint.refreshData();
-    }).catch((error) => {
-      console.error("IMAGE GET FAILED: ", error);
-      changeImgData("");
-    })
+    endpoint.get<Blob>(imgPath, { responseType: "blob" })
+      .then((result) => {
+        if (imgData) { URL.revokeObjectURL(imgData); }
+        const img_url = URL.createObjectURL(result);
+        changeImgData(img_url);
+      }).catch((error) => {
+        console.error("IMAGE GET FAILED: ", error);
+        changeImgData("");
+      })
   }, [endpoint.updateFlag]);
 
-
   useEffect(() => {
-    let timer_id;
-    timer_id = setInterval(refreshImage, 950);
-
+    const timer_id = setInterval(refreshImage, 950);
     return () => clearInterval(timer_id);
   }, [refreshImage]);
 
-  const getPoint = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+  const getPoint = useCallback((e: React.MouseEvent<HTMLImageElement>): Point => {
     const bounds = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - bounds.left;
-    const y = e.clientY - bounds.top;
-    let point: Point = [x,y];
-    return point;
+    return [e.clientX - bounds.left, e.clientY - bounds.top];
   }, []);
 
   const calculateRectangle = useCallback(() => {
@@ -72,8 +57,10 @@ export function ClickableImage(props:ClickableImageProps)  {
     let maxX = Math.max(...xCoords);
     let minY = Math.min(...yCoords);
     let maxY = Math.max(...yCoords);
+    
     const canvas = document.getElementById('canvas') as HTMLElement | null;
-    if (!canvas) return;  // If we can't get the canvas, no point continuing
+    if (!canvas) return;
+    
     if (maximiseAxis === 'x') {
       minX = 0;
       maxX = canvas.clientWidth;
@@ -81,6 +68,7 @@ export function ClickableImage(props:ClickableImageProps)  {
       minY = 0;
       maxY = canvas.clientHeight;
     }
+    
     const rectanglePoints: Point[] = [
       [minX, minY],
       [maxX, minY],
@@ -88,32 +76,21 @@ export function ClickableImage(props:ClickableImageProps)  {
       [minX, maxY],
     ];
     setPoints(rectanglePoints);
-    setCoords([[minX, maxX], [minY, maxY]]);
   }, [startPoint, endPoint, maximiseAxis]);
 
-  // Handle context menu = handle right click
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
-    const isRectangle =
-      (Array.isArray(startPoint) && startPoint.length > 0) ||
-      (Array.isArray(endPoint) && endPoint.length > 0) ||
-      points.length > 0;
-    if (isRectangle)
-    {
-      // Cancel context if already rectangle
+    if (startPoint || endPoint || points.length > 0) {
       e.preventDefault();
-      // Reset rectangle
       setStartPoint(null);
       setEndPoint(null);
       setPoints([]);
-      setCoords([]);
     }
-    // Otherwise open context menu as normal
   }, [startPoint, endPoint, points]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
-    if (e.button !== 0) { return; }  // Only draw on left click
+    if (e.button !== 0) return;
     e.preventDefault();
-    const point: Point = getPoint(e);
+    const point = getPoint(e);
     setStartPoint(point);
     setEndPoint(point);
   }, [getPoint]);
@@ -128,50 +105,40 @@ export function ClickableImage(props:ClickableImageProps)  {
   }, [startPoint, getPoint, calculateRectangle]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
-      e.preventDefault();
-      if (startPoint) {
-        calculateRectangle();
-        const canvas = document.getElementById('canvas') as HTMLElement | null;
-        if (!canvas) return;
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
-        // Convert to 80x80 grid coordinates
-        const x1 = Math.round((coords[0][0] / width) * 80);
-        const x2 = Math.round((coords[0][1] / width) * 80);
-        const y1 = Math.round((coords[1][0] / height) * 80);
-        const y2 = Math.round((coords[1][1] / height) * 80);
-        // Get existing regions and add new one
-        const existingRegions = regions || {};
-        const newRegionId = Object.keys(existingRegions).length + 1;
-        const coordinates: RegionCoords = [
-          [Math.max(0, Math.min(x1, 79)), Math.max(0, Math.min(x2, 79))],
-          [Math.max(0, Math.min(y1, 79)), Math.max(0, Math.min(y2, 79))]
-        ];
-        // Create updated regions dictionary
-        const sendData: RegionMap = {
-          ...regions,
-          [newRegionId.toString()]: coordinates
-        };
-        if (valuesAsPercentages) {
-          const sendDataPercent = Object.fromEntries(
-            Object.entries(sendData).map(([id, coord]) => [
-              id,
-                [
-                  [parseFloat((coord[0][0] / 80 * 100).toFixed(2)), parseFloat((coord[0][1] / 80 * 100).toFixed(2))],
-                  [parseFloat((coord[1][0] / 80 * 100).toFixed(2)), parseFloat((coord[1][1] / 80 * 100).toFixed(2))]
-                ]
-                ])
-            );
-          endpoint.put({ [coordsParam]: sendDataPercent }, coordsPath);
-        } 
-        else {
-          endpoint.put({ [coordsParam]: sendData }, coordsPath);
-        }
-        setStartPoint(null);
-        setEndPoint(null);
-        setPoints([]);
-      }
-  }, [startPoint, coords, calculateRectangle, coordsParam, regions, valuesAsPercentages, endpoint, coordsPath]);
+    e.preventDefault();
+    if (!startPoint || !endPoint) return;
+    
+    calculateRectangle();
+    const canvas = document.getElementById('canvas') as HTMLElement | null;
+    if (!canvas) return;
+    
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    
+    const x1 = endPoint[0] / width;
+    const x2 = startPoint[0] / width;
+    const y1 = endPoint[1] / height;
+    const y2 = startPoint[1] / height;
+    
+    const coords: [[number, number], [number, number]] = [
+      [Math.min(x1, x2), Math.max(x1, x2)],
+      [Math.min(y1, y2), Math.max(y1, y2)]
+    ];
+
+    // If no selection function provided, send direct to endpoint
+    if (!onSelection) {
+      const sendVal = {[coordsParam]: coords};
+      // console.log("sendval:", JSON.stringify(sendVal));
+      endpoint.put(sendVal, coordsPath);
+    }
+    else {
+      onSelection(coords);
+    }
+    
+    setStartPoint(null);
+    setEndPoint(null);
+    // setPoints([]);
+  }, [startPoint, endPoint, calculateRectangle]);
 
   return (
     <div style={{
@@ -185,12 +152,12 @@ export function ClickableImage(props:ClickableImageProps)  {
       msUserSelect: 'none'
     }}>
       <img 
-        src={imgData ? imgData : undefined}
+        src={imgData || undefined}
         style={{
           display: 'block',
           width: '100%',
           height: 'auto',
-          imageRendering: 'pixelated', // Make image sharp when upscaled
+          imageRendering: 'pixelated',
         }}
         draggable="false"
         onMouseDown={handleMouseDown}
@@ -200,54 +167,25 @@ export function ClickableImage(props:ClickableImageProps)  {
         alt="Detector view"
       />
       <svg
-          id="canvas"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none'
-          }}>
-          {/* Render existing regions */}
-          {Object.entries(regions).map(([id, region]) => {
-            const [[x1, x2], [y1, y2]] = region;
-            const canvas = document.getElementById('canvas') as HTMLElement | null;
-            if (!canvas) return;
-            const width = canvas.clientWidth;
-            const height = canvas.clientHeight;
-            
-            const color = getRegionColor(parseInt(id) - 1);
-            
-            // Scale to display coordinates
-            const dx1 = (x1 * width) / 80;
-            const dx2 = (x2 * width) / 80;
-            const dy1 = (y1 * height) / 80;
-            const dy2 = (y2 * height) / 80;
-            return (
-              <polygon
-                key={id}
-                points={`${dx1},${dy1} ${dx2},${dy1} ${dx2},${dy2} ${dx1},${dy2}`}
-                style={{
-                  pointerEvents: 'none',
-                  fill: color.fill,
-                  stroke: color.stroke
-                }}
-              />
-            );
-          })}
-          
-          {/* Render current selection */}
-          {points.length === 4 &&
-            <polygon
-              points={points.map(point => point.join(",")).join(" ")}
-              style={{
-                pointerEvents: 'none',
-                fill: 'rgba(255, 255, 255, 0.3)',
-                stroke: 'white'
-              }}
-            />
-          }
+        id="canvas"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none'
+        }}>
+        {points.length === 4 &&
+          <polygon
+            points={points.map(point => point.join(",")).join(" ")}
+            style={{
+              pointerEvents: 'none',
+              fill: 'rgba(255, 255, 255, 0.3)',
+              stroke: 'white'
+            }}
+          />
+        }
       </svg>
     </div>
   );

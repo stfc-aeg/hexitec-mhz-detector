@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAdapterEndpoint } from 'odin-react';
-import { Container, Row, Col, Form, Button } from 'react-bootstrap';
+import { Container, Row, Col, Form } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import { 
   TitleCard,
   OdinDoubleSlider,
   WithEndpoint 
 } from 'odin-react';
-import { getRegionColor } from './colorUtils';
 import { ValueRangeControl } from './ValueRangeControl';
 import { ClickableImage } from './ClickableImage';
-import { HistogramPlot } from './HistogramPlot';
-import { floatingInputStyle, type MetadataType } from '../../utils'
+import { floatingInputStyle } from '../../utils'
+import type { MetadataType } from '../../EndpointTypes';
 
 import type { ParamTree } from 'odin-react';
 
-export interface HistogramRegion {
+export interface HistogramRegion extends ParamTree {
   x: [number, number];
   y: [number, number];
   width: number;
@@ -23,7 +22,7 @@ export interface HistogramRegion {
 }
 
 // Derived from processor.py
-export interface HistogramData {
+export interface HistogramData extends ParamTree {
   counts: number[];
   bins: number[];
   mean: number;
@@ -43,10 +42,8 @@ interface LiveViewTypes extends ParamTree {
           energy_range: number[];
           num_bins: number;
           histograms: any | null;
-          regions: any;
+          region: any;
           scale: number;
-          size_x: number;
-          size_y: number;
           value_range: number[];
         };
       }
@@ -54,18 +51,13 @@ interface LiveViewTypes extends ParamTree {
     _image: {
       [detectorName: string]: {
         image: undefined;
-        histograms: undefined;
+        histogram: undefined;
       }
     };
 }
 
-const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 
-function getGridLayout(count: number) {
-  if (count <= 1) return { cols: 1 };
-  if (count === 2) return { cols: 2 };
-  return { cols: 2 }; // 2 columns for 3 or more histograms
-}
+const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 
 interface HistogramLiveViewProps {
   endpoint_url: string;
@@ -78,8 +70,9 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const [colorRange, setColorRange] = useState<[number, number]>([0, 1000]);
 
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
+
+  // const histogramViewEndpoint = useAdapterEndpoint<HistogramEndpointTypes>(`liveview/_image/${name}/histograms`, endpoint_url, 1000);
   const liveViewData = liveViewEndPoint?.data?.histview?.[name];
-  const liveViewHistData = liveViewEndPoint?.data?._image?.[name];
   const imgPath = `histview/${name}/image`;
 
   // This appears as the ranges stuck together so it needs formatting into (x - y)
@@ -119,8 +112,31 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
     return () => clearInterval(timer);
   }, [lastUpdateTime]);
 
-  const histograms = Object.entries(liveViewHistData?.histograms || {}) as [string, HistogramData][]; // regionId is a number but JS parsing
-  const layout = getGridLayout(histograms.length);
+  // function to send histogram region selection
+  const handleHistSelection = (coords: [[number, number], [number, number]]) => {
+    // y-axis is maximised so can be ignored
+    const [xMinNorm, xMaxNorm] = coords[0];
+    const numBins = liveViewData?.image['num_bins'];
+
+    if (!numBins) return;
+
+      // Convert normalized coords → bin indices
+      let binMin = Math.floor(xMinNorm * numBins);
+      let binMax = Math.floor(xMaxNorm * numBins);
+
+      // Clamp to valid range
+      binMin = Math.max(0, Math.min(binMin, numBins - 1));
+      binMax = Math.max(0, Math.min(binMax, numBins - 1));
+
+      // Ensure correct ordering
+      if (binMin > binMax) {
+        [binMin, binMax] = [binMax, binMin];
+      }
+      liveViewEndPoint.put(
+        { energy_range: [binMin, binMax] },
+        `histview/${name}/image`
+      );
+  };
 
   return (
     <TitleCard title={`Histogram View - ${name}`}>
@@ -139,7 +155,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         {/* Main Content */}
         <Row>
           {/* Left Column - Image and Controls */}
-          <Col xs={12} md={6} className="mb-4">
+          <Col xs={12} md={3} className="mb-4">
             <div className="d-flex">
 
               {/* Color scale */}
@@ -167,24 +183,35 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   </Form.Select>
                 </FloatingLabel>
               </div>
+            </div>
+          </Col>
+          <Col md={9}>
 
-              {/* Image */}
-              <div className="flex-grow-1">
-                <div className="position-relative">
-                  <ClickableImage
-                    endpoint={liveViewEndPoint}
-                    imgPath={`_image/${name}/image`}
-                    coordsPath={imgPath}
-                    coordsParam="regions"
-                    regions={liveViewData?.image?.regions}
-                    getRegionColor={getRegionColor}
-                  />
-                  <div className="mt-2 text-muted small">
-                    Click and drag to select a region for histogram analysis
-                  </div>
-                </div>
-
-                {/* Image Controls */}
+            {/* ClickableImages */}
+            <Row>
+              <Col> {/* Counts map */}
+                <ClickableImage
+                  endpoint={liveViewEndPoint}
+                  imgPath={`_image/${name}/image`}
+                  coordsPath={`histview/${name}/image/`}
+                  coordsParam={'region'}
+                />
+              </Col>
+              <Col> {/* 1D histogram */}
+                <ClickableImage
+                  endpoint={liveViewEndPoint}
+                  imgPath={`_image/${name}/histogram`}
+                  onSelection={handleHistSelection}
+                  maximiseAxis={'y'}
+                />
+                
+              </Col>
+            </Row>
+            {/* Image Controls */}
+            <Row>
+              <Col>
+              </Col>
+              <Col>
                 <div className="mt-3">
                   <Form.Group>
                     <Form.Label>Energy Bin Range Selection {energyRange}</Form.Label>
@@ -199,45 +226,13 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     />
                   </Form.Group>
                 </div>
-              </div>
-            </div>
-          </Col>
-
-          {/* Right Column - Histogram Grid */}
-          <Col xs={12} md={6}>
-            <div className="histogram-grid">
-              <Row className="g-3">
-                {histograms.map(([regionId, histData]) => {
-                  const regionIdNum = parseInt(regionId, 10);
-                  return (
-                  <Col xs={12} md={layout.cols === 1 ? 12 : 6} key={regionId}>
-                    <div className="position-relative">
-                      <HistogramPlot 
-                        histogramData={histData}
-                        regionId={regionIdNum}
-                        color={getRegionColor(parseInt(regionId) - 1)}
-                      />
-                      <Button 
-                        variant="outline-danger" 
-                        size="sm"
-                        className="position-absolute"
-                        style={{ top: '10px', right: '10px' }}
-                        onClick={() => {
-                          const updatedRegions = {...liveViewData?.image?.regions};
-                          delete updatedRegions[regionId];
-                          liveViewEndPoint.put({ regions: updatedRegions }, 'image');
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </Col>
-                )})}
-              </Row>
-            </div>
+              </Col>
+            </Row>
+                
           </Col>
         </Row>
       </Container>
     </TitleCard>
+
   );
 }

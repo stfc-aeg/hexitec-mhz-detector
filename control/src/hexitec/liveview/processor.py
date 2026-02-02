@@ -7,30 +7,25 @@ from multiprocessing import Process, Queue, Pipe
 import logging
 from tornado.escape import json_decode
 from odin_data.control.ipc_channel import IpcChannel
+import matplotlib.pyplot as plt
 
 class HistogramLiveViewProcessor:
     """Process 3D histogram data received over ZMQ and render 2D visualizations."""
     
-    def __init__(self, endpoint, dimensions=(80, 80, 1024), size_x=640, size_y=640, colour='bone', energy_range=None):
+    def __init__(self, endpoint, dimensions=(80, 80, 1024), colour='bone', energy_range=None):
         """Initialize the HistogramLiveDataProcessor.
         
         Args:
             endpoint: ZMQ endpoint string
             dimensions: Tuple of (width, height, energy_bins)
-            size_x: Display width in pixels
-            size_y: Display height in pixels 
             colour: OpenCV colormap name
             energy_range: Dict with 'min' and 'max' keys for energy bin range
         """
         self.endpoint = endpoint
         self.orig_dims = dimensions
-        self.size_x = size_x
-        self.size_y = size_y
         self.colour = colour
         self.last_valid_image = {}
-        self.regions = {}  # Dictionary to store multiple regions
-        self.last_histograms = {}  # Store last valid histograms for each region
-        self.scale_factor = 1.0  # Add this line
+        self.region = None  # Array of region corners normalised to 0-1
 
         self.num_bins = dimensions[2]
 
@@ -62,7 +57,6 @@ class HistogramLiveViewProcessor:
         
         # Setup multiprocessing communication
         self.image_queue = Queue(maxsize=1)
-        self.hist_queue = Queue(maxsize=1)
         self.pipe_parent, self.pipe_child = Pipe(duplex=True)
         
         # Start processing in background
@@ -101,70 +95,6 @@ class HistogramLiveViewProcessor:
                 except zmq.Again:
                     continue
 
-    def set_region(self, region, region_id=None):
-        """Set a region for histogram calculation."""
-        if region_id is None:
-            region_id = len(self.regions) + 1
-        self.regions[region_id] = region
-        self.update_params({"regions": self.regions})
-
-    def remove_region(self, region_id):
-        """Remove a region."""
-        if region_id in self.regions:
-            del self.regions[region_id]
-            if region_id in self.last_histograms:
-                del self.last_histograms[region_id]
-            self.update_params({"regions": self.regions})
-
-    def calculate_histogram(self, data_3d, region):
-        """Calculate histogram from 3D data energy bins for selected region."""
-        try:
-            # Extract region coordinates
-            [[x1, x2], [y1, y2]] = region
-            x_min, x_max = int(x1), int(x2)
-            y_min, y_max = int(y1), int(y2)
-            
-            # Validate coordinates
-            if x_min >= x_max or y_min >= y_max:
-                return None
-                
-            # Ensure coordinates are within bounds
-            x_min = max(0, min(x_min, data_3d.shape[1]-1))
-            x_max = max(0, min(x_max, data_3d.shape[1]-1))
-            y_min = max(0, min(y_min, data_3d.shape[0]-1))
-            y_max = max(0, min(y_max, data_3d.shape[0]-1))
-            
-            # Check if region has valid size
-            if x_max <= x_min or y_max <= y_min:
-                return None
-                
-            # Extract region data - keeping all energy bins
-            region_data = data_3d[y_min:y_max+1, x_min:x_max+1, :]
-            
-            # Sum over spatial dimensions to get total spectrum
-            spectrum = np.sum(region_data, axis=(0,1))
-            
-            # Create bin edges (0 to energy_bins)
-            bin_edges = np.arange(data_3d.shape[2] + 1)
-            
-            return {
-                'counts': spectrum.tolist(),
-                'bins': bin_edges.tolist(),
-                'mean': float(np.mean(spectrum)),
-                'std': float(np.std(spectrum)) if spectrum.size > 1 else 0.0,
-                'min': float(np.min(spectrum)),
-                'max': float(np.max(spectrum)),
-                'region': {
-                    'x': [x_min, x_max],
-                    'y': [y_min, y_max],
-                    'width': x_max - x_min + 1,
-                    'height': y_max - y_min + 1
-                }
-            }
-        except Exception as e:
-            logging.error(f"Error calculating histogram: {str(e)}")
-            return None
-
     def process_frame(self, msg):
         """Process a single data frame."""
         try:
@@ -172,8 +102,7 @@ class HistogramLiveViewProcessor:
             dtype = header.get('dtype', 'uint32')
             
             # Decompress if needed
-            if len(msg[1]) != 80*80*self.orig_dims[-1]*4:  # 26214400 = 80*80*4096
-                # data = np.frombuffer(blosc.decompress(msg[1]), dtype=dtype)
+            if len(msg[1]) != 80*80*self.orig_dims[-1]*4:
                 data = np.frombuffer(msg[1], dtype=dtype)
             else:
                 data = np.frombuffer(msg[1], dtype=dtype)
@@ -181,67 +110,60 @@ class HistogramLiveViewProcessor:
             # Reshape to 3D array
             data_3d = data.reshape(self.orig_dims)
             
-            # Sum selected energy bins
+            # Sum selected energy bins for 2D display
             summed_data = np.sum(data_3d[:, :, 
-                                     self.energy_range['min']:self.energy_range['max'] + 1], 
-                              axis=2)
-
-            # Apply value range clipping
-            clipped_data = np.clip(summed_data, 
-                                self.value_range['min'], 
-                                self.value_range['max'])
-            
-            # Calculate histograms if regions exist
-            histograms = {}
-            for region_id, region in self.regions.items():
-                try:
-                    hist_data = self.calculate_histogram(data_3d, region)
-                    if hist_data is not None:
-                        histograms[region_id] = hist_data
-                        self.last_histograms[region_id] = hist_data
-                    elif region_id in self.last_histograms:
-                        histograms[region_id] = self.last_histograms[region_id]
-                except Exception as e:
-                    logging.error(f"Error calculating histogram for region {region_id}: {str(e)}")
-                    if region_id in self.last_histograms:
-                        histograms[region_id] = self.last_histograms[region_id]
-
-            # Find data range if not set
-            if self.value_range['min'] == self.value_range['max']:
-                data_min = np.min(summed_data)
-                data_max = np.max(summed_data)
-                if data_min != data_max:
-                    self.value_range['min'] = float(data_min)
-                    self.value_range['max'] = float(data_max)
+                                    self.energy_range['min']:self.energy_range['max'] + 1], 
+                            axis=2)
             
             # Normalize to 0-255 for display
             if self.value_range['max'] > self.value_range['min']:
-                normalized_data = ((clipped_data - self.value_range['min']) / 
-                                 (self.value_range['max'] - self.value_range['min']) * 255)
+                normalized_data = ((summed_data - self.value_range['min']) / 
+                                (self.value_range['max'] - self.value_range['min']) * 255)
                 normalized_data = np.clip(normalized_data, 0, 255).astype(np.uint8)
             else:
-                normalized_data = np.zeros_like(clipped_data, dtype=np.uint8)
+                normalized_data = np.zeros_like(summed_data, dtype=np.uint8)
 
-            # Apply colormap
+            # Apply colormap to 2D image
             colour_data = cv2.applyColorMap(normalized_data, self.get_colour_map())
 
-            # Encode for transmission
-            flags = [
-                cv2.IMWRITE_JPEG_QUALITY, 95,  # Maximum JPEG quality
-                cv2.IMWRITE_JPEG_OPTIMIZE, 1,    # Enable JPEG optimization
-                cv2.IMWRITE_JPEG_PROGRESSIVE, 1  # Enable progressive JPEG
-            ]
+            # Encode 2D image
+            flags = [cv2.IMWRITE_JPEG_QUALITY, 85]  # Faster JPEG encoding
+            _, buffer_2d = cv2.imencode('.jpg', colour_data, flags)
 
-            _, buffer = cv2.imencode('.jpg', colour_data, flags)
-            buffer = np.array(buffer)
-            # encoded_data = base64.b64encode(buffer).decode('utf-8')
+            # Get region/full image if no region
+            region_data = self.extract_region(data_3d)
+            # Histogram also respects energy range
+            spectrum = np.sum(
+                region_data[:, :, self.energy_range['min']:self.energy_range['max'] + 1],
+                axis=(0, 1)
+            )
             
-            # Update image queue
+            # Create histogram image
+            fig, ax = plt.subplots(figsize=(8, 2), dpi=100)
+            ax.hist(spectrum, bins=256, alpha=0.75, color='blue', log=True, histtype='step')
+            ax.yaxis.set_visible(False)
+            for spine in ['top', 'left', 'right']:
+                ax.spines[spine].set_visible(False)
+            ax.set_xlim(left=0, right=len(spectrum))
+            fig.tight_layout(pad=0.05)
+            
+            # Render to image
+            fig.canvas.draw()
+            histData = np.frombuffer(fig.canvas.renderer.buffer_rgba(), dtype=np.uint8)
+            width, height = fig.canvas.get_width_height()
+            histData = histData.reshape((height, width, 4))
+            histData = cv2.cvtColor(histData, cv2.COLOR_RGBA2BGR)
+            plt.close(fig)
+            
+            # Encode histogram image
+            _, buffer_hist = cv2.imencode('.jpg', histData, flags)
+            
+            # Queue both images
             while not self.image_queue.empty():
                 self.image_queue.get()
             self.image_queue.put({
-                'image': buffer.tobytes(),
-                'histograms': histograms
+                'counts': np.array(buffer_2d).tobytes(),
+                'histogram': np.array(buffer_hist).tobytes()
             })
             
         except Exception as e:
@@ -254,6 +176,33 @@ class HistogramLiveViewProcessor:
             return self.colormap_dict[colour_name]
         logging.warning(f"Colormap '{self.colour}' not found, falling back to bone")
         return cv2.COLORMAP_BONE
+    
+    def extract_region(self, data_3d):
+        """Return a spatial ROI of the 3d dataset based on the given region.
+        :return data: shape is (roi_x, roi_y, energy_bins)
+        """
+        # Default to full image
+        if self.region is None:
+            return data_3d
+        
+        x_norm, y_norm = self.region
+        x_min_n, x_max_n = x_norm
+        y_min_n, y_max_n = y_norm
+        x_size, y_size, _ = data_3d.shape  # e.g. 80x80x1024
+
+        x_min = int(np.floor(x_min_n * x_size))
+        x_max = int(np.ceil(x_max_n * x_size))
+        y_min = int(np.floor(y_min_n * y_size))
+        y_max = int(np.ceil(y_max_n * y_size))
+
+        # Ensure it's within array bounds
+        x_min = max(0, min(x_min, x_size - 1))
+        x_max = max(1, min(x_max, x_size))
+        y_min = max(0, min(y_min, y_size - 1))
+        y_max = max(1, min(y_max, y_size))
+
+        return data_3d[x_min:x_max, y_min:y_max, :]
+
 
     def get_image(self):
         """Get latest processed image and histograms if available."""
