@@ -187,7 +187,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
           </Col>
           <Col md={9}>
             <Row>
-              <Col> {/* Counts map */}
+              <Col> {/* Counts map and histogram */}
                 <ClickableImage
                   endpoint={liveViewEndPoint}
                   imgPath={`_image/${name}/counts`}
@@ -195,38 +195,35 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   coordsParam={'region'}
                 />
               </Col>
-              <Col> {/* 1D histogram */}
+              <Col>
+                <div>Region Selection</div>
+              </Col>
+            </Row>
+            <Row>
+              <Col> 
                 <ClickableImage
                   endpoint={liveViewEndPoint}
                   imgPath={`_image/${name}/histogram`}
                   onSelection={handleHistSelection}
                   maximiseAxis={'y'}
                 />
-                
-              </Col>
-            </Row>
-            {/* Image Controls */}
-            <Row>
-              <Col>
               </Col>
               <Col>
-                <div className="mt-3">
-                  <Form.Group>
-                    <Form.Label>Energy Bin Range Selection {energyRange}</Form.Label>
-                    <EndPointDoubleSlider
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${imgPath}/energy_range`}
-                      min={0}
-                      max={liveViewData?.image['num_bins'] - 1}
-                      step={1}
-                      title="Energy Bins"
-                      value={liveViewData?.image?.energy_range}
-                    />
-                  </Form.Group>
-                </div>
+
+                <Form.Group className="mt-3">
+                  <Form.Label>Energy Bin Range Selection {energyRange}</Form.Label>
+                  <EndPointDoubleSlider
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/energy_range`}
+                    min={0}
+                    max={liveViewData?.image['num_bins'] - 1}
+                    step={1}
+                    title="Energy Bins"
+                    value={liveViewData?.image?.energy_range}
+                  />
+                </Form.Group>
               </Col>
-            </Row>
-                
+            </Row>     
           </Col>
         </Row>
       </Container>
