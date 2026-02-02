@@ -186,13 +186,11 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
             </div>
           </Col>
           <Col md={9}>
-
-            {/* ClickableImages */}
             <Row>
               <Col> {/* Counts map */}
                 <ClickableImage
                   endpoint={liveViewEndPoint}
-                  imgPath={`_image/${name}/image`}
+                  imgPath={`_image/${name}/counts`}
                   coordsPath={`histview/${name}/image/`}
                   coordsParam={'region'}
                 />

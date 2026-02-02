@@ -84,7 +84,7 @@ class HistogramLiveViewController(BaseController):
             }
             self.tree['_image'].update({
                 name: {
-                    'image': (lambda: None, None),
+                    'counts': (lambda: None, None),
                     'histogram': (lambda: None, None)
                 }
             })

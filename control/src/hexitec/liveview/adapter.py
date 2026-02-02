@@ -31,7 +31,7 @@ class HistogramLiveViewAdapter(BaseAdapter):
                 if not bytes or not isinstance(bytes, dict):
                     return ApiAdapterResponse(b"", content_type="text/plain", status_code=200)
 
-                if levels[-1] == 'image':
+                if levels[-1] == 'counts':
                     img_bytes = bytes['counts']
                 elif levels[-1] == 'histogram':
                     logging.warning(img_bytes)
