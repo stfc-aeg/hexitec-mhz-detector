@@ -51,6 +51,9 @@ class HistogramLiveViewProcessor:
         
         logging.debug(f"Available OpenCV colormaps: {available_colormaps}")
 
+        logging.getLogger('matplotlib.font_manager').disabled = True
+        logging.getLogger('PIL.PngImagePlugin').disabled=True
+
         self.colormap_dict = {}
         for name in available_colormaps:
             self.colormap_dict[name] = getattr(cv2, f'COLORMAP_{name.upper()}')
