@@ -34,7 +34,6 @@ class HistogramLiveViewAdapter(BaseAdapter):
                 if levels[-1] == 'counts':
                     img_bytes = bytes['counts']
                 elif levels[-1] == 'histogram':
-                    logging.warning(img_bytes)
                     img_bytes = bytes['histogram']
 
                 response=img_bytes

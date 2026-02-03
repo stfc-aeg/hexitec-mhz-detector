@@ -8,8 +8,11 @@ interface ClickableImageProps {
   imgPath: string;
   coordsPath?: string;
   coordsParam?: string;
-  onSelection?: (coords: [[number, number], [number, number]]) => void;
+  onSelection?: (coords: [[number, number], [number, number]] | null) => void;
   maximiseAxis?: string | null;
+  rectOutlineColour?: string;
+  rectRgbaProperties?: string;
+  rectDisappears?: boolean;
 }
 
 export function ClickableImage(props: ClickableImageProps) {
@@ -20,6 +23,8 @@ export function ClickableImage(props: ClickableImageProps) {
     coordsParam,
     onSelection,
     maximiseAxis = null,
+    rectOutlineColour='white', rectRgbaProperties='rgba(255,255,255,0.33)',
+    rectDisappears = false,
   } = props;
   
   const [imgData, changeImgData] = useState<string | null>(null);
@@ -79,11 +84,21 @@ export function ClickableImage(props: ClickableImageProps) {
   }, [startPoint, endPoint, maximiseAxis]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    // Clear selection on right click. If no selection, normal menu appears
     if (startPoint || endPoint || points.length > 0) {
       e.preventDefault();
       setStartPoint(null);
       setEndPoint(null);
       setPoints([]);
+
+      if (!onSelection) { // in case there's no send function
+        if (coordsParam && coordsPath) {
+          const sendVal = {[coordsParam]: null};
+          endpoint.put(sendVal, coordsPath);
+        }
+      } else {
+        onSelection(null);
+      }
     }
   }, [startPoint, endPoint, points]);
 
@@ -137,7 +152,10 @@ export function ClickableImage(props: ClickableImageProps) {
     
     setStartPoint(null);
     setEndPoint(null);
-    // setPoints([]);
+    if (rectDisappears) {
+      setPoints([]);
+    }
+    
   }, [startPoint, endPoint, calculateRectangle]);
 
   return (
@@ -180,9 +198,9 @@ export function ClickableImage(props: ClickableImageProps) {
           <polygon
             points={points.map(point => point.join(",")).join(" ")}
             style={{
-              pointerEvents: 'none',
-              fill: 'rgba(255, 255, 255, 0.3)',
-              stroke: 'white'
+              pointerEvents:'none', // Unclickable
+              fill: rectRgbaProperties,
+              stroke: rectOutlineColour // border
             }}
           />
         }

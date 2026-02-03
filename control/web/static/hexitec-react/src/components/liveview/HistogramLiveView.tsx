@@ -7,7 +7,8 @@ import {
   OdinDoubleSlider,
   WithEndpoint 
 } from 'odin-react';
-import { ValueRangeControl } from './ValueRangeControl';
+import { ColourScale } from './ColourScale';
+import { MinMaxInput } from '../MinMaxInput';
 import { ClickableImage } from './ClickableImage';
 import { floatingInputStyle } from '../../utils'
 import type { MetadataType } from '../../EndpointTypes';
@@ -39,12 +40,12 @@ interface LiveViewTypes extends ParamTree {
         image: {
           colour: string;
           data: any | null;
-          energy_range: number[];
+          energy_range: [number, number];
           num_bins: number;
           histograms: any | null;
-          region: any;
+          region: [[number, number],[number, number]];
           scale: number;
-          value_range: number[];
+          value_range: [number, number];
         };
       }
     };
@@ -56,7 +57,6 @@ interface LiveViewTypes extends ParamTree {
     };
 }
 
-
 const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 
 interface HistogramLiveViewProps {
@@ -67,7 +67,7 @@ interface HistogramLiveViewProps {
 export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps) {
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
-  const [colorRange, setColorRange] = useState<[number, number]>([0, 1000]);
+  const [colourRange, setColourRange] = useState<[number, number]>([0, 1000]);
 
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
 
@@ -80,13 +80,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
 
   const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
-
-  const handleColorRangeChange = (newRange: [number, number]) => {
-    setColorRange(newRange);
-    liveViewEndPoint.put({ 
-      value_range: newRange
-    }, imgPath);
-  };
 
   // Timer effects remain the same...
   useEffect(() => {
@@ -134,7 +127,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
       }
       liveViewEndPoint.put(
         { energy_range: [binMin, binMax] },
-        `histview/${name}/image`
+        imgPath
       );
   };
 
@@ -155,16 +148,25 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         {/* Main Content */}
         <Row>
           {/* Left Column - Image and Controls */}
-          <Col xs={12} md={3} className="mb-4">
+          <Col xs={12} md={3} className="mb-4 justify-content-center">
             <div className="d-flex">
 
               {/* Color scale */}
               <div className="me-3">
-                <ValueRangeControl 
-                  min={colorRange[0]}
-                  max={colorRange[1]}
+                <MinMaxInput
+                  label="Value Range"
+                  value={colourRange}
+                  onApply={(range) => {
+                    setColourRange(range);
+                    liveViewEndPoint.put(
+                      { value_range: range }, imgPath
+                    );
+                  }}
+                />
+                <ColourScale 
+                  min={colourRange[0]}
+                  max={colourRange[1]}
                   colormap={liveViewData?.image?.colour || 'bone'}
-                  onRangeChange={handleColorRangeChange}
                 />
                 <FloatingLabel
                   label="Colourmap" className="mt-3">
@@ -206,22 +208,21 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   imgPath={`_image/${name}/histogram`}
                   onSelection={handleHistSelection}
                   maximiseAxis={'y'}
+                  rectOutlineColour='black'
+                  rectRgbaProperties='rgba(50,50,50,0.05)'
+                  rectDisappears={true}
                 />
               </Col>
               <Col>
-
-                <Form.Group className="mt-3">
-                  <Form.Label>Energy Bin Range Selection {energyRange}</Form.Label>
-                  <EndPointDoubleSlider
-                    endpoint={liveViewEndPoint}
-                    fullpath={`${imgPath}/energy_range`}
-                    min={0}
-                    max={liveViewData?.image['num_bins'] - 1}
-                    step={1}
-                    title="Energy Bins"
-                    value={liveViewData?.image?.energy_range}
-                  />
-                </Form.Group>
+                <MinMaxInput
+                  label={`Manual Energy Bin Range ${energyRange}`}
+                  value={liveViewData?.image?.energy_range || [0, 0]}
+                  onApply={(range) => {
+                    liveViewEndPoint.put(
+                      { energy_range: range }, imgPath
+                    );
+                  }}
+                />
               </Col>
             </Row>     
           </Col>
