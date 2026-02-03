@@ -2,6 +2,8 @@ import type { AdapterEndpoint_t } from 'odin-react';
 import { useState, useEffect, useCallback } from 'react';
 
 type Point = [number, number];
+type Region2D = [[number, number], [number, number]];
+type Region1D = [number, number];
 
 interface ClickableImageProps {
   endpoint: AdapterEndpoint_t;
@@ -9,10 +11,11 @@ interface ClickableImageProps {
   coordsPath?: string;
   coordsParam?: string;
   onSelection?: (coords: [[number, number], [number, number]] | null) => void;
-  maximiseAxis?: string | null;
+  maximiseAxis?: 'x' | 'y' | null;
   rectOutlineColour?: string;
   rectRgbaProperties?: string;
   rectDisappears?: boolean;
+  region?: Region2D | Region1D | null;
 }
 
 export function ClickableImage(props: ClickableImageProps) {
@@ -25,12 +28,16 @@ export function ClickableImage(props: ClickableImageProps) {
     maximiseAxis = null,
     rectOutlineColour='white', rectRgbaProperties='rgba(255,255,255,0.33)',
     rectDisappears = false,
+    region=null
   } = props;
   
   const [imgData, changeImgData] = useState<string | null>(null);
   const [startPoint, setStartPoint] = useState<Point | null>(null);
   const [endPoint, setEndPoint] = useState<Point | null>(null);
   const [points, setPoints] = useState<Point[]>([]);
+
+  // this state and the region prop allow an optional external control of the drawn rectangle
+  const [isInteracting, setIsInteracting] = useState(false);
   
   const refreshImage = useCallback(() => {
     endpoint.get<Blob>(imgPath, { responseType: "blob" })
@@ -53,6 +60,68 @@ export function ClickableImage(props: ClickableImageProps) {
     const bounds = e.currentTarget.getBoundingClientRect();
     return [e.clientX - bounds.left, e.clientY - bounds.top];
   }, []);
+
+  // Draw a square if there are values and the user isn't currently drawing on the image
+  useEffect(() => {
+    if (isInteracting) return;
+
+    if (!region) {
+      setPoints([]);
+      return;
+    }
+
+    const canvas = document.getElementById('canvas') as HTMLElement | null;
+    if (!canvas) return;
+
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    let xMinNorm = 0, xMaxNorm = 1;
+    let yMinNorm = 0, yMaxNorm = 1;
+
+    // 2D region -- [[xMin, xMax], [yMin, yMax]]
+    if (Array.isArray(region[0])) {
+      const [[rxMin, rxMax], [ryMin, ryMax]] =
+        region as [[number, number], [number, number]];
+
+      xMinNorm = rxMin;
+      xMaxNorm = rxMax;
+      yMinNorm = ryMin;
+      yMaxNorm = ryMax;
+    }
+    // 1D region -- [min, max]
+    else {
+      const [rMin, rMax] = region as [number, number];
+
+      if (maximiseAxis === 'y') {
+        xMinNorm = rMin;
+        xMaxNorm = rMax;
+        yMinNorm = 0;
+        yMaxNorm = 1;
+      } else if (maximiseAxis === 'x') {
+        xMinNorm = 0;
+        xMaxNorm = 1;
+        yMinNorm = rMin;
+        yMaxNorm = rMax;
+      } else {
+        // no maximiseAxis: ignore ambiguous 1D region
+        return;
+      }
+    }
+
+    const minX = xMinNorm * width;
+    const maxX = xMaxNorm * width;
+    const minY = yMinNorm * height;
+    const maxY = yMaxNorm * height;
+
+    setPoints([
+      [minX, minY],
+      [maxX, minY],
+      [maxX, maxY],
+      [minX, maxY],
+    ]);
+  }, [region, maximiseAxis, isInteracting]);
+
 
   const calculateRectangle = useCallback(() => {
     if (!startPoint || !endPoint) return;
@@ -89,6 +158,7 @@ export function ClickableImage(props: ClickableImageProps) {
       e.preventDefault();
       setStartPoint(null);
       setEndPoint(null);
+      setIsInteracting(false);
       setPoints([]);
 
       if (!onSelection) { // in case there's no send function
@@ -105,6 +175,7 @@ export function ClickableImage(props: ClickableImageProps) {
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
     if (e.button !== 0) return;
     e.preventDefault();
+    setIsInteracting(true);
     const point = getPoint(e);
     setStartPoint(point);
     setEndPoint(point);
@@ -152,6 +223,7 @@ export function ClickableImage(props: ClickableImageProps) {
     
     setStartPoint(null);
     setEndPoint(null);
+    setIsInteracting(false);
     if (rectDisappears) {
       setPoints([]);
     }
