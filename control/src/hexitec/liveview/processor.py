@@ -29,6 +29,8 @@ class HistogramLiveViewProcessor:
 
         self.num_bins = dimensions[2]
 
+        self.max_pix_val = 2**32 * self.num_bins
+
         # Energy bin selection range
         self.energy_range = energy_range or {
             'min': 0,
@@ -38,7 +40,7 @@ class HistogramLiveViewProcessor:
         # Value range for clipping and display
         self.value_range = {
             'min': 0.0,
-            'max': 65535.0
+            'max': self.max_pix_val
         }
 
         # Log available colormaps
