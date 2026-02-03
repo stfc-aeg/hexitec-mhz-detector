@@ -118,16 +118,21 @@ class HistogramLiveViewProcessor:
                                     self.energy_range['min']:self.energy_range['max'] + 1], 
                             axis=2)
             
-            # Normalize to 0-255 for display
-            if self.value_range['max'] > self.value_range['min']:
-                normalized_data = ((summed_data - self.value_range['min']) / 
-                                (self.value_range['max'] - self.value_range['min']) * 255)
-                normalized_data = np.clip(normalized_data, 0, 255).astype(np.uint8)
+            # Clipping and rescaling
+            low = self.value_range['min']
+            high = self.value_range['max']
+
+            if high > low:
+                # Clip to range and scale back over full range of vals
+                clipped = np.clip(summed_data, low, high)
+                scaled = (clipped - low) / (high - low) * 65535.0
+                # 8-bit for display
+                normalised_data = (scaled / 65535.0 * 255.0).astype(np.uint8)
             else:
-                normalized_data = np.zeros_like(summed_data, dtype=np.uint8)
+                normalised_data = np.zeros_like(summed_data, dtype=np.uint8)
 
             # Apply colormap to 2D image
-            colour_data = cv2.applyColorMap(normalized_data, self.get_colour_map())
+            colour_data = cv2.applyColorMap(normalised_data, self.get_colour_map())
 
             # Encode 2D image
             flags = [cv2.IMWRITE_JPEG_QUALITY, 85]  # Faster JPEG encoding
