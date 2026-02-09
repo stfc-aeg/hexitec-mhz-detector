@@ -163,7 +163,7 @@ export function ClickableImage(props: ClickableImageProps) {
 
       if (!onSelection) { // in case there's no send function
         if (coordsParam && coordsPath) {
-          const sendVal = {[coordsParam]: null};
+          const sendVal = {[coordsParam]: []};
           endpoint.put(sendVal, coordsPath);
         }
       } else {

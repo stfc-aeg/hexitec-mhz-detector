@@ -149,13 +149,22 @@ class HistogramLiveViewProcessor:
             )
             
             # Create histogram image
-            fig, ax = plt.subplots(figsize=(8, 2), dpi=100)
-            ax.hist(spectrum, bins=256, alpha=0.75, color='blue', log=True, histtype='step')
+            min_e = self.energy_range['min']
+            max_e = self.energy_range['max']
+            energy_axis = np.arange(min_e, max_e + 1)
+
+            fig, ax = plt.subplots(figsize=(8, 3), dpi=100)
+            ax.plot(energy_axis, spectrum, color='blue', linewidth=1)
+
+            ax.set_xlim(min_e, max_e)
+            ax.set_yscale('log')
             ax.yaxis.set_visible(False)
+            ax.tick_params(axis='x', labelsize=12)
+
             for spine in ['top', 'left', 'right']:
                 ax.spines[spine].set_visible(False)
-            ax.set_xlim(left=0, right=len(spectrum))
-            fig.tight_layout(pad=0.05)
+
+            fig.subplots_adjust(left=0.02, right=0.98, top=0.95, bottom=0.3)
             
             # Render to image
             fig.canvas.draw()

@@ -105,7 +105,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const handleHistSelection = (coords: [[number, number], [number, number]] | null) => {
     if (!coords) {
       liveViewEndPoint.put(
-        { energy_range: null }, imgPath
+        { energy_range: [] }, imgPath
       );
       return;
     };
@@ -116,9 +116,15 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
 
     if (!numBins) return;
 
-      // Convert normalized coords → bin indices
-      let binMin = Math.floor(xMinNorm * numBins);
-      let binMax = Math.floor(xMaxNorm * numBins);
+      // Get current range so selection works within existing range instead of overriding it
+      const currentRange = liveViewData?.image?.energy_range;
+      const currentMin = currentRange?.[0] ?? 0;
+      const currentMax = currentRange?.[1] ?? numBins -1; // Default is full range 0-(num_bins-1)
+
+      const currentWidth = currentMax - currentMin +1;
+
+      let binMin = Math.floor(currentMin + xMinNorm * currentWidth); // min + (0->1)*(max-min)
+      let binMax = Math.floor(currentMin + xMaxNorm * currentWidth) // this is always in prev range
 
       // Clamp to valid range
       binMin = Math.max(0, Math.min(binMin, numBins - 1));
@@ -168,7 +174,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 <EndpointButton
                   endpoint={liveViewEndPoint}
                   fullpath={`${imgPath}/value_range`}
-                  value={null}
+                  value={[]}
                   variant='outline-primary'
                   style={{width:30}}
                 >
@@ -201,6 +207,14 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
           <Col md={9}>
             <Row className="mb-3">
               <Col> {/* Counts map and histogram */}
+                <Row>
+                  <Col xs={6} className="justify-content-left">
+                    <label className="text-muted">0</label>
+                  </Col>
+                  <Col xs={6} className="text-end">
+                    <label className="text-muted">80</label>
+                  </Col>
+                </Row>
                 <ClickableImage
                   endpoint={liveViewEndPoint}
                   imgPath={`_image/${name}/counts`}
