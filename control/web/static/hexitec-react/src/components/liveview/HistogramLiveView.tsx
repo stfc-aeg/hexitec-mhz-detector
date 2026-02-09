@@ -323,7 +323,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     <EndpointButton
                       endpoint={liveViewEndPoint}
                       fullpath={`${imgPath}/energy_range`}
-                      value={null}
+                      value={[]}
                       variant='outline-primary'
                       style={{width:30}}
                     >
