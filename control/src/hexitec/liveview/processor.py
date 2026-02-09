@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 class HistogramLiveViewProcessor:
     """Process 3D histogram data received over ZMQ and render 2D visualizations."""
     
-    def __init__(self, endpoint, dimensions=(80, 80, 1024), colour='bone', energy_range=None):
+    def __init__(self, endpoint, occupancy_threshold, dimensions=(80, 80, 1024), colour='bone', energy_range=None):
         """Initialize the HistogramLiveDataProcessor.
         
         Args:
@@ -26,6 +26,8 @@ class HistogramLiveViewProcessor:
         self.colour = colour
         self.last_valid_image = {}
         self.region = None  # Array of region corners normalised to 0-1
+        self.occupancy = -1
+        self.occupancy_threshold = occupancy_threshold
 
         self.num_bins = dimensions[2]
 
@@ -184,6 +186,19 @@ class HistogramLiveViewProcessor:
                 'counts': np.array(buffer_2d).tobytes(),
                 'histogram': np.array(buffer_hist).tobytes()
             })
+
+            # Calculate occupancy
+            if self.occupancy_threshold is not None:
+                total_pixels = summed_data.size
+                above = np.count_nonzero(summed_data > self.occupancy_threshold)
+                percent = (above/total_pixels) * 100.0
+                self.occupancy = percent
+
+                # Send occupancy back
+                try:
+                    self.pipe_child.send({"occupancy": self.occupancy})
+                except:
+                    logging.warning(f"Could not sent occupancy through pipe child")
             
         except Exception as e:
             logging.error(f"Error processing frame: {str(e)}")

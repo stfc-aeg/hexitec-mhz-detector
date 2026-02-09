@@ -33,6 +33,10 @@ class HistogramLiveViewController(BaseController):
         # Parse dimensions
         dimensions = list(map(int, options.get('data_dimensions', '80x80x1024').split('x')))
 
+        # Occupancy
+        occupancy_pixel_threshold = int(options.get('occupancy_pixel_threshold', 200),)
+        self.occupancy_warning_threshold = int(options.get('occupancy_warning_threshold', 10))
+
         # Last part of dimensions is energy_bins
         num_bins = dimensions[2]
 
@@ -52,6 +56,7 @@ class HistogramLiveViewController(BaseController):
         for i, endpoint in enumerate(endpoints):
             processor = HistogramLiveViewProcessor(
                 endpoint,
+                occupancy_threshold=occupancy_pixel_threshold,
                 dimensions=dimensions,
                 energy_range=energy_range
             )
@@ -79,7 +84,9 @@ class HistogramLiveViewController(BaseController):
                         partial(self.set_energy_range, processor=processor)
                     ),
                     "num_bins": (lambda p=processor: p.num_bins,
-                                 partial(self.set_num_bins, processor=processor))
+                                 partial(self.set_num_bins, processor=processor)),
+                    "occupancy_percent": (lambda p=processor: p.occupancy, None),
+                    "occupancy_threshold": (lambda: self.occupancy_warning_threshold, None)
                 }
             }
             self.tree['_image'].update({
@@ -114,6 +121,7 @@ class HistogramLiveViewController(BaseController):
     def get(self, path, with_metadata=False):
         """Get parameter data from controller."""
         try:
+            self.poll_processors()  # Update values when making requests to keep these up-to-date
             return self.param_tree.get(path, with_metadata)
         except ParameterTreeError as error:
             logging.error("Error getting parameter: %s", error)
@@ -181,3 +189,11 @@ class HistogramLiveViewController(BaseController):
             update["energy_range"] = processor.energy_range  # Update whole thing just in case
 
         self.update_processor(processor, update)
+
+    def poll_processors(self):
+        """Get any values from the processor classes."""
+        for processor in self.processors:
+            while processor.pipe_parent.poll():
+                update = processor.pipe_parent.recv()
+                for key, value in update.items():
+                    setattr(processor, key, value)

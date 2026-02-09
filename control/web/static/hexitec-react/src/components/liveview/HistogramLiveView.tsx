@@ -6,7 +6,7 @@ import { TitleCard, WithEndpoint } from 'odin-react';
 import { ColourScale } from './ColourScale';
 import { MinMaxInput } from '../MinMaxInput';
 import { ClickableImage } from './ClickableImage';
-import { floatingInputStyle } from '../../utils'
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils'
 import type { MetadataType } from '../../EndpointTypes';
 
 import type { ParamTree } from 'odin-react';
@@ -43,6 +43,8 @@ interface LiveViewTypes extends ParamTree {
           region: [[number, number],[number, number]];
           scale: number;
           value_range: [number, number];
+          occupancy_percent: number;
+          occupancy_threshold: number;
         };
       }
     };
@@ -140,6 +142,32 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
       );
   };
 
+  const getOccupancyStyle = (
+    value?: number,
+    threshold?: number
+  ) => {
+    if (value == null || threshold == null ) return floatingLabelStyle;
+
+    // Other styles will be based off of floatingLabelStyle but with different colours
+    if (value >= threshold) {
+      return {
+        border: '1px solid #992732',
+        backgroundColor: '#f8d7da',
+        borderRadius: '0.375rem'
+      }; // exceeds threshold: red
+    }
+
+    if (value >= 0.8*threshold) {
+      return {
+        border: '1px solid #dfb600',
+        backgroundColor: '#f8f5d7',
+        borderRadius: '0.375rem'
+      }; // top 20% of threshold: warning yellow
+    }
+
+    return floatingLabelStyle; // default blue
+  }
+
   return (
     <TitleCard title={`Histogram View - ${name}`}>
       <Container fluid>
@@ -215,21 +243,55 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     <label className="text-muted">80</label>
                   </Col>
                 </Row>
-                <ClickableImage
-                  endpoint={liveViewEndPoint}
-                  imgPath={`_image/${name}/counts`}
-                  coordsPath={`histview/${name}/image/`}
-                  coordsParam={'region'}
-                  region={liveViewData?.image?.region ?? null}
-                />
+                <div style={{position:'relative', width: '100%', position: 'relative'}}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: -20,
+                      top: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      fontSize: '1rem',
+                      color: 'rgba(0,0,0,0.75)',
+                      pointerEvents: 'none'
+                    }}>
+                      <span>0</span>
+                      <span>80</span>
+                  </div>
+                  <ClickableImage
+                    endpoint={liveViewEndPoint}
+                    imgPath={`_image/${name}/counts`}
+                    coordsPath={`histview/${name}/image/`}
+                    coordsParam={'region'}
+                    region={liveViewData?.image?.region ?? null}
+                  />
+                </div>
               </Col>
               <Col>
-                <RegionSelectionInput
-                  imageHeight={80}
-                  imageWidth={80}
-                  value={liveViewData?.image?.region || undefined}
-                  onApply={(region) => liveViewEndPoint.put({ 'region': region}, imgPath)}
-                />
+                <Row>
+                  <RegionSelectionInput
+                    imageHeight={80}
+                    imageWidth={80}
+                    value={liveViewData?.image?.region || undefined}
+                    onApply={(region) => liveViewEndPoint.put({ 'region': region}, imgPath)}
+                  />
+                </Row>
+                <Row className="mt-3">
+                  <Col>
+                    <FloatingLabel label="Occupancy %">
+                      <Form.Control
+                        value={checkNull(liveViewData?.image?.occupancy_percent)}
+                        disabled
+                        style={getOccupancyStyle(
+                          liveViewData?.image?.occupancy_percent,
+                          liveViewData?.image?.occupancy_threshold
+                        )}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
               </Col>
             </Row>
             <Row>
