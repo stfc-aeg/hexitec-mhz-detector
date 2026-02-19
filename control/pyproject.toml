@@ -16,21 +16,25 @@ dependencies = [
     "munir @ git+https://github.com/stfc-aeg/munir.git#egg=munir",
     "requests",
     "python-statemachine",
-    "RegisterAccessor @ git+ssh://git@github.com/stfc-aeg/memory-accessor.git#subdirectory=control",
+    # "RegisterAccessor @ git+ssh://git@github.com/stfc-aeg/memory-accessor.git#subdirectory=control",
+    "mhz-readout @ git+ssh://git@github.com/stfc-aeg/MHz-Readout-Processor",
+    # "histogrammer @ git+ssh://git@github.com/stfc-aeg/odin-histogrammer.git@v1.0.1",
     "opencv-python",
+    "matplotlib",
     "blosc"
 
 ]
 readme = "README.md"
+authors = [
+    {name = "Josh Harris"},
+    {name = "Mika Shearwood", email = "mika.shearwood@stfc.ac.uk"},
+    {name = "Ashley Neaves", email = "ashley.neaves@stfc.ac.uk"}
+]
 
 [project.optional-dependencies]
 odin_control = [
     "odin-control @ git+https://github.com/odin-detector/odin-control@1.6.0#egg=odin-control"
 ]
-
-[[project.authors]] 
-email = "josh.harris@stfc.ac.uk"
-name = "Josh Harris"
 
 [project.urls]
 GitHub = "https://github.com/stfc-aeg/hexitec-mhz-detector"
