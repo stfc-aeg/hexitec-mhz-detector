@@ -1,0 +1,15 @@
+.stateOverlay {
+    max-width: none !important;
+    text-align: center;
+    justify-content: center;
+    width: 90%;
+    --bs-modal-bg: var(--bs-danger-bg-subtle);
+    --bs-modal-border-color: var(--bs-danger-border-subtle);
+    --bs-modal-header-border-color: var(--bs-modal-border-color);
+    --bs-modal-footer-border-color: var(--bs-modal-border-color);
+    --bs-modal-color: var(--bs-danger-text-emphasis);
+
+    :global(.modal-header) {
+        justify-content: center;
+    }
+}
