@@ -7,9 +7,13 @@ from hexitec.util.iac import IACError, iac_get, iac_set
 from odin.adapters.adapter import ApiAdapter
 from odin.adapters.proxy import ProxyAdapter
 from readout_processor.adapter import ReadoutProcessorAdapter
-from statemachine import State, StateMachine, Event
-from statemachine.transition_list import TransitionList
+from statemachine import Event, State, StateMachine
+from statemachine.exceptions import TransitionNotAllowed
 from tornado.ioloop import PeriodicCallback
+
+
+class StateMachineException(Exception):
+    """Basic State Machine Exception Class"""
 
 
 class ReadoutStatusControl(TypedDict):
@@ -48,272 +52,332 @@ class ReadoutStatus(TypedDict):
     reset: None
 
 
-class MHZMonitor(StateMachine):
-    current_retry = 0
-    reset_counter = 0
-    cleanup = False
+class LokiStatus(TypedDict):
+    ENABLE_STATE: str
+    ENABLE_STATE_STATUS_MESSAGE: str
 
-    frame_number = 0
-    status: ReadoutStatus = None
+    POWER_BOARD_INIT: bool
+    COB_INIT: bool
+    ASIC_INIT: bool
 
-    # States
-    idle = State("Idle", initial=True)
-    initialising = State("Initialising")
-    monitoring = State("Monitoring")
-    resetting = State("Resetting")
-    waiting_for_lanes = State("WaitingForLanes")
-    waiting_for_channels = State("WaitingForChannels")
-    reactivating = State("Reactivating")
-    error = State("Error")
+    SYNC: bool
+    REGS_EN: bool
+    ASIC_EN: bool
 
-    # Transitions
-    start = Event(idle.to(initialising))
-    init_success = initialising.to(monitoring)
+    proxy_status: int
 
-    # Monitor Loop
-    monitor: TransitionList = (monitoring.to.itself(internal=True)
-                               | reactivating.to(monitoring)
-                               )
 
-    # Reset Path
-    wait_lanes: TransitionList = (resetting.to(waiting_for_lanes)
-                                  | waiting_for_lanes.to.itself(internal=True))
-    wait_channels: TransitionList = (waiting_for_lanes.to(waiting_for_channels)
-                                     | waiting_for_channels.to.itself(internal=True))
-    reactivate: TransitionList = (waiting_for_channels.to(reactivating)
-                                  | reactivating.to.itself(internal=True))
-
-    reset = (monitoring.to(resetting)
-             | waiting_for_lanes.to(resetting)
-             | waiting_for_channels.to(resetting)
-             | reactivating.to(resetting)
-             )
-
-    # Error State
-    raise_error = (monitoring.to(error)
-                   | resetting.to(error)
-                   | waiting_for_lanes.to(error)
-                   | waiting_for_channels.to(error)
-                   | reactivating.to(error)
-                   )
-
-    recover = error.to(resetting)
-
+class Monitor:
+    """State Domain Model, which defines state Actions
+    (that trigger when entering/exiting state or on transitions)
+    , and holds class variables for the system, such as the
+    IAC adapters and timeouts """
     def __init__(self, adapters: dict[str, ApiAdapter],
-                 timeout=60, max_retries=3, event_history=100):
-        
-        # self.frame_check_duration = check_interval
-        # self.frame_check_interval = frame_check_interval
+                 timeout=60, max_retries=3, event_history=50):
+        self.retries = 0
+        self.reset_counter = 0
+        self.frame_number = 0
+
         self.timeout = timeout
         self.max_timeout = timeout
+
         self.max_retries = max_retries
         self.reset_history = deque(maxlen=event_history)
 
-        self.proxy: ProxyAdapter = adapters["proxy"]
+        self.loki: ProxyAdapter = adapters["proxy"]
         self.readout: ReadoutProcessorAdapter = adapters["readout"]
 
-        super().__init__()
+        self.readout_status: ReadoutStatus = None
+        self.loki_status: LokiStatus = None
 
+        self.loki_state_path = "loki/application/system_state"
+
+        self.error: Exception = None
+
+    # Adapter Communication Methods, for getting system status
+    def get_readout_status(self) -> ReadoutStatus:
+        return iac_get(self.readout, "status")
+
+    def get_loki_status(self) -> LokiStatus:
+        stat: LokiStatus = iac_get(self.loki, self.loki_state_path)
+        stat["proxy_status"] = iac_get(self.loki, "status/loki/status_code")
+
+        return stat
+
+    def clear_counters(self):
+        self.reset_counter = 0
+        self.retries = 0
+        self.timeout = self.max_timeout
+        self.reset_history.clear()
+
+    # Conditionals
+    def is_running(self):
+        return self.readout_status["is_running"]
+
+    def is_chan_up(self):
+        return self.readout_status["aurora"]["channel"]
+
+    def is_lane_up(self):
+        return self.readout_status["aurora"]["lane"]
+
+    def is_loki_power_board(self):
+        return self.loki_status["POWER_BOARD_INIT"]
+
+    def is_loki_cob(self):
+        return self.loki_status["COB_INIT"]
+
+    def is_loki_asic(self):
+        return self.loki_status["ASIC_INIT"]
+
+    def is_loki_up(self) -> bool:
+        return all([self.is_loki_power_board(),
+                   self.is_loki_asic(),
+                   self.is_loki_cob()])
+
+    def is_error(self):
+        return self.error is not None
+
+    def is_timeout(self):
+        return self.timeout < 1
+
+    def is_max_attempts(self):
+        return self.retries > self.max_retries
+
+    # Actions
     def on_enter_idle(self):
         logging.info("State Machine Started")
 
-    @start.on
-    def initialise(self):
-        """Initialise State Machine"""
+    def on_start(self):
+        """On Transition: idle -> initialise"""
         try:
-            self.status = self._get_status()
-            self.frame_number = self._get_frame_number()
-        except IOError:
-            logging.error("State Machine Initialisation Failed, could not read from device")
-            self.raise_error()
-        
-        self.init_success()
-    
-    @monitoring.enter
-    def start_monitoring(self):
+            self.readout_status = self.get_readout_status()
+            self.loki_status = self.get_loki_status()
+        except IACError:
+            logging.error("Unable to read status at initialisation")
+            self.error = StateMachineException("Unable to read status at initialisation")
+
+    def on_enter_monitoring(self):
         logging.info("Monitoring Loop Started")
+        self.retries = 0
 
-    @monitor.on
-    def monitor_readout(self):
-        """Monitor Readout status. Trigger reset if not running."""
-
+    def on_monitor(self):
+        """On Transition: monitoring -> monitoring,
+        error -> monitoring, reactivating -> monitoring"""
         try:
-            self.status = self._get_status()
-        except IOError:
-            self.raise_error()
-        
-        if not self.status["is_running"] or not self.status["frame_changing"]:
-            # Readout is not running, start reset process
-            logging.warning("Readout not running. Triggering Reset")
-            self.reset()
+            self.readout_status = self.get_readout_status()
+            self.loki_status = self.get_loki_status()
+        except IACError:
+            self.error = StateMachineException("Unable to read status whilst Monitoring")
 
-    @reset.before
-    def log_reset_event(self, event: str, source: State):
+        if not 200 <= self.loki_status["proxy_status"] < 300:
+            # proxy is showing an error Status Code. We should error out
+            self.error = StateMachineException(
+                "Loki Proxy Error. HTTP Code: ({})".format(self.loki_status["proxy_status"]))
+
+    def on_enter_resetting(self, event: str, source: State):
         """Log a reset event before starting the reset process"""
-        if source != self.monitoring:
-            self.current_retry += 1
-            if self.current_retry > self.max_retries:
-                logging.warning("Exceeded Reset Retry limit")
-                self.raise_error()
+        self.retries += 1
+        if self.retries > self.max_retries:
+            logging.error("Exceeded Reset Retry limit")
+            self.error = StateMachineException(
+                "Exceeeded Retry Limit of {}".format(self.max_retries)
+            )
 
-        self.reset_counter += 1
-        logging.info("Starting reset sequence. Attempt %d/%d",
-                     self.current_retry + 1, self.max_retries)
-        reasons = {
-            self.monitoring.name: "Monitoring Loop saw failed Readout",
-            self.waiting_for_lanes.name: "Timeout Waiting for Lanes",
-            self.waiting_for_channels.name: "Timeout Waiting for Channel",
-            self.reactivating.name: "Timeout waiting for Reactivation to succeed"
-        }
-        event = {
-            "count": self.reset_counter,
-            "timestamp": datetime.now().isoformat(),
-            "reason": reasons.get(source.name, "Unknown Reset Event"),
-            "retry_attempt": self.current_retry
-        }
+        else:
+            try:
+                self.reset_counter += 1
+                logging.warning("Starting reset sequence. Attempt %d/%d",
+                                self.retries, self.max_retries)
 
-        self.reset_history.append(event)
+                self.readout_status = self.get_readout_status()
+                self.loki_status = self.get_loki_status()
 
-    @reset.on
-    def reset_readout(self):
-        """Start the Reset process"""
+                if not self.is_loki_up():
+                    monitoring_reason = "Loki Board Failed"
+                else:
+                    monitoring_reason = "Data Readout Failed"
 
+                reasons = {
+                    "Monitoring": monitoring_reason,
+                    "WaitingForLanes": "Timeout Waiting for Lanes",
+                    "WaitingForChannels": "Timeout Waiting for Channel",
+                    "Reactivating": "Timeout waiting for Reactivation to succeed"
+                }
+                event = {
+                    "count": self.reset_counter,
+                    "timestamp": datetime.now().isoformat(),
+                    "reason": reasons.get(source.name, "Unknown Reset Event"),
+                    "retry_attempt": self.retries
+                }
+
+                self.reset_history.append(event)
+            except IACError as err:
+                self.error = err
+
+    # Resetting Steps for Readout
+    def on_enter_waiting_for_lanes(self):
+        """Entering WaitingForLanes State"""
+        self.timeout = self.max_timeout  # resetting timeout
         try:
-            iac_set(self.proxy, "loki/application/system_state", {"SYNC": False})
+            iac_set(self.loki, self.loki_state_path, {"SYNC": False})
             logging.debug("Loki Data Sync OFF")
 
             iac_set(self.readout, "status", {"reset": True})
             logging.debug("Readout resetting")
-
-            self.wait_lanes()
-        except IACError:
-            self.raise_error()
-
-    @waiting_for_lanes.enter
-    def start_wait_lanes(self):
+            self.readout_status = self.get_readout_status()
+        except IACError as err:
+            self.error = err
         logging.info("Waiting for Lane to come back")
 
-    @wait_lanes.on
-    def await_lanes(self):
+    def on_enter_waiting_for_channels(self):
+        self.timeout = self.max_timeout
         try:
-            self.status = self._get_status()
-        except IOError:
-            self.raise_error()
-
-        if self.status["aurora"]["lane"]:
-            logging.debug("Lane Up")
-            self.timeout = self.max_timeout
-            self.wait_channels()
-        else:
-            # still waiting. reduce timeout
-            self.timeout -= 1
-            if not self.timeout:
-                # timed out
-                self.reset()
-
-    @waiting_for_channels.enter
-    def start_wait_channel(self):
-
-        try:
-            iac_set(self.proxy, "loki/application/system_state", {"ASIC_REBOND": True})
+            iac_set(self.loki, self.loki_state_path, {"ASIC_REBOND": True})
             logging.debug("Loki Rebond command sent")
-            self.wait_channels()
-        except IACError:
-            self.raise_error()
+            self.readout_status = self.get_readout_status()
+        except IACError as err:
+            self.error = err
     
         logging.info("Waiting for Channel to come back")
 
-    @wait_channels.on
-    def await_channel(self):
-        try:
-            self.status = self._get_status()
-        except IACError:
-            self.raise_error()
-        
-        if self.status["aurora"]["channel"]:
-            logging.debug("Channel Up")
-            self.timeout = self.max_timeout
-            self.reactivate()
-        else:
-            # still waiting. reduce timeout
-            self.timeout -= 1
-            if not self.timeout:
-                # timed out
-                self.reset()
-    
-    @reactivating.enter
-    def start_reactivation(self):
+    def on_enter_reactivating(self):
+        self.timeout = self.max_timeout
         logging.info("Reactivating Readout after reset")
-
         try:
             iac_set(self.readout, "status", {"reactivate": True})
-            iac_set(self.proxy, "loki/application/system_state", {"SYNC": True})
-        
-        except IACError:
-            self.raise_error()
+            iac_set(self.loki, self.loki_state_path, {"SYNC": True})
 
-    @reactivate.on
-    def await_reactivation(self):
-
-        try:
-            self.status = self._get_status()
-        except IACError:
-            self.raise_error()
-
-        if self.status["is_running"] and self.status["frame_changing"]:
-            logging.debug("Datapath recovered")
-            self.timeout = self.max_timeout
-            self.current_retry = 0
-            self.monitor()
-        else:
-            self.timeout -= 1
-            if not self.timeout:
-                self.reset()
-
-    @raise_error.on
-    def process_error(self, event: str, source: State):
-        logging.error("Entered Error State from %s State", source)
-        logging.error("Total resets performed: %d", self.reset_counter)
-
-    @recover.before
-    def recover_from_error(self):
-        logging.info("Recovering from Error")
-        self.reset()
-
-    def _get_status(self) -> ReadoutStatus:
-        """Get the Readout Status"""
-
-        try:
-            stat = iac_get(self.readout, "status")
-            if not stat['is_running']:
-                logging.debug("Readout is not running correctly")
-                logging.debug("Aurora Channel: %s. Aurora Lane: %s",
-                              stat["aurora"]["channel"], stat["aurora"]["lane"])
-                logging.debug("CMAC Lane 0: %s. Lane 1: %s",
-                              stat["cmac"]["cmac_0_lane_up"] == 1,
-                              stat["cmac"]["cmac_1_lane_up"] == 1)
-            return stat
         except IACError as err:
-            logging.error("Failed to get Readout Status from Adapter")
-            logging.error(err)
-            raise err
+            self.error = err
 
-    def _get_frame_number(self) -> int:
-        """Get the Frame Number"""
+    def on_wait(self):
+        """Checking status while waiting for reset step.
+        This Action will trigger for the lane, channel, and reactivating States"""
 
-        stat = self._get_status()
-        return stat["frame_number"]
+        try:
+            self.readout_status = self.get_readout_status()
+            self.timeout -= 1
+        except IACError as err:
+            self.error = err
 
-    def _check_frame_variation(self) -> bool:
-        """Check that the frame number is changing"""
+    # Resetting steps for Loki
+    def on_enter_loki_power_init(self):
+        """Initialise LOKI Power Board"""
+        self.timeout = self.max_timeout
+        try:
+            iac_set(self.loki, self.loki_state_path, {"ENABLE_STATE": "PWR_DONE"})
+        except IACError as err:
+            self.error = err
 
-        self.status = self._get_status()
-        return self.status["frame_changing"]
+    def on_enter_loki_cob_init(self):
+        """Init Loki COB"""
+        self.timeout = self.max_timeout
+        try:
+            iac_set(self.loki, self.loki_state_path, {"ENABLE_STATE": "COB_DONE"})
+        except IACError as err:
+            self.error = err
 
-    def _clear_counters(self):
-        self.current_retry = 0
-        self.reset_counter = 0
-        self.reset_history.clear()
+    def on_enter_loki_asic_init(self):
+        """Init Loki Asic"""
+        self.timeout = self.max_timeout
+        try:
+            iac_set(self.loki, self.loki_state_path, {"ENABLE_STATE": "ASIC_DONE"})
+        except IACError as err:
+            self.error = err
+
+    def on_wait_loki(self):
+        """Check Loki Status while waiting for reset steps"""
+        try:
+            self.loki_status = self.get_loki_status()
+            self.timeout -= 1
+        except IACError as err:
+            self.error = err
+
+    def on_enter_error(self, source: State):
+        logging.error("Entered Error State from %s State", source)
+        logging.error("Error Messsage: %s", self.error)
+
+    def on_exit_error(self):
+        logging.info("Resetting after error")
+        self.error = None
+        self.retries = 0
+
+
+class MonitorControl(StateMachine):
+
+    # States
+    idle = State("System Idle", initial=True)
+    initialising = State("Initialising")
+    monitoring = State("Monitoring")
+    resetting = State("Resetting")
+    waiting_for_lanes = State("Waiting For Lanes")
+    waiting_for_channels = State("Waiting For Channels")
+    reactivating = State("Reactivating")
+    error = State("Error")
+
+    loki_power_init = State("Loki Power Init")
+    loki_cob_init = State("Loki COB Init")
+    loki_asic_init = State("Loki ASIC Init")
+
+    # Transitions
+
+    # All states can fall into error state if an error is raised
+    raise_error = error.from_.any(cond="is_error")
+
+
+    # Monitoring Loop
+    monitor = (
+        initialising.to(monitoring, unless="is_error")
+        | monitoring.to(monitoring, internal=True, unless="is_error", cond="is_running")
+    )
+
+    # branch to pick which reset step to begin
+    start_reset = (
+        resetting.to(waiting_for_lanes, cond="is_loki_up", unless="is_max_attempts or is_error")
+        | resetting.to(loki_power_init, cond="!is_loki_power_board", unless="is_max_attempts or is_error")
+        | resetting.to(loki_cob_init, cond="!is_loki_cob", unless="is_max_attempts or is_error")
+        | resetting.to(loki_asic_init, cond="!is_loki_asic", unless="is_max_attempts or is_error")
+    )
+
+    reset = (
+        monitoring.to(resetting, cond="!is_running", unless="is_error")
+        | waiting_for_lanes.to(resetting, cond="is_timeout", unless="is_error")
+        | waiting_for_channels.to(resetting, cond="is_timeout", unless="is_error")
+        | reactivating.to(resetting, cond="is_timeout", unless="is_error")
+        | loki_power_init.to(resetting, cond="is_timeout", unless="is_error")
+        | loki_cob_init.to(resetting, cond="is_timeout", unless="is_error")
+        | loki_asic_init.to(resetting, cond="is_timeout", unless="is_error")
+    )
+
+    # Resetting Steps. Loops included for waiting.
+    wait = (
+        waiting_for_lanes.to(waiting_for_lanes, internal=True,
+                             cond=["!is_timeout", "!is_lane_up"], unless="is_error")
+        | waiting_for_lanes.to(waiting_for_channels,
+                               cond="is_lane_up", unless="is_error")
+        | waiting_for_channels.to(waiting_for_channels, internal=True,
+                                  cond=["!is_timeout", "!is_chan_up"], unless="is_error")
+        | waiting_for_channels.to(reactivating,
+                                  cond="is_chan_up", unless="is_error")
+        | reactivating.to(reactivating, internal=True,
+                          cond=["!is_timeout", "!is_running"], unless="is_error")
+        | reactivating.to(monitoring, cond="is_running", unless="is_error")
+    )
+
+    wait_loki = (
+        loki_power_init.to(loki_power_init, internal=True, cond=["!is_loki_power_board", "!is_timeout"], unless="is_error")
+        | loki_power_init.to(loki_cob_init, cond="is_loki_power_board", unless="is_error")
+        | loki_cob_init.to(loki_cob_init, internal=True, cond=["!is_loki_cob", "!is_timeout"], unless="is_error")
+        | loki_cob_init.to(loki_asic_init, cond="is_loki_cob", unless="is_error")
+        | loki_asic_init.to(loki_asic_init, internal=True, cond=["!is_timeout", "!is_loki_asic"], unless="is_error")
+        | loki_asic_init.to(monitoring, cond="is_loki_asic", unless="is_error")
+    )
+
+    # recover from error state
+    recover = Event(error.to(monitoring))
+
+    # start the state machine
+    start = Event(idle.to(initialising))
 
 
 class StateMonitor:
@@ -321,11 +385,10 @@ class StateMonitor:
     def __init__(self, adapters: dict[str, ApiAdapter],
                  timeout=60, max_retries=3, event_history=100,
                  frequency: float = 1000):
-        
-        self.machine = MHZMonitor(adapters, timeout,
-                                  int(max_retries), int(event_history))
-        
-        self.machine.start()  # initialise state machine
+        self.monitor = Monitor(adapters, int(timeout), int(max_retries), int(event_history))
+        self.machine = MonitorControl(self.monitor)
+
+        self.machine.send("start")  # initialise state machine
 
         self.run_loop = PeriodicCallback(self.run, frequency)
         self.run_loop.start()
@@ -333,15 +396,19 @@ class StateMonitor:
         self.tree = {
             "state": (lambda: self.machine.current_state.name, None,
                       {"allowed_values": [state.name for state in self.machine.states]}),
-            "num_resets": (lambda: self.machine.reset_counter, None),
-            "reset_history": (lambda: list(self.machine.reset_history), None),
-            "clear_history": (None, lambda _: self.machine._clear_counters()),
-            "current_retry": (lambda: self.machine.current_retry, None,
-                              {"max": self.machine.max_retries}),
+            "num_resets": (lambda: self.monitor.reset_counter, None),
+            "reset_history": (lambda: list(self.monitor.reset_history), None),
+            "clear_history": (None, lambda _: self.monitor.clear_counters()),
+            "current_retry": (lambda: self.monitor.retries, None,
+                              {"max": self.monitor.max_retries}),
             "recover": (lambda: self.machine.current_state == self.machine.error,
                         lambda _: self.recover_from_error()),
             "monitoring": (self.run_loop.is_running, self.run_monitor,
-                           {"description": "Run the IOLoop Callback to trigger Monitoring events"})
+                           {"description": "Run the IOLoop Callback to trigger Monitoring events"}),
+            "error": (lambda: str(self.monitor.error) if self.monitor.error is not None else "", None),
+            "debug_error": (None, lambda _: self._inject_error()),
+            "next_state": (lambda: [t.target.name for t in self.machine.current_state.transitions
+                                    if t.target not in [self.machine.current_state, self.machine.error]], None)
         }
 
     def run_monitor(self, run: bool):
@@ -351,31 +418,30 @@ class StateMonitor:
             self.run_loop.stop()
 
     def run(self):
-        state = self.machine.current_state
+        try:
+            state = self.machine.current_state
+            enabled_events: list[Event] = self.machine.enabled_events()
+            if state != self.machine.error:
+                if len(enabled_events) > 1:
+                    # report if State Machine is not certain of which state to transition to
+                    # due to the setup of the state machine conditions, this should not happen
+                    logging.warning("State machine has no definitive Event: %s",
+                                    ", ".join([f"{e.name}" for e in enabled_events]))
 
-        if state == self.machine.idle:
-            # shouldnt be, because of initialisation, but just in case
-            self.machine.start()
+                self.machine.send(enabled_events[0].id)
+            else:
+                self.run_monitor(False)
 
-        # loops!
-        elif state == self.machine.monitoring:
-            # continue monitoring
-            self.machine.monitor()
+        except TransitionNotAllowed as err:
+            logging.error("Error trying to run State Machine: %s", err)
 
-        elif state == self.machine.waiting_for_lanes:
-            # continue waiting for lanes
-            self.machine.wait_lanes()
-
-        elif state == self.machine.waiting_for_channels:
-            # continue waiting for channel
-            self.machine.wait_channels()
-
-        elif state == self.machine.reactivating:
-            self.machine.reactivate()
+    def _inject_error(self):
+        self.monitor.error = StateMachineException("Debug Injected Error")
 
     def recover_from_error(self):
 
         state = self.machine.current_state
 
         if state == self.machine.error:
-            self.machine.recover()
+            self.machine.send("recover")
+            self.run_monitor(True)
