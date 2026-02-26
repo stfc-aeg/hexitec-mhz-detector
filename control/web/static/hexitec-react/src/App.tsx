@@ -10,11 +10,12 @@ import { HistogramLiveView } from './components/liveview/HistogramLiveView';
 import HistogramControl from './pages/Histogrammer';
 
 import { UserLevelContext } from './components/UserLevel';
+import type { HexitecParamTree } from './components/admonitor/MonitorOverlay';
 
 function App() {
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
-  const endpoint = useAdapterEndpoint('hexitec', endpoint_url);
+  const endpoint = useAdapterEndpoint<HexitecParamTree>('hexitec', endpoint_url);
 
   return (
     <UserLevelContext value={endpoint.data.user_type==='power'}>

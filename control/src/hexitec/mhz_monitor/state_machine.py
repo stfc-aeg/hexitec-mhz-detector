@@ -158,11 +158,12 @@ class Monitor:
 
     def on_enter_monitoring(self):
         logging.info("Monitoring Loop Started")
-        self.retries = 0
 
-    def on_monitor(self):
+    def on_monitor(self, source: State):
         """On Transition: monitoring -> monitoring,
         error -> monitoring, reactivating -> monitoring"""
+        if source.name == "Monitoring":
+            self.retries = 0
         try:
             self.readout_status = self.get_readout_status()
             self.loki_status = self.get_loki_status()
@@ -199,8 +200,11 @@ class Monitor:
 
                 reasons = {
                     "Monitoring": monitoring_reason,
-                    "WaitingForLanes": "Timeout Waiting for Lanes",
-                    "WaitingForChannels": "Timeout Waiting for Channel",
+                    "Waiting For Lanes": "Timeout Waiting for Lanes",
+                    "Waiting For Channels": "Timeout Waiting for Channel",
+                    "Loki Power Init": "Timeout waiting for Loki Power Board",
+                    "Loki COB Init": "Timeout waiting for Loki COB Init",
+                    "Loki ASIC Init": "Timeout waiting for Loki ASIC Init",
                     "Reactivating": "Timeout waiting for Reactivation to succeed"
                 }
                 event = {
@@ -324,7 +328,6 @@ class MonitorControl(StateMachine):
     # All states can fall into error state if an error is raised
     raise_error = error.from_.any(cond="is_error")
 
-
     # Monitoring Loop
     monitor = (
         initialising.to(monitoring, unless="is_error")
@@ -365,11 +368,14 @@ class MonitorControl(StateMachine):
     )
 
     wait_loki = (
-        loki_power_init.to(loki_power_init, internal=True, cond=["!is_loki_power_board", "!is_timeout"], unless="is_error")
+        loki_power_init.to(loki_power_init, internal=True,
+                           cond=["!is_loki_power_board", "!is_timeout"], unless="is_error")
         | loki_power_init.to(loki_cob_init, cond="is_loki_power_board", unless="is_error")
-        | loki_cob_init.to(loki_cob_init, internal=True, cond=["!is_loki_cob", "!is_timeout"], unless="is_error")
+        | loki_cob_init.to(loki_cob_init, internal=True,
+                           cond=["!is_loki_cob", "!is_timeout"], unless="is_error")
         | loki_cob_init.to(loki_asic_init, cond="is_loki_cob", unless="is_error")
-        | loki_asic_init.to(loki_asic_init, internal=True, cond=["!is_timeout", "!is_loki_asic"], unless="is_error")
+        | loki_asic_init.to(loki_asic_init, internal=True,
+                            cond=["!is_timeout", "!is_loki_asic"], unless="is_error")
         | loki_asic_init.to(monitoring, cond="is_loki_asic", unless="is_error")
     )
 
@@ -404,11 +410,15 @@ class StateMonitor:
             "recover": (lambda: self.machine.current_state == self.machine.error,
                         lambda _: self.recover_from_error()),
             "monitoring": (self.run_loop.is_running, self.run_monitor,
-                           {"description": "Run the IOLoop Callback to trigger Monitoring events"}),
-            "error": (lambda: str(self.monitor.error) if self.monitor.error is not None else "", None),
+                           {"description": "Run the Monitoring Loop"}),
+            "error": (lambda: str(self.monitor.error) if self.monitor.error is not None else "",
+                      None),
             "debug_error": (None, lambda _: self._inject_error()),
             "next_state": (lambda: [t.target.name for t in self.machine.current_state.transitions
-                                    if t.target not in [self.machine.current_state, self.machine.error]], None)
+                                    if t.target not in [self.machine.current_state,
+                                                        self.machine.error,
+                                                        self.machine.resetting]],
+                           None)
         }
 
     def run_monitor(self, run: bool):

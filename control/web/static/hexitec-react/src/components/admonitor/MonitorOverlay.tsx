@@ -1,10 +1,8 @@
-import { EndpointButton, OdinTable, OdinTableRow, TitleCard, useAdapterEndpoint, type AdapterEndpoint, type ParamTree } from "odin-react";
-import { Alert, Col, Modal, Row, Container, Badge, ListGroup } from "react-bootstrap";
-import { StatusOverview } from "./StatusOverview";
-import { DiagnosticInfo } from "./DiagInfo";
+import { EndpointButton, OdinTable, OdinTableRow, useAdapterEndpoint, type ParamTree } from "odin-react";
+import { Alert, Badge, Modal, ProgressBar } from "react-bootstrap";
 
-import style from "./style.module.css"
 import type { ComponentProps } from "react";
+import style from "./style.module.css";
 
 interface ResetHistory extends ParamTree{
   count: number;
@@ -13,16 +11,14 @@ interface ResetHistory extends ParamTree{
   timestamp: string;  // ISO datetime format
 }
 
-const ErrorState = ["Resetting", "WaitingForLanes", "WaitingForChannels",
-                    "Reactivating", "Error"] as const;
-                
+type States = 'System Idle' | 'Initialising' | 'Monitoring' | 'Resetting'
+            | 'Waiting For Lanes'| 'Waiting For Channels'| 'Reactivating'
+            | 'Loki Power Init'| 'Loki COB Init'| 'Loki ASIC Init'
+            | 'Error'
 
-type MonitorState = "Idle" | "Initialising" | "Monitoring" 
-                  | typeof ErrorState[number];
-type CriticalState = typeof ErrorState[number];
 
-const isCriticalState = (x: MonitorState): x is CriticalState => {
-    return ErrorState.some((state) => x === state)
+const isCriticalState = (x: States): boolean => {
+    return (!["System Idle", "Initialising", "Monitoring"].includes(x));
 }
 
 interface MonitorTree extends ParamTree{
@@ -32,10 +28,13 @@ interface MonitorTree extends ParamTree{
   num_resets: number;
   recover: boolean;
   reset_history: ResetHistory[];
-  state: MonitorState;
+  state: States;
+  error: string;
+  next_state: string[];
 }
+
 interface HexitecParamTree extends ParamTree {
-  user_type: string;
+  user_type: "basic" | "power";
   mhz_monitor: MonitorTree;
 }
 
@@ -50,45 +49,34 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
 
     const endpoint = useAdapterEndpoint<HexitecParamTree>("hexitec", import.meta.env.VITE_ENDPOINT_URL, interval);
     
-    const {state = "Idle",
-           recover = false,
-           current_retry = 0,
-           reset_history = [],
-           num_resets = 0} = endpoint.data.mhz_monitor ?? {};
+    const {
+        state = "System Idle",
+        recover = false,
+        current_retry = 0,
+        reset_history = [],
+        num_resets = 0,
+        error = "",
+    } = endpoint.data.mhz_monitor ?? {};
+
     const max_retries: number = endpoint.metadata?.mhz_monitor?.current_retry?.max ?? 3;
-
-    const allStates = endpoint.metadata?.mhz_monitor?.state?.allowed_values as typeof state[] ?? [];
-
     const recentResets = reset_history?.slice(-5).reverse() ?? [];
-
     const resetTableData = recentResets.map(log => {
         return {
             "timestamp": new Date(log.timestamp).toLocaleString(),
-            "retry_attempt": log.retry_attempt + 1,
+            "retry_attempt": log.retry_attempt,
             "count": log.count,
             "reason": log.reason
         }
     })
-    const getUserFriendlyState = (getState: typeof state): [string, ComponentProps<typeof Alert>["variant"]] => {
-        let text: string, colour: ComponentProps<typeof Alert>["variant"];
 
+    const getStateColour = (getState: typeof state): ComponentProps<typeof Alert>["variant"] => {
+        let colour: ComponentProps<typeof Alert>["variant"];
+        
+        // const text = getState.replace(/([a-z])([A-Z])/g, '$1 $2')
         switch(getState) {
-            case 'Idle': text = 'System Idle'; break;
-            case 'Initialising': text = 'Initialising'; break;
-            case 'Monitoring': text = 'Monitoring'; break;
-            case 'Resetting': text = 'Resetting'; break;
-            case 'WaitingForLanes': text = 'Waiting for Lanes'; break;
-            case 'WaitingForChannels': text = 'Waiting for Channels'; break;
-            case 'Reactivating': text = 'Reactivating'; break;
-            case 'Error':
-            default: text = 'Error';
-        }
-        switch(getState) {
-            case "Resetting":
-            case "WaitingForLanes":
-            case "WaitingForChannels":
-            case "Reactivating":
-                colour = "warning"
+            case "System Idle":
+            case "Initialising":
+                colour = "secondary";
                 break;
             case "Error":
                 colour = "danger";
@@ -96,96 +84,100 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
             case "Monitoring":
                 colour = "success";
                 break;
-            case "Idle":
-            case "Initialising":
+            case "Resetting":
+            case "Waiting For Lanes":
+            case "Waiting For Channels":
+            case "Reactivating":
             default:
-                colour = "secondary";
+                colour = "primary";
         }
-        return [text, colour]
+        return colour
     }
-    const [userFriendlyState, stateColor] = getUserFriendlyState(state);
 
+    const getStateProgressBar = (getState: typeof state): [string, number] => {
 
-    // const showOverlay = () => {
-    //     const adxdmaData = endpoint.data.mhz_monitor;
-    //     if (!adxdmaData) return false;
+        switch(getState) {
+            case "System Idle":
+            case "Initialising":
+            case "Monitoring":
+                return ["success", 100]
+            case "Error":
+                return ["danger", 100]
+            case "Resetting":
+                return ["primary", 15]
+            case "Waiting For Lanes":
+            case "Loki Power Init":
+                return ["primary", 25]
+            case "Waiting For Channels":
+            case "Loki COB Init":
+                return ["primary", 50]
+            case "Reactivating":
+            case "Loki ASIC Init":
+                return ["primary", 75]
+            default:
+                return ["secondary", 100]
+        }
+    }
 
-    //     const {state, recover} = adxdmaData;
+    const stateColor = getStateColour(state);
+    const [progressColor, progressAmount] = getStateProgressBar(state);
 
-    //     // return (isCriticalState(state) || recover)
-    //     return true;
-    // }
-    
     return (
-        <Modal show={isCriticalState(state) || recover} backdrop="static"
+        <Modal show={isCriticalState(state) || current_retry != 0} backdrop="static" size="lg"
             centered keyboard={false} dialogClassName={style.stateOverlay}>
             <Modal.Header>
                 <Modal.Title>⚠️ Hardware Issue Detected ⚠️</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Container>
-                <Row>
-                <Col>
-                    <Alert variant="danger">
-                        An issue with the Data Readout Hardware has been detected. Below is information on the
-                        system's automatic attempts to resolve this issue. If maximum retries are attempted,
-                        contact technical support.
-                    </Alert>
-                </Col>
-                </Row>
-                <Row>
-                <Col md={5}>
-                    <h2>
-                        Status: <Badge bg={stateColor}>{userFriendlyState}</Badge>
-                    </h2>
-                    <p>
-                        Retry Count: {current_retry} / {max_retries}
-                        {current_retry >= max_retries && (
-                            <Badge bg="danger">Max retries reached</Badge>
-                        )}
-                    </p>
-                    <ListGroup>
-                        {allStates.map((states) => (
-                            <ListGroup.Item key={states} active={state == states}>
-                                {getUserFriendlyState(states)[0]}
-                            </ListGroup.Item>
-                        ))}
-                    </ListGroup>
-                    
-                </Col>
-                <Col>
-                    <h1> Reset History</h1>
-                    {resetTableData.length > 0 ? (
-                    <>
-                    <p>{reset_history.length} reset events recorded</p>
-                    <OdinTable columns={{"count": "Count", "retry_attempt": "Attempt", "timestamp": "Timestamp", "reason": "Reason"}}>
-                        {resetTableData.map((log) => (
-                            <OdinTableRow key={log.timestamp} row={log}/>
-                        ))}
-                    </OdinTable>
-                    </>
-                    ) : (
-                        <p>No Reset events recorded</p>
+                An issue with the Data Readout Hardware has been detected. Below is information on the
+                system's automatic attempts to resolve this issue. If maximum retries are attempted,
+                contact technical support.
+            </Modal.Body>
+            
+            <Modal.Body>
+                <h2>Status: <Badge bg={stateColor}>{state}</Badge></h2>
+                <p>
+                    {current_retry > max_retries ? (
+                        <Badge bg="danger">Max retries reached</Badge>
+                    ) :
+                    (
+                        <Badge bg="secondary">Reset Attempt: {current_retry}/{max_retries}</Badge>
                     )}
-                    <EndpointButton endpoint={endpoint} fullpath="mhz_monitor/clear_history"
-                                    value={true} disabled={!(resetTableData.length > 0)}>
-                        Clear History
-                    </EndpointButton>
-                </Col>
-                </Row>
-                <Row>
-                    <Col>
-                        
-                    </Col>
-                </Row>
-                </Container>
+                </p>
+                <ProgressBar animated={!['System Idle', 'Initialising', 'Monitoring', "Error"].includes(state)}
+                    now={progressAmount} variant={progressColor}
+                    label={state}/>
+                {error && (
+                    <>
+                        <p>Error Message: {error}</p>
+                        <EndpointButton endpoint={endpoint} fullpath="mhz_monitor/recover" value={true}
+                                    variant="danger" disabled={!recover}>
+                        {recover ? "manually Recover from Error" : "Recovery not required"}
+                        </EndpointButton>
+                    </>
+                )}
+            </Modal.Body>
+            <Modal.Body>
+                <h2>Reset History</h2>
+                {num_resets > 0 ? (
+                <>
+                <p>{num_resets} reset events recorded</p>
+                <OdinTable columns={{"count": "Total Reset", "retry_attempt": "Attempt Number", "timestamp": "Timestamp", "reason": "Reason"}}>
+                    {resetTableData.map((log) => (
+                        <OdinTableRow key={log.timestamp} row={log}/>
+                    ))}
+                </OdinTable>
+                </>
+                ) : (
+                    <p>No Reset events recorded</p>
+                )}
+                <EndpointButton endpoint={endpoint} fullpath="mhz_monitor/clear_history"
+                            value={true} disabled={!(resetTableData.length > 0)}>
+                    Clear History
+                </EndpointButton>
             </Modal.Body>
             <Modal.Footer>
                 <p>This alert will automatically dismiss when the hardware connection is restored.</p>
-                <EndpointButton endpoint={endpoint} fullpath="mhz_monitor/recover" value={true}
-                                variant="warning" disabled={!recover}>
-                    {recover ? "manually Recover from Error" : "Recovery not required"}
-                </EndpointButton>
             </Modal.Footer>
         </Modal>
     )
@@ -193,4 +185,4 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
     
 }
 
-export {SystemMonitorOverlay, type HexitecParamTree};
+export { SystemMonitorOverlay, type HexitecParamTree };

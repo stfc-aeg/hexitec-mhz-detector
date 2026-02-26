@@ -1,8 +1,6 @@
 .stateOverlay {
-    max-width: none !important;
     text-align: center;
     justify-content: center;
-    width: 90%;
     --bs-modal-bg: var(--bs-danger-bg-subtle);
     --bs-modal-border-color: var(--bs-danger-border-subtle);
     --bs-modal-header-border-color: var(--bs-modal-border-color);
@@ -11,5 +9,9 @@
 
     :global(.modal-header) {
         justify-content: center;
+    }
+
+    :global(.modal-body) {
+        border-bottom: var(--bs-modal-header-border-width) solid var(--bs-modal-header-border-color);
     }
 }
