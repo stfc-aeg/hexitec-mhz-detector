@@ -3,7 +3,7 @@ from hexitec.base.base_controller import BaseController, BaseError
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from typing import TypedDict, cast
-from histogrammer.adapter import HistogramAdapter, HistogramController
+from histogrammer.adapter.adapter import HistogramAdapter, HistogramController
 from hexitec.liveview.adapter import HistogramLiveViewAdapter, HistogramLiveViewController
 from munir.adapter import MunirAdapter, MunirFpController, MunirController
 from odin.adapters.proxy import ProxyAdapter

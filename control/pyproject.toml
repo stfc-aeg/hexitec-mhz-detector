@@ -13,17 +13,16 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "munir @ git+https://github.com/stfc-aeg/munir.git#egg=munir",
-    "requests",
-    "python-statemachine=2.6.0",
-    # "RegisterAccessor @ git+ssh://git@github.com/stfc-aeg/memory-accessor.git#subdirectory=control",
-    "mhz-readout @ git+ssh://git@github.com/stfc-aeg/MHz-Readout-Processor",
-    # "histogrammer @ git+ssh://git@github.com/stfc-aeg/odin-histogrammer.git@v1.0.1",
-    "opencv-python",
-    "matplotlib",
-    "blosc"
-
+   "munir @ git+https://github.com/stfc-aeg/munir.git#egg=munir",
+   "requests",
+   "python-statemachine==2.6.0",
+   "mhz-readout @ git+ssh://git@github.com/stfc-aeg/MHz-Readout-Processor",
+   "histogrammer @ git+ssh://git@github.com/stfc-aeg/odin-histogrammer.git@v1.1.0",
+   "opencv-python>=4.12.0.88",
+   "matplotlib>=3.10.8",
+   "blosc>=1.11.3"
 ]
+
 readme = "README.md"
 authors = [
     {name = "Josh Harris"},
