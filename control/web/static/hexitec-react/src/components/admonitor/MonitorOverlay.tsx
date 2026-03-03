@@ -26,6 +26,7 @@ interface MonitorTree extends ParamTree{
   current_retry: number;
   monitoring: boolean;
   num_resets: number;
+  timeout: number;
   recover: boolean;
   reset_history: ResetHistory[];
   state: States;
@@ -56,9 +57,11 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
         reset_history = [],
         num_resets = 0,
         error = "",
+        timeout = 0,
     } = endpoint.data.mhz_monitor ?? {};
 
     const max_retries: number = endpoint.metadata?.mhz_monitor?.current_retry?.max ?? 3;
+    const max_timeout: number = endpoint.metadata?.mhz_monitor?.timeout?.max ?? 60;
     const recentResets = reset_history?.slice(-5).reverse() ?? [];
     const resetTableData = recentResets.map(log => {
         return {
@@ -144,15 +147,31 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
                         <Badge bg="secondary">Reset Attempt: {current_retry}/{max_retries}</Badge>
                     )}
                 </p>
+                <ProgressBar>
                 <ProgressBar animated={!['System Idle', 'Initialising', 'Monitoring', "Error"].includes(state)}
                     now={progressAmount} variant={progressColor}
                     label={state}/>
+                {timeout > 0 &&
+                    <ProgressBar variant="info" animated now={(timeout / max_timeout)*(100-progressAmount)}
+                        className={style.progressLabelContainer} label={
+                        <div className={style.progressLabelContainer}>
+                            <p className={style.progressLabelOver}>
+                                {`Timeout: ${timeout}/${max_timeout}`}
+                            </p>
+                            <div className={style.progressLabelUnder}>
+                                {`Timeout: ${timeout}/${max_timeout}`}
+                            </div>
+                        </div>}
+                    />
+                }
+                </ProgressBar>
+                
                 {error && (
                     <>
                         <p>Error Message: {error}</p>
                         <EndpointButton endpoint={endpoint} fullpath="mhz_monitor/recover" value={true}
                                     variant="danger" disabled={!recover}>
-                        {recover ? "manually Recover from Error" : "Recovery not required"}
+                        {recover ? "Manually Recover from Error" : "Recovery not Available"}
                         </EndpointButton>
                     </>
                 )}
@@ -177,7 +196,7 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
                 </EndpointButton>
             </Modal.Body>
             <Modal.Footer>
-                <p>This alert will automatically dismiss when the hardware connection is restored.</p>
+                This alert will automatically dismiss when the hardware connection is restored.
             </Modal.Footer>
         </Modal>
     )

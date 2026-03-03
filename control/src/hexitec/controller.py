@@ -39,7 +39,7 @@ class HexitecController(BaseController):
         self.adxdma_tree = ParameterTree(self.mhz_monitor.tree)
 
         self.param_tree = ParameterTree({
-            'mhz_monitor': self.adxdma_tree, 
+            'mhz_monitor': self.adxdma_tree,
             'user_type': (lambda: self.options['user_type'], None)
         })
 

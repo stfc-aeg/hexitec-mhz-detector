@@ -11,7 +11,29 @@
         justify-content: center;
     }
 
+    :global(.modal-footer) {
+        justify-content: center;
+    }
+
     :global(.modal-body) {
         border-bottom: var(--bs-modal-header-border-width) solid var(--bs-modal-header-border-color);
     }
+}
+.progressLabelContainer {
+    overflow: visible;
+    position: relative;
+}
+.progressLabelOver {
+    position: relative;
+    z-index: 2;
+    margin: 0;
+    overflow: hidden;
+}
+
+.progressLabelUnder {
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    overflow: visible;
+    color: var(--bs-info);
 }

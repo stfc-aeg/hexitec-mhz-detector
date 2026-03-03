@@ -78,7 +78,7 @@ class Monitor:
         self.reset_counter = 0
         self.frame_number = 0
 
-        self.timeout = timeout
+        self.timeout = 0
         self.max_timeout = timeout
 
         self.max_retries = max_retries
@@ -107,7 +107,7 @@ class Monitor:
     def clear_counters(self):
         self.reset_counter = 0
         self.retries = 0
-        self.timeout = self.max_timeout
+        self.timeout = 0
         self.reset_history.clear()
 
     # Conditionals
@@ -138,7 +138,7 @@ class Monitor:
         return self.error is not None
 
     def is_timeout(self):
-        return self.timeout < 1
+        return self.timeout >= self.max_timeout
 
     def is_max_attempts(self):
         return self.retries > self.max_retries
@@ -158,6 +158,7 @@ class Monitor:
 
     def on_enter_monitoring(self):
         logging.info("Monitoring Loop Started")
+        self.timeout = 0
 
     def on_monitor(self, source: State):
         """On Transition: monitoring -> monitoring,
@@ -221,7 +222,7 @@ class Monitor:
     # Resetting Steps for Readout
     def on_enter_waiting_for_lanes(self):
         """Entering WaitingForLanes State"""
-        self.timeout = self.max_timeout  # resetting timeout
+        self.timeout = 0  # resetting timeout
         try:
             iac_set(self.loki, self.loki_state_path, {"SYNC": False})
             logging.debug("Loki Data Sync OFF")
@@ -234,7 +235,7 @@ class Monitor:
         logging.info("Waiting for Lane to come back")
 
     def on_enter_waiting_for_channels(self):
-        self.timeout = self.max_timeout
+        self.timeout = 0
         try:
             iac_set(self.loki, self.loki_state_path, {"ASIC_REBOND": True})
             logging.debug("Loki Rebond command sent")
@@ -245,7 +246,7 @@ class Monitor:
         logging.info("Waiting for Channel to come back")
 
     def on_enter_reactivating(self):
-        self.timeout = self.max_timeout
+        self.timeout = 0
         logging.info("Reactivating Readout after reset")
         try:
             iac_set(self.readout, "status", {"reactivate": True})
@@ -260,14 +261,14 @@ class Monitor:
 
         try:
             self.readout_status = self.get_readout_status()
-            self.timeout -= 1
+            self.timeout += 1
         except IACError as err:
             self.error = err
 
     # Resetting steps for Loki
     def on_enter_loki_power_init(self):
         """Initialise LOKI Power Board"""
-        self.timeout = self.max_timeout
+        self.timeout = 0
         try:
             iac_set(self.loki, self.loki_state_path, {"ENABLE_STATE": "PWR_DONE"})
         except IACError as err:
@@ -275,7 +276,7 @@ class Monitor:
 
     def on_enter_loki_cob_init(self):
         """Init Loki COB"""
-        self.timeout = self.max_timeout
+        self.timeout = 0
         try:
             iac_set(self.loki, self.loki_state_path, {"ENABLE_STATE": "COB_DONE"})
         except IACError as err:
@@ -283,7 +284,7 @@ class Monitor:
 
     def on_enter_loki_asic_init(self):
         """Init Loki Asic"""
-        self.timeout = self.max_timeout
+        self.timeout = 0
         try:
             iac_set(self.loki, self.loki_state_path, {"ENABLE_STATE": "ASIC_DONE"})
         except IACError as err:
@@ -293,7 +294,7 @@ class Monitor:
         """Check Loki Status while waiting for reset steps"""
         try:
             self.loki_status = self.get_loki_status()
-            self.timeout -= 1
+            self.timeout += 1
         except IACError as err:
             self.error = err
 
@@ -402,6 +403,8 @@ class StateMonitor:
         self.tree = {
             "state": (lambda: self.machine.current_state.name, None,
                       {"allowed_values": [state.name for state in self.machine.states]}),
+            "timeout": (lambda: self.monitor.timeout, None,
+                        {"min": 0, "max": self.monitor.max_timeout}),
             "num_resets": (lambda: self.monitor.reset_counter, None),
             "reset_history": (lambda: list(self.monitor.reset_history), None),
             "clear_history": (None, lambda _: self.monitor.clear_counters()),
