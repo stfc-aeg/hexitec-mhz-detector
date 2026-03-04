@@ -243,7 +243,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     <label className="text-muted">80</label>
                   </Col>
                 </Row>
-                <div style={{position:'relative', width: '100%', position: 'relative'}}>
+                <div style={{position:'relative', width: '100%'}}>
                   <div
                     style={{
                       position: 'absolute',
