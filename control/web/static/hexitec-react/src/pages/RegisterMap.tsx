@@ -15,7 +15,7 @@ function RegisterMap({ endpoint_url }: RegisterMapProps) {
 
   return (
     <Container>
-      <UserAware userLevel="power" endpoint_url={endpoint_url}>
+      <UserAware userLevel="power">
         <Row>
           <Col>
             <Card className="mb-3">

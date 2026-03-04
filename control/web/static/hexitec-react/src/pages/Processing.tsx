@@ -33,8 +33,7 @@ function Processing({ endpoint_url }: ProcessingProps) {
     <Container>
       <Row>
         {/* File Uploads - Power User Only */}
-        <Col md={6}>
-          <UserAware userLevel="power" endpoint_url={endpoint_url}>
+          <UserAware userLevel="power" as={Col}>
             <Card className="mb-3">
               <Card.Header><strong>File Uploads</strong></Card.Header>
               <Card.Body>
@@ -79,91 +78,88 @@ function Processing({ endpoint_url }: ProcessingProps) {
               </Card.Body>
             </Card>
           </UserAware>
-        </Col>
 
         {/* Processing Settings */}
-        <Col md={6}>
+        <Col>
           <Card className="mb-3">
             <Card.Header><strong>Processing Settings</strong></Card.Header>
             <Card.Body>
-              <UserAware userLevel="basic" endpoint_url={endpoint_url}>
-                <Row className="mb-3">
-                  <Col>
-                    <Form.Label><b>Charge-sharing Options</b></Form.Label>
-                    <Row>
-                      <Col>
-                        <EndpointCheck
-                          endpoint={histogramEndpoint}
-                          fullpath="config/charge_sharing/positive_edge"
-                          type="switch"
-                          label="Positive Edge"
-                        />
-                      </Col>
-                      <Col>
-                        <EndpointCheck
-                          endpoint={histogramEndpoint}
-                          fullpath="config/charge_sharing/sum_enable"
-                          type="switch"
-                          label="Sum Enable"
-                        />
-                      </Col>
-                    </Row>
-                    <Row className="mb-3">
-                      <Col>
-                        <EndpointCheck
-                          endpoint={histogramEndpoint}
-                          fullpath="config/charge_sharing/negative_neighbour"
-                          type="switch"
-                          label="Negative Neighbour"
-                        />
-                      </Col>
-                      <Col>
-                        <EndpointCheck
-                          endpoint={histogramEndpoint}
-                          fullpath="config/charge_sharing/position_adjust"
-                          type="switch"
-                          label="Position Adjust"
-                        />
-                      </Col>
-                    </Row>
-                    <Row className="mb-2">
-                      <Form.Label>L3 File load</Form.Label>
-                      <FilePicker
+              <Row className="mb-3">
+                <Col>
+                  <Form.Label><b>Charge-sharing Options</b></Form.Label>
+                  <Row>
+                    <Col>
+                      <EndpointCheck
                         endpoint={histogramEndpoint}
-                        fullpath={"config/charge_sharing/l3_filename"}
-                        buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename}
-                        param_metadata={l3file_metadata}
-                        loadButton={true}
-                        loadPath={"config/charge_sharing/l3_load"}
+                        fullpath="config/charge_sharing/positive_edge"
+                        type="switch"
+                        label="Positive Edge"
                       />
-                    </Row>
-                    <Row className="mb-2">
-                      <Form.Label>MC File load</Form.Label>
-                      <FilePicker
+                    </Col>
+                    <Col>
+                      <EndpointCheck
                         endpoint={histogramEndpoint}
-                        fullpath={"config/charge_sharing/mc_filename"}
-                        buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename}
-                        param_metadata={mcfile_metadata}
-                        loadButton={true}
-                        loadPath={"config/charge_sharing/mc_load"}
+                        fullpath="config/charge_sharing/sum_enable"
+                        type="switch"
+                        label="Sum Enable"
                       />
-                    </Row>
-                    <Row className="mb-2">
-                      <Form.Label>Pos File load</Form.Label>
-                      <FilePicker
+                    </Col>
+                  </Row>
+                  <Row className="mb-3">
+                    <Col>
+                      <EndpointCheck
                         endpoint={histogramEndpoint}
-                        fullpath={"config/charge_sharing/pos_filename"}
-                        buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename}
-                        param_metadata={posfile_metadata}
-                        loadButton={true}
-                        loadPath={"config/charge_sharing/pos_load"}
+                        fullpath="config/charge_sharing/negative_neighbour"
+                        type="switch"
+                        label="Negative Neighbour"
                       />
-                    </Row>
-                  </Col>
-                </Row>
-              </UserAware>
+                    </Col>
+                    <Col>
+                      <EndpointCheck
+                        endpoint={histogramEndpoint}
+                        fullpath="config/charge_sharing/position_adjust"
+                        type="switch"
+                        label="Position Adjust"
+                      />
+                    </Col>
+                  </Row>
+                  <Row className="mb-2">
+                    <Form.Label>L3 File load</Form.Label>
+                    <FilePicker
+                      endpoint={histogramEndpoint}
+                      fullpath={"config/charge_sharing/l3_filename"}
+                      buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename}
+                      param_metadata={l3file_metadata}
+                      loadButton={true}
+                      loadPath={"config/charge_sharing/l3_load"}
+                    />
+                  </Row>
+                  <Row className="mb-2">
+                    <Form.Label>MC File load</Form.Label>
+                    <FilePicker
+                      endpoint={histogramEndpoint}
+                      fullpath={"config/charge_sharing/mc_filename"}
+                      buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename}
+                      param_metadata={mcfile_metadata}
+                      loadButton={true}
+                      loadPath={"config/charge_sharing/mc_load"}
+                    />
+                  </Row>
+                  <Row className="mb-2">
+                    <Form.Label>Pos File load</Form.Label>
+                    <FilePicker
+                      endpoint={histogramEndpoint}
+                      fullpath={"config/charge_sharing/pos_filename"}
+                      buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename}
+                      param_metadata={posfile_metadata}
+                      loadButton={true}
+                      loadPath={"config/charge_sharing/pos_load"}
+                    />
+                  </Row>
+                </Col>
+              </Row>
 
-              <UserAware userLevel="power" endpoint_url={endpoint_url}>
+              <UserAware userLevel="power">
                 <Row className="mb-3">
                   <Col>
                     <Form.Label><b>Dark Tracking / Baseline Load</b></Form.Label>
@@ -277,7 +273,6 @@ function Processing({ endpoint_url }: ProcessingProps) {
                   </Col>
                 </Row>
               </UserAware>
-              <UserAware userLevel="basic" endpoint_url={endpoint_url}>
                 <Row className="mb-3">
                   <Col>
                     <Form.Label>Timing Resolution</Form.Label>
@@ -285,7 +280,6 @@ function Processing({ endpoint_url }: ProcessingProps) {
                     <Form.Text className="text-muted">Value (s) between accepted min/maxs</Form.Text>
                   </Col>
                 </Row>
-              </UserAware>
             </Card.Body>
           </Card>
         </Col>
