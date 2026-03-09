@@ -143,8 +143,18 @@ class HistogramLiveViewController(BaseController):
         """Set region for the histogram.
         :param value: array of coordinations as such: [[x_min,x_max],[y_min,y_max']]
         """
-        processor.region = value
-        self.update_processor(processor, {"region": value})
+        # If array is empty, reset to full region. This avoids needing a separate reset function
+        if not value:
+            rounded_value = [[0.0, 1.0], [0.0, 1.0]]
+        else:
+            # Round to nearest pixel: scale up, round, scale back down
+            width, height = processor.orig_dims[0], processor.orig_dims[1]
+            rounded_value = [
+                [round(coord * width) / width for coord in value[0]],
+                [round(coord * height) / height for coord in value[1]]
+            ]
+        processor.region = rounded_value
+        self.update_processor(processor, {"region": rounded_value})
 
     def set_value_range(self, value, processor):
         """Set value range for clipping and display."""
