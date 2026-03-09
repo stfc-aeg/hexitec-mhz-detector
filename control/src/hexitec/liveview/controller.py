@@ -158,7 +158,6 @@ class HistogramLiveViewController(BaseController):
 
     def set_value_range(self, value, processor):
         """Set value range for clipping and display."""
-        logging.warning(f"value: {value}")
         if not value:  # e.g. empty array, None
             processor.value_range = {'min': 0, 'max': processor.max_pix_val}  # Maximum defined in processor init
         if isinstance(value, list) and len(value) == 2:
@@ -172,7 +171,6 @@ class HistogramLiveViewController(BaseController):
 
     def set_energy_range(self, value, processor):
         """Set energy bin range."""
-        logging.warning(f"energy_range: {value}")
         if not value:  # e.g. empty array, then reset
             processor.energy_range = {'min': 0, 'max': processor.num_bins - 1}
         else:
