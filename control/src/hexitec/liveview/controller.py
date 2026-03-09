@@ -86,7 +86,9 @@ class HistogramLiveViewController(BaseController):
                     "num_bins": (lambda p=processor: p.num_bins,
                                  partial(self.set_num_bins, processor=processor)),
                     "occupancy_percent": (lambda p=processor: p.occupancy, None),
-                    "occupancy_threshold": (lambda: self.occupancy_warning_threshold, None)
+                    "occupancy_threshold": (lambda: self.occupancy_warning_threshold, None),
+                    "autoclip": (lambda p=processor: p.autoclip, partial(self.set_autoclip, processor=processor)),
+                    "autoclip_percent": (lambda p=processor: p.autoclip_percent, partial(self.set_autoclip_percent, processor=processor))
                 }
             }
             self.tree['_image'].update({
@@ -197,6 +199,16 @@ class HistogramLiveViewController(BaseController):
             update["energy_range"] = processor.energy_range  # Update whole thing just in case
 
         self.update_processor(processor, update)
+
+    def set_autoclip(self, value, processor):
+        """Set automatic clipping mode."""
+        processor.autoclip = bool(value)
+        self.update_processor(processor, {"autoclip": processor.autoclip})
+
+    def set_autoclip_percent(self, value, processor):
+        """Set automatic clipping percentage."""
+        processor.autoclip_percent = float(value)
+        self.update_processor(processor, {"autoclip_percent": processor.autoclip_percent})
 
     def poll_processors(self):
         """Get any values from the processor classes."""

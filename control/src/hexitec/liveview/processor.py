@@ -45,6 +45,10 @@ class HistogramLiveViewProcessor:
             'max': self.max_pix_val
         }
 
+        # Automatic clipping parameters
+        self.autoclip = False
+        self.autoclip_percent = 95.0
+
         # Log available colormaps
         available_colormaps = []
         for name in ['AUTUMN', 'BONE', 'JET', 'WINTER', 'RAINBOW', 'OCEAN', 'SUMMER', 
@@ -123,8 +127,18 @@ class HistogramLiveViewProcessor:
                             axis=2)
             
             # Clipping and rescaling
-            low = self.value_range['min']
-            high = self.value_range['max']
+            if self.autoclip:
+                lower_q = (100 - self.autoclip_percent) / 2
+                upper_q = 100 - lower_q
+                low = np.percentile(summed_data, lower_q)
+                high = np.percentile(summed_data, upper_q)
+            else:
+                low = self.value_range['min']
+                high = self.value_range['max']
+
+            # Sort high and low to avoid issues
+            if high < low:
+                low, high = high, low
 
             if high > low:
                 # Clip to range and scale back over full range of vals
@@ -132,7 +146,7 @@ class HistogramLiveViewProcessor:
                 scaled = (clipped - low) / (high - low) * 65535.0
                 # 8-bit for display
                 normalised_data = (scaled / 65535.0 * 255.0).astype(np.uint8)
-            else:
+            else:  # This will avoid divide-by-zero if they are the same
                 normalised_data = np.zeros_like(summed_data, dtype=np.uint8)
 
             # Apply colormap to 2D image

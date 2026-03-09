@@ -45,6 +45,8 @@ interface LiveViewTypes extends ParamTree {
           value_range: [number, number];
           occupancy_percent: number;
           occupancy_threshold: number;
+          autoclip: boolean;
+          autoclip_percent: number;
         };
       }
     };
@@ -57,6 +59,7 @@ interface LiveViewTypes extends ParamTree {
 }
 
 const EndpointButton = WithEndpoint(Button);
+const EndpointFormControl = WithEndpoint(Form.Control);
 
 interface HistogramLiveViewProps {
   endpoint_url: string;
@@ -192,6 +195,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
               <div className="me-3">
                 <MinMaxInput
                   label="Value Range"
+                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
                   value={liveViewData?.image?.value_range ?? [0,1000]}
                   onApply={(range) => {
                     liveViewEndPoint.put(
@@ -205,6 +209,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   value={[]}
                   variant='outline-primary'
                   style={{width:30}}
+                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
                 >
                   Reset Value Range
                 </EndpointButton>
@@ -213,6 +218,31 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   max={liveViewData?.image?.value_range[1] ?? 1000}
                   colormap={liveViewData?.image?.colour || 'bone'}
                 />
+                <Row>
+                  <Col>
+                    <EndpointButton
+                      endpoint={liveViewEndPoint}
+                      fullpath={`${imgPath}/autoclip`}
+                      value={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? false : true}
+                      variant={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'danger' :'primary'}
+                      style={{width:30}}
+                      className="mb-3"
+                    >
+                      {liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'Disable autoclip' : 'Enable autoclip'}
+                    </EndpointButton>
+                  </Col>
+                  <Col>
+                    <FloatingLabel label="Autoclip %">
+                      <EndpointFormControl
+                        endpoint={liveViewEndPoint}
+                        fullpath={`${imgPath}/autoclip_percent`}
+                        value={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip_percent ?? 95}
+                        variant='outline-primary'
+                        style={{width:'30%'}}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
                 <FloatingLabel
                   label="Colourmap" className="mt-3">
                   <Form.Select

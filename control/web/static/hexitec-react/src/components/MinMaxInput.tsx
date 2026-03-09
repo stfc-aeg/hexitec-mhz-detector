@@ -7,6 +7,7 @@ interface MinMaxInputProps {
   onApply: (value: [number, number]) => void;
   minLabel?: string;
   maxLabel?: string;
+  disabled?: boolean;
 }
 
 export function MinMaxInput({
@@ -15,6 +16,7 @@ export function MinMaxInput({
   onApply,
   minLabel = 'Min',
   maxLabel = 'Max',
+  disabled = false,
 }: MinMaxInputProps) {
   const [localMin, setLocalMin] = useState(value[0]);
   const [localMax, setLocalMax] = useState(value[1]);
@@ -73,6 +75,7 @@ export function MinMaxInput({
                 apply();
               }
             }}
+            disabled={disabled}
           />
         </Col>
         {/* These border styles are to simulate an 'InputGroup' 
@@ -98,6 +101,7 @@ export function MinMaxInput({
                 apply();
               }
             }}
+            disabled={disabled}
           />
         </Col>
 
@@ -105,7 +109,7 @@ export function MinMaxInput({
           <Button
             className="w-100 h-100"
             variant={changed ? "primary" : "outline-secondary"}
-            disabled={!changed}
+            disabled={!changed || disabled}
             style={{
               borderTopLeftRadius: 0,
               borderBottomLeftRadius: 0,
