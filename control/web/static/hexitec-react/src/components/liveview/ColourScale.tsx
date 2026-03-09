@@ -1,14 +1,12 @@
 import React from 'react';
-import { Form } from 'react-bootstrap';
 
-interface ValueRangeControlProps {
+interface ColourScaleProps {
     min: number;
     max: number;
     colormap: string;
-    onRangeChange: Function;
 }
 
-export function ValueRangeControl({ min, max, colormap, onRangeChange }: ValueRangeControlProps) {
+export function ColourScale({ min, max, colormap }: ValueRangeControlProps) {
     const height = 400;
     const width = 30;
     const labelWidth = 75;
@@ -213,25 +211,6 @@ export function ValueRangeControl({ min, max, colormap, onRangeChange }: ValueRa
 
     return (
         <div style={{ position: 'relative', marginRight: '10px' }}>
-            <h6 className="mb-3">Value Range Clipping</h6>
-            <div style={{ marginTop: '20px' }}>
-                <Form.Group>
-                    <Form.Label>Maximum Value</Form.Label>
-                    <Form.Text className="text-muted d-block">
-                        Values above this will be clipped
-                    </Form.Text>
-                    <Form.Control 
-                        type="number" 
-                        value={max} 
-                        onChange={(e) => {
-                            const newMax = parseInt(e.target.value);
-                            if (!isNaN(newMax)) {
-                                onRangeChange([min, newMax]);
-                            }
-                        }}
-                    />
-                </Form.Group>
-            </div>
             <div className="d-flex align-items-center">
                 <svg width={width + labelWidth + padding} height={totalHeight}>
                     {createGradient()}
@@ -276,25 +255,6 @@ export function ValueRangeControl({ min, max, colormap, onRangeChange }: ValueRa
                         </g>
                     ))}
                 </svg>
-            </div>
-            
-            <div style={{ marginTop: '20px' }}>
-                <Form.Group>
-                    <Form.Label>Minimum Value</Form.Label>
-                        <Form.Text className="text-muted d-block">
-                            Values below this will be clipped
-                        </Form.Text>
-                        <Form.Control 
-                            type="number" 
-                            value={min} 
-                            onChange={(e) => {
-                                const newMin = parseInt(e.target.value);
-                                if (!isNaN(newMin)) {
-                                    onRangeChange([newMin, max]);
-                                }
-                            }}
-                        />
-                </Form.Group>
             </div>
         </div>
     );

@@ -2,20 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useAdapterEndpoint } from 'odin-react';
 import { Container, Row, Col, Form, Button } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import { 
-  TitleCard,
-  OdinDoubleSlider,
-  WithEndpoint 
-} from 'odin-react';
-import { getRegionColor } from './colorUtils';
-import { ValueRangeControl } from './ValueRangeControl';
+import { TitleCard, WithEndpoint } from 'odin-react';
+import { ColourScale } from './ColourScale';
+import { MinMaxInput } from '../MinMaxInput';
 import { ClickableImage } from './ClickableImage';
-import { HistogramPlot } from './HistogramPlot';
-import { floatingInputStyle, type MetadataType } from '../../utils'
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils'
+import type { MetadataType } from '../../EndpointTypes';
 
 import type { ParamTree } from 'odin-react';
+import { RegionSelectionInput } from './RegionSelection';
 
-export interface HistogramRegion {
+export interface HistogramRegion extends ParamTree {
   x: [number, number];
   y: [number, number];
   width: number;
@@ -23,7 +20,7 @@ export interface HistogramRegion {
 }
 
 // Derived from processor.py
-export interface HistogramData {
+export interface HistogramData extends ParamTree {
   counts: number[];
   bins: number[];
   mean: number;
@@ -40,31 +37,26 @@ interface LiveViewTypes extends ParamTree {
         image: {
           colour: string;
           data: any | null;
-          energy_range: number[];
+          energy_range: [number, number];
+          num_bins: number;
           histograms: any | null;
-          regions: any;
+          region: [[number, number],[number, number]];
           scale: number;
-          size_x: number;
-          size_y: number;
-          value_range: number[];
+          value_range: [number, number];
+          occupancy_percent: number;
+          occupancy_threshold: number;
         };
       }
     };
     _image: {
       [detectorName: string]: {
         image: undefined;
-        histograms: undefined;
+        histogram: undefined;
       }
     };
 }
 
-const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
-
-function getGridLayout(count: number) {
-  if (count <= 1) return { cols: 1 };
-  if (count === 2) return { cols: 2 };
-  return { cols: 2 }; // 2 columns for 3 or more histograms
-}
+const EndpointButton = WithEndpoint(Button);
 
 interface HistogramLiveViewProps {
   endpoint_url: string;
@@ -74,22 +66,18 @@ interface HistogramLiveViewProps {
 export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps) {
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
-  const [colorRange, setColorRange] = useState<[number, number]>([0, 1000]);
 
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
+
+  // const histogramViewEndpoint = useAdapterEndpoint<HistogramEndpointTypes>(`liveview/_image/${name}/histograms`, endpoint_url, 1000);
   const liveViewData = liveViewEndPoint?.data?.histview?.[name];
-  const liveViewHistData = liveViewEndPoint?.data?._image?.[name];
   const imgPath = `histview/${name}/image`;
+
+  // This appears as the ranges stuck together so it needs formatting into (x - y)
+  const energyRange = `(0 - ${liveViewData?.image['num_bins'] -1})`;
 
   const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
-
-  const handleColorRangeChange = (newRange: [number, number]) => {
-    setColorRange(newRange);
-    liveViewEndPoint.put({ 
-      value_range: newRange
-    }, imgPath);
-  };
 
   // Timer effects remain the same...
   useEffect(() => {
@@ -115,8 +103,70 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
     return () => clearInterval(timer);
   }, [lastUpdateTime]);
 
-  const histograms = Object.entries(liveViewHistData?.histograms || {}) as [string, HistogramData][]; // regionId is a number but JS parsing
-  const layout = getGridLayout(histograms.length);
+  // function to send histogram region selection
+  const handleHistSelection = (coords: [[number, number], [number, number]] | null) => {
+    if (!coords) {
+      liveViewEndPoint.put(
+        { energy_range: [] }, imgPath
+      );
+      return;
+    };
+
+    // y-axis is maximised so can be ignored
+    const [xMinNorm, xMaxNorm] = coords[0];
+    const numBins = liveViewData?.image['num_bins'];
+
+    if (!numBins) return;
+
+      // Get current range so selection works within existing range instead of overriding it
+      const currentRange = liveViewData?.image?.energy_range;
+      const currentMin = currentRange?.[0] ?? 0;
+      const currentMax = currentRange?.[1] ?? numBins -1; // Default is full range 0-(num_bins-1)
+
+      const currentWidth = currentMax - currentMin +1;
+
+      let binMin = Math.floor(currentMin + xMinNorm * currentWidth); // min + (0->1)*(max-min)
+      let binMax = Math.floor(currentMin + xMaxNorm * currentWidth) // this is always in prev range
+
+      // Clamp to valid range
+      binMin = Math.max(0, Math.min(binMin, numBins - 1));
+      binMax = Math.max(0, Math.min(binMax, numBins - 1));
+
+      // Ensure correct ordering
+      if (binMin > binMax) {
+        [binMin, binMax] = [binMax, binMin];
+      }
+      liveViewEndPoint.put(
+        { energy_range: [binMin, binMax] },
+        imgPath
+      );
+  };
+
+  const getOccupancyStyle = (
+    value?: number,
+    threshold?: number
+  ) => {
+    if (value == null || threshold == null ) return floatingLabelStyle;
+
+    // Other styles will be based off of floatingLabelStyle but with different colours
+    if (value >= threshold) {
+      return {
+        border: '1px solid #992732',
+        backgroundColor: '#f8d7da',
+        borderRadius: '0.375rem'
+      }; // exceeds threshold: red
+    }
+
+    if (value >= 0.8*threshold) {
+      return {
+        border: '1px solid #dfb600',
+        backgroundColor: '#f8f5d7',
+        borderRadius: '0.375rem'
+      }; // top 20% of threshold: warning yellow
+    }
+
+    return floatingLabelStyle; // default blue
+  }
 
   return (
     <TitleCard title={`Histogram View - ${name}`}>
@@ -135,16 +185,33 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         {/* Main Content */}
         <Row>
           {/* Left Column - Image and Controls */}
-          <Col xs={12} md={6} className="mb-4">
+          <Col xs={12} md={3} className="mb-4 justify-content-center">
             <div className="d-flex">
 
               {/* Color scale */}
               <div className="me-3">
-                <ValueRangeControl 
-                  min={colorRange[0]}
-                  max={colorRange[1]}
+                <MinMaxInput
+                  label="Value Range"
+                  value={liveViewData?.image?.value_range ?? [0,1000]}
+                  onApply={(range) => {
+                    liveViewEndPoint.put(
+                      { value_range: range }, imgPath
+                    );
+                  }}
+                />
+                <EndpointButton
+                  endpoint={liveViewEndPoint}
+                  fullpath={`${imgPath}/value_range`}
+                  value={[]}
+                  variant='outline-primary'
+                  style={{width:30}}
+                >
+                  Reset Value Range
+                </EndpointButton>
+                <ColourScale 
+                  min={liveViewData?.image?.value_range[0] ?? 0}
+                  max={liveViewData?.image?.value_range[1] ?? 1000}
                   colormap={liveViewData?.image?.colour || 'bone'}
-                  onRangeChange={handleColorRangeChange}
                 />
                 <FloatingLabel
                   label="Colourmap" className="mt-3">
@@ -153,7 +220,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     value={liveViewData?.image?.colour || 'Select a colour'}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
                       let selectedColour = e.currentTarget.value;
-                      liveViewEndPoint.put({value: selectedColour}, `${imgPath}/colour`);
+                      liveViewEndPoint.put(selectedColour, `${imgPath}/colour`);
                     }}>
                     {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
                       <option key={index} value={effect}>
@@ -163,77 +230,113 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   </Form.Select>
                 </FloatingLabel>
               </div>
-
-              {/* Image */}
-              <div className="flex-grow-1">
-                <div className="position-relative">
-                  <ClickableImage
-                    endpoint={liveViewEndPoint}
-                    imgPath={`_image/${name}/image`}
-                    coordsPath={imgPath}
-                    coordsParam="regions"
-                    regions={liveViewData?.image?.regions}
-                    getRegionColor={getRegionColor}
-                  />
-                  <div className="mt-2 text-muted small">
-                    Click and drag to select a region for histogram analysis
-                  </div>
-                </div>
-
-                {/* Image Controls */}
-                <div className="mt-3">
-                  <Form.Group>
-                    <Form.Label>Energy Bin Range Selection (0-1023)</Form.Label>
-                    <EndPointDoubleSlider
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${imgPath}/energy_range`}
-                      min={0}
-                      max={1023}
-                      step={1}
-                      title="Energy Bins"
-                      value={liveViewData?.image?.energy_range || [0, 1023]}
-                    />
-                  </Form.Group>
-                </div>
-              </div>
             </div>
           </Col>
-
-          {/* Right Column - Histogram Grid */}
-          <Col xs={12} md={6}>
-            <div className="histogram-grid">
-              <Row className="g-3">
-                {histograms.map(([regionId, histData]) => {
-                  const regionIdNum = parseInt(regionId, 10);
-                  return (
-                  <Col xs={12} md={layout.cols === 1 ? 12 : 6} key={regionId}>
-                    <div className="position-relative">
-                      <HistogramPlot 
-                        histogramData={histData}
-                        regionId={regionIdNum}
-                        color={getRegionColor(parseInt(regionId) - 1)}
-                      />
-                      <Button 
-                        variant="outline-danger" 
-                        size="sm"
-                        className="position-absolute"
-                        style={{ top: '10px', right: '10px' }}
-                        onClick={() => {
-                          const updatedRegions = {...liveViewData?.image?.regions};
-                          delete updatedRegions[regionId];
-                          liveViewEndPoint.put({ regions: updatedRegions }, 'image');
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </div>
+          <Col md={9}>
+            <Row className="mb-3">
+              <Col> {/* Counts map and histogram */}
+                <Row>
+                  <Col xs={6} className="justify-content-left">
+                    <label className="text-muted">0</label>
                   </Col>
-                )})}
-              </Row>
-            </div>
+                  <Col xs={6} className="text-end">
+                    <label className="text-muted">80</label>
+                  </Col>
+                </Row>
+                <div style={{position:'relative', width: '100%'}}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: -20,
+                      top: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      fontSize: '1rem',
+                      color: 'rgba(0,0,0,0.75)',
+                      pointerEvents: 'none'
+                    }}>
+                      <span>0</span>
+                      <span>80</span>
+                  </div>
+                  <ClickableImage
+                    endpoint={liveViewEndPoint}
+                    imgPath={`_image/${name}/counts`}
+                    coordsPath={`histview/${name}/image/`}
+                    coordsParam={'region'}
+                    region={liveViewData?.image?.region ?? null}
+                  />
+                </div>
+              </Col>
+              <Col>
+                <Row>
+                  <RegionSelectionInput
+                    imageHeight={80}
+                    imageWidth={80}
+                    value={liveViewData?.image?.region || undefined}
+                    onApply={(region) => liveViewEndPoint.put({ 'region': region}, imgPath)}
+                  />
+                </Row>
+                <Row className="mt-3">
+                  <Col>
+                    <FloatingLabel label="Occupancy %">
+                      <Form.Control
+                        value={checkNull(liveViewData?.image?.occupancy_percent)}
+                        disabled
+                        style={getOccupancyStyle(
+                          liveViewData?.image?.occupancy_percent,
+                          liveViewData?.image?.occupancy_threshold
+                        )}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+              </Col>
+            </Row>
+            <Row>
+              <Col> 
+                <ClickableImage
+                  endpoint={liveViewEndPoint}
+                  imgPath={`_image/${name}/histogram`}
+                  onSelection={handleHistSelection}
+                  maximiseAxis={'y'}
+                  rectOutlineColour='black'
+                  rectRgbaProperties='rgba(50,50,50,0.05)'
+                  rectDisappears={true}
+                />
+              </Col>
+              <Col>
+                <Row>
+                  <MinMaxInput
+                    label={`Manual Energy Bin Range ${energyRange}`}
+                    value={liveViewData?.image?.energy_range || [0, 0]}
+                    onApply={(range) => {
+                      liveViewEndPoint.put(
+                        { energy_range: range }, imgPath
+                      );
+                    }}
+                  />
+                </Row>
+                <Row>
+                  <Col className="justify-content-end">
+                    <EndpointButton
+                      endpoint={liveViewEndPoint}
+                      fullpath={`${imgPath}/energy_range`}
+                      value={[]}
+                      variant='outline-primary'
+                      style={{width:30}}
+                    >
+                      Reset Energy Range
+                    </EndpointButton>
+                  </Col>
+                </Row>
+              </Col>
+            </Row>     
           </Col>
         </Row>
       </Container>
     </TitleCard>
+
   );
 }

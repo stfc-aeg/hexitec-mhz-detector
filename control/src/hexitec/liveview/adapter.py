@@ -26,13 +26,15 @@ class HistogramLiveViewAdapter(BaseAdapter):
             if levels[0] == '_image':
                 bytes = self.controller.get_image_from_processor_name(levels[1])
 
-                if not bytes or not isinstance(img_bytes, dict):
+                # logging.warning(f"bytes: {bytes}")
+
+                if not bytes or not isinstance(bytes, dict):
                     return ApiAdapterResponse(b"", content_type="text/plain", status_code=200)
 
-                if levels[-1] == 'image':
-                    img_bytes = bytes['image']
+                if levels[-1] == 'counts':
+                    img_bytes = bytes['counts']
                 elif levels[-1] == 'histogram':
-                    img_bytes = bytes['histograms']
+                    img_bytes = bytes['histogram']
 
                 response=img_bytes
                 content_type="image/jpg"

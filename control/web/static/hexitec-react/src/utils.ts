@@ -1,5 +1,5 @@
 // Utility function that checks if a value is null or undefined. Returns 'null' if yes, value if no
-export const checkNull = (val: number) => val === null || val === undefined ? 'null' : val.toFixed(4);
+export const checkNull = (val: number) => val === null || val === undefined ? 'null' : val.toFixed(2);
 
 export const checkNullNoDp = (val: number) => val === null || val === undefined ? 'null' : val;
 
@@ -13,11 +13,3 @@ export const floatingInputStyle = {
   border: "1px solid #ced4da", // thin Bootstrap-like grey border
   borderRadius: "0.375rem",    // Bootstrap default rounded corners
 };
-
-export interface MetadataType {
-  value: any;
-  writeable: boolean;
-  min?: number;
-  max?: number;
-  allowed_values?: any[]
-}
