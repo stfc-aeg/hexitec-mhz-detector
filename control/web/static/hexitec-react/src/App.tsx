@@ -9,7 +9,7 @@ import RegisterMap from './pages/RegisterMap';
 import { HistogramLiveView } from './components/liveview/HistogramLiveView';
 import HistogramControl from './pages/Histogrammer';
 
-import { UserLevelContext } from './components/UserLevel';
+import { UserLevelContext } from './components/UserAware';
 import type { HexitecParamTree } from './components/admonitor/MonitorOverlay';
 
 function App() {
@@ -18,7 +18,7 @@ function App() {
   const endpoint = useAdapterEndpoint<HexitecParamTree>('hexitec', endpoint_url);
 
   return (
-    <UserLevelContext value={endpoint.data.user_type==='power'}>
+    <UserLevelContext value={endpoint.data.user_type}>
       <OdinApp 
         title={'Hexitec-MHZ'} 
         navLinks={[
