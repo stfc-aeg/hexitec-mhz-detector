@@ -1,0 +1,39 @@
+.stateOverlay {
+    text-align: center;
+    justify-content: center;
+    --bs-modal-bg: var(--bs-danger-bg-subtle);
+    --bs-modal-border-color: var(--bs-danger-border-subtle);
+    --bs-modal-header-border-color: var(--bs-modal-border-color);
+    --bs-modal-footer-border-color: var(--bs-modal-border-color);
+    --bs-modal-color: var(--bs-danger-text-emphasis);
+
+    :global(.modal-header) {
+        justify-content: center;
+    }
+
+    :global(.modal-footer) {
+        justify-content: center;
+    }
+
+    :global(.modal-body) {
+        border-bottom: var(--bs-modal-header-border-width) solid var(--bs-modal-header-border-color);
+    }
+}
+.progressLabelContainer {
+    overflow: visible;
+    position: relative;
+}
+.progressLabelOver {
+    position: relative;
+    z-index: 2;
+    margin: 0;
+    overflow: hidden;
+}
+
+.progressLabelUnder {
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    overflow: visible;
+    color: var(--bs-info);
+}

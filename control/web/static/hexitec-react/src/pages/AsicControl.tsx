@@ -8,7 +8,7 @@ interface AsicControlProps {
 function AsicControl({ endpoint_url }: AsicControlProps) {
   return (
     <Container>
-      <UserAware userLevel="power" endpoint_url={endpoint_url}>
+      <UserAware userLevel="power">
         <Row>
           <Col md={6}>
             <Card className="mb-3">

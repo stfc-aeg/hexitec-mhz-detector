@@ -16,11 +16,13 @@
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.0",
     "react-focus-lock": "^2.13.6",
-    "react-plotlyjs": "^0.4.4"
+    "react-plotlyjs": "^0.4.4",
+    "recharts": "^2.13.3",
+    "web-vitals": "^2.1.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
-    "@types/react": "^19.1.8",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",
     "eslint": "^9.29.0",
