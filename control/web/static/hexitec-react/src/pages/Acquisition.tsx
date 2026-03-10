@@ -1,7 +1,8 @@
-import { Container, Row, Col, Card, Form, Button, ProgressBar, FloatingLabel } from 'react-bootstrap';
-import { EndpointInput, useAdapterEndpoint } from 'odin-react';
+import { Container, Row, Col, Card, Form, Button, ProgressBar, FloatingLabel, ToggleButton, ButtonGroup } from 'react-bootstrap';
+import { useState } from 'react';
+import { EndpointInput, useAdapterEndpoint, TitleCard } from 'odin-react';
 import { floatingInputStyle, checkNullNoDp } from '../utils.js'
-import type { MunirTypes } from '../EndpointTypes';
+import type { AcquisitionTypes, MunirTypes } from '../EndpointTypes';
 
 interface AcquisitionProps {
   endpoint_url: string;
@@ -10,15 +11,162 @@ interface AcquisitionProps {
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const munirEndpoint = useAdapterEndpoint<MunirTypes>('munir', endpoint_url, 500);
+  const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 500);
   // console.log(munirEndpoint?.data?.subsystems?.hexitec_mhz?.args)
+
+  const [triggerModeValue, setTriggerModeValue] = useState('hardware');
+  const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst');
+  const triggerModeRadios = [
+    { name: 'Hardware', value: 'hardware' },
+    { name: 'Software', value: 'software' }
+  ];
+  const adTriggerModeRadios = [
+    { name: 'Burst',  value: 'burst' },
+    { name: 'Continuous', value: 'continuous' },
+    { name: 'Step scan', value: 'step_scan' }
+  ];
+
+  const handleTriggerModeChange = (value: string) => {
+    setTriggerModeValue(value);
+    let sendVal = {['device']: value};
+    acquisitionEndpoint.put(sendVal, 'config/trigger');
+  }
+
+  const handleAdTriggerModeChange = (value: string) => {
+    setAdTriggerModeValue(value);
+    let sendVal = {['trigger_mode']: value};
+    acquisitionEndpoint.put(sendVal, 'config/trigger');
+  }
 
   return (
     <Container>
       <Row>
-        {/* Acquisition Settings */}
+        {/* Trigger Settings */}
+        <Col md={6} className="mt-3">
+          <TitleCard title={<strong>Trigger Settings</strong>}>
+            <Row>
+              <ButtonGroup>
+                {triggerModeRadios.map((radio, idx) => (
+                  <ToggleButton
+                    key={idx}
+                    className='equal-width-buttongroup'
+                    id={`radio-${idx}`}
+                    type="radio"
+                    variant='outline-primary'
+                    name="triggerModeRadio"
+                    value={radio.value}
+                    checked={triggerModeValue === radio.value}
+                    onChange={(e) => handleTriggerModeChange(e.currentTarget.value)}
+                  >
+                    {radio.name}
+                  </ToggleButton>
+                ))}
+              </ButtonGroup>
+              {/* Show AD trigger mode options if hardware trigger mode is selected. needs centering */}
+              {triggerModeValue==='hardware' ? (
+                <Col>
+                  <Row className="mt-3">
+                    <ButtonGroup>
+                      {adTriggerModeRadios.map((radio, idx) => (
+                        <ToggleButton
+                          key={idx}
+                          className='equal-width-buttongroup'
+                          id={`ad-trigger-radio-${idx}`}
+                          type="radio"
+                          variant='outline-secondary'
+                          name="adTriggerModeRadio"
+                          value={radio.value}
+                          checked={adTriggerModeValue === radio.value}
+                          onChange={(e) => handleAdTriggerModeChange(e.currentTarget.value)}
+                        >
+                          {radio.name}
+                        </ToggleButton>
+                      ))}
+                    </ButtonGroup>
+                  </Row>
+                  <Row>
+                    {adTriggerModeValue === 'burst' && (
+                      <>
+                        <Col className="mt-3">
+                          <FloatingLabel label="Timeframes per trigger">
+                            <EndpointInput
+                              endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
+                              type="number"
+                              style={floatingInputStyle}
+                            />
+                          </FloatingLabel>
+                        </Col>
+                        <Col className="mt-3">
+                          <FloatingLabel label="Frames per timeframe">
+                            <EndpointInput
+                              endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_per_timeframe"
+                              type="number"
+                              style={floatingInputStyle}
+                            />
+                          </FloatingLabel>
+                        </Col>
+                      </>
+                    )}
+                    {adTriggerModeValue === 'continuous' && (
+                      <Col className="mt-3">
+                        <p>In continuous mode, the detector acquires frames continuously, assigned to the current histogram time frame until the next trigger is received. Acquisition continues until end or aborted.</p>
+                      </Col>
+                    )}
+                    {adTriggerModeValue === 'step_scan' && (
+                      <>
+                        <Col className="mt-3">
+                          <FloatingLabel label="Frames per timeframe">
+                            <EndpointInput
+                              endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_per_timeframe"
+                              type="number"
+                              style={floatingInputStyle}
+                            />
+                          </FloatingLabel>
+                        </Col>
+                        <Col className="mt-3">
+                          <p>In step scan mode, the detector will acquire a set number of frames (input) each time it receives a trigger. The detector will wait for the next trigger before acquiring the next set of frames.</p>
+                        </Col>
+                      </>
+                    )}
+                  </Row>
+                </Col>
+              ) : (
+                // show software trigger options if software trigger mode is selected: # timeframes, and frames per timeframe
+                <Col>
+                  <Row>
+                    <Col className="mt-3">
+                      <FloatingLabel label="# Timeframes">
+                        <EndpointInput
+                          endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
+                          type="number"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                    </Col>
+                    <Col className="mt-3">
+                      <FloatingLabel label="Frames per timeframe">
+                        <EndpointInput
+                          endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_per_timeframe"
+                          type="number"
+                          style={floatingInputStyle}
+                        />
+                      </FloatingLabel>
+                    </Col>
+                  </Row>
+                </Col>
+              )}
+            </Row>
+            <Row className="mt-3">
+              <label>Summary goes here</label>
+            </Row>
+          </TitleCard>
+
+        </Col>
+
+        {/* Acquisition Status */}
         <Col md={6}>
           <Card className="mt-3">
-            <Card.Header><strong>Acquisition Settings</strong></Card.Header>
+            <Card.Header><strong>Acquisition Status</strong></Card.Header>
             <Card.Body>
               {/* Acquisition Length (frames) */}
               <Row className="mb-3">
@@ -34,7 +182,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   <Form.Text>Est. {checkNullNoDp(munirEndpoint?.data.subsystems?.hexitec_mhz.args.num_frames*1000000).toLocaleString()} frames</Form.Text>
                 </Col>
               </Row>
-
               {/* File Name */}
               <Row className="mb-3">
                 <Col>
@@ -63,15 +210,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   </FloatingLabel>
                 </Col>
               </Row>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Acquisition Status */}
-        <Col md={6}>
-          <Card className="mt-3">
-            <Card.Header><strong>Acquisition Status</strong></Card.Header>
-            <Card.Body>
               <Row className="mb-3">
                 <Col>
                   <Form.Label>Acquisition Progress</Form.Label>
