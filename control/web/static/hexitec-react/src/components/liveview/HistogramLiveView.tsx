@@ -236,7 +236,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       <EndpointFormControl
                         endpoint={liveViewEndPoint}
                         fullpath={`${imgPath}/autoclip_percent`}
-                        value={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip_percent ?? 95}
                         variant='outline-primary'
                         style={{width:'30%'}}
                       />
