@@ -338,12 +338,13 @@ export interface FrameProcStatus extends ParamTree{
 
 export interface AcquisitionTypes extends ParamTree {
   acquisition: {
-    start: null | boolean;
-    stop: null | boolean;
+    start: null;
+    stop: null;
+    acquiring: boolean;
   };
   config: {
     bin_mode: string;
-    trigger_mode: {
+    trigger: {
       device: string;
       mode: string;
       frames_per_timeframe: number;

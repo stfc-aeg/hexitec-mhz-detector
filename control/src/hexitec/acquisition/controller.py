@@ -35,6 +35,8 @@ class AcquisitionController(BaseController):
         self.bin_mode = options.get('default_bin_mode', 'histogram_1024')
         self.munir_subsystem = options.get('munir_subsystem', 'hexitec_mhz')
 
+        self.acquiring = False
+
     def initialize(self, adapters: Adapters):
         """Initialise the acquisition controller with information about adapters currently loaded
         into the running application.
@@ -80,7 +82,8 @@ class AcquisitionController(BaseController):
         self.param_tree = ParameterTree({
             'acquisition': {
                 'start': (None, self._start_acquisition),
-                'stop': (None, self._stop_acquisition)
+                'stop': (None, self._stop_acquisition),
+                'acquiring': (lambda: self.acquiring, None)
             },
             'config': config_tree,
         })
@@ -91,19 +94,19 @@ class AcquisitionController(BaseController):
     def _stop_preview(self):
         pass
 
-    def _start_acquisition(self):
+    def _start_acquisition(self, value):
+        self.acquiring = True
         # Check histogrammer details are sensible
         # Configure odin data with histogrammer details
         # Tell odin data to start acquisition
         # Start histogrammer to send data
         # Need some awaiting of acquisition end signal?
-        pass
 
-    def _stop_acquisition(self):
+    def _stop_acquisition(self, value):
+        self.acquiring = False
         # Tell histogrammer to stop
         # Tell odin data to stop
         # Restart preview? Perhaps should not turn on automatically, could be optional
-        pass
 
     def get(self, path, with_metadata=False):
         """Get parameter data from controller."""
