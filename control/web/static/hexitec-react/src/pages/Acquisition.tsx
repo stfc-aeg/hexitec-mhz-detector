@@ -1,6 +1,6 @@
 import { Container, Row, Col, Card, Form, Button, ProgressBar, FloatingLabel, ToggleButton, ButtonGroup } from 'react-bootstrap';
 import { useState } from 'react';
-import { WithEndpoint, EndpointInput, useAdapterEndpoint, TitleCard } from 'odin-react';
+import { WithEndpoint, EndpointInput, useAdapterEndpoint, TitleCard, EndpointButton } from 'odin-react';
 import { floatingInputStyle, floatingLabelStyle } from '../utils.js'
 import type { AcquisitionTypes, MunirTypes, MetadataType } from '../EndpointTypes';
 
@@ -8,7 +8,6 @@ interface AcquisitionProps {
   endpoint_url: string;
 }
 
-const EndpointButton = WithEndpoint(Button);
 const EndpointSelect = WithEndpoint(Form.Select);
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
@@ -17,8 +16,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
   const acquisitionData = acquisitionEndpoint?.data;
 
-
-  const acquisitionMetadata = acquisitionEndpoint?.metadata as AcquisitionTypes|undefined;
+  const acquisitionMetadata = acquisitionEndpoint?.metadata;
   const binmode_metadata = acquisitionMetadata?.config?.bin_mode as MetadataType|undefined;
 
   const [triggerModeValue, setTriggerModeValue] = useState('hardware');
@@ -298,12 +296,12 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 <Col>
                   <EndpointButton
                     endpoint={acquisitionEndpoint}
-                    fullpath={acquisitionEndpoint?.data.acquisition?.acquiring ? "acquisition/stop" : "acquisition/start"}
-                    variant={acquisitionEndpoint?.data.acquisition?.acquiring ? "danger" : "primary"}
-                    value={true}
+                    fullpath="acquisition/run"
+                    variant={acquisitionEndpoint?.data.acquisition?.run ? "danger" : "primary"}
+                    value={acquisitionEndpoint?.data.acquisition?.run ? false : true}
                     className="w-100"
                   >
-                    {acquisitionEndpoint?.data.acquisition?.acquiring ? 'Stop acquisition' : 'Start acquisition'}
+                    {acquisitionEndpoint?.data.acquisition?.run ? 'Stop acquisition' : 'Start acquisition'}
                   </EndpointButton>
                 </Col>
               </Row>

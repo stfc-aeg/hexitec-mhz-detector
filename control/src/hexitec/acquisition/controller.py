@@ -81,9 +81,7 @@ class AcquisitionController(BaseController):
         config_tree = self.configuration.tree
         self.param_tree = ParameterTree({
             'acquisition': {
-                'start': (None, self._start_acquisition),
-                'stop': (None, self._stop_acquisition),
-                'acquiring': (lambda: self.acquiring, None)
+                'run': (lambda: self.acquiring, self.run_acquisition)
             },
             'config': config_tree,
         })
@@ -94,7 +92,16 @@ class AcquisitionController(BaseController):
     def _stop_preview(self):
         pass
 
-    def _start_acquisition(self, value):
+    def run_acquisition(self, value):
+        """Start or stop an acquisition.
+        :param value: boolean: if True, start. If False, stop
+        """
+        if value:
+            self._start_acquisition()
+        else:
+            self._stop_acquisition()
+
+    def _start_acquisition(self):
         self.acquiring = True
         # Check histogrammer details are sensible
         # Configure odin data with histogrammer details
@@ -102,7 +109,7 @@ class AcquisitionController(BaseController):
         # Start histogrammer to send data
         # Need some awaiting of acquisition end signal?
 
-    def _stop_acquisition(self, value):
+    def _stop_acquisition(self):
         self.acquiring = False
         # Tell histogrammer to stop
         # Tell odin data to stop
