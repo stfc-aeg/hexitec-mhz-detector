@@ -1,4 +1,4 @@
-import type { ParamTree } from 'odin-react';
+import type { ParamNode } from 'odin-react';
 
 export interface MetadataType {
   value: any;
@@ -10,7 +10,7 @@ export interface MetadataType {
 
 // Histogram Endpoint Types
 
-export interface HistogramTypes extends ParamTree {
+export interface HistogramTypes extends ParamNode {
   acquisition: {
     count: {
       complete_time_frames: number;
@@ -127,7 +127,7 @@ export interface HistogramTypes extends ParamTree {
 
 // Munir Endpoint Types
 
-export interface MunirTypes extends ParamTree {
+export interface MunirTypes extends ParamNode {
   execute: {
     hexitec_mhz: boolean;
   };
@@ -155,7 +155,7 @@ export interface MunirTypes extends ParamTree {
   }
 };
 
-export interface HexitecMhzStatus extends ParamTree{
+export interface HexitecMhzStatus extends ParamNode {
   FrameWrapperCore_0: {
     core_usage: number;
     frames_processed: number;
@@ -290,7 +290,7 @@ export interface HexitecMhzStatus extends ParamTree{
   };
 }
 
-export interface FrameProcStatus extends ParamTree{
+export interface FrameProcStatus extends ParamNode {
   HexitecMhz: HexitecMhzStatus;
   Liveview: {
     timing: {
@@ -336,11 +336,9 @@ export interface FrameProcStatus extends ParamTree{
   };
 }
 
-export interface AcquisitionTypes extends ParamTree {
+export interface AcquisitionTypes extends ParamNode {
   acquisition: {
-    start: null;
-    stop: null;
-    acquiring: boolean;
+    run: boolean;
   };
   config: {
     bin_mode: string;
@@ -351,5 +349,4 @@ export interface AcquisitionTypes extends ParamTree {
       number_of_timeframes: number;
     };
   };
-
 }
