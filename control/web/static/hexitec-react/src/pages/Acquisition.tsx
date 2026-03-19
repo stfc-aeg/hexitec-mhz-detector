@@ -243,6 +243,19 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 </Row>
               </Col>
             </Row>
+            <Row className="mt-3">
+              <Col>
+                <EndpointButton
+                  endpoint={acquisitionEndpoint}
+                  fullpath="config/trigger/run_histogramming"
+                  variant={acquisitionEndpoint?.data.config?.trigger?.run_histogramming ? "danger" : "outline-primary"}
+                  value={acquisitionEndpoint?.data.config?.trigger?.run_histogramming ? false : true}
+                  className="w-100"
+                >
+                  {acquisitionEndpoint?.data.config?.trigger?.run_histogramming ? 'Stop histogramming' : 'Start histogramming'}
+                </EndpointButton>
+              </Col>
+            </Row>
           </TitleCard>
 
         </Col>

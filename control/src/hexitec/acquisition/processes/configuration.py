@@ -18,6 +18,7 @@ class Configuration():
         self.frames_per_timeframe = 1
         self.number_of_timeframes = 1
 
+        self.running_histogrammer = False
 
         self.tree = ParameterTree({
             'bin_mode': (lambda: self.bin_mode, self.change_bin_mode, 
@@ -32,7 +33,8 @@ class Configuration():
                 'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe,
                                          {'min': 1}),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
-                                         {'min': 1})
+                                         {'min': 1}),
+                'run_histogramming': (lambda: None, self._start_histogramming)
             }
         })
 
@@ -104,7 +106,7 @@ class Configuration():
         :param mode: string representing the trigger mode, either 'burst', 'step_scan', or 'continuous'
         """
         self.trigger_mode = mode
-    
+
     def set_frames_per_timeframe(self, frames: int):
         """Set the number of frames per timeframe/histogram.
         This value is used in the same way no matter the mode, except in continuous mode where it is not used.
@@ -113,7 +115,7 @@ class Configuration():
         if frames < 1:
             raise AcquisitionConfigurationError("Frames per timeframe must be a positive integer.")
         self.frames_per_timeframe = frames
-    
+
     def set_number_of_timeframes(self, timeframes: int):
         """Set the number of timeframes to be acquired.
         How this is interpreted depends on the mode:
@@ -125,4 +127,34 @@ class Configuration():
         if timeframes < 1:
             raise AcquisitionConfigurationError("Number of timeframes must be a positive integer.")
         self.number_of_timeframes = timeframes
-    
+
+    def run_histogramming(self, value: bool):
+        if value:
+            self.running_histogrammer = True
+            self._start_histogramming()
+        else:
+            self.running_histogrammer = False
+            self._stop_histogramming()
+
+    def _start_histogramming(self):
+        """Start the histogrammer."""
+        # need a switch case for the different modes
+        match (self.device, self.trigger_mode):
+            case ("software", _):
+                # # timeframes and frames per timeframe are as-is here
+                self.histogrammer.setValue("input_frames", self.frames_per_timeframe)
+                self.histogrammer.setValue("output_frames", self.number_of_timeframes)
+                self.histogrammer.setRun(True)
+            case ("hardware", "burst"):
+                # burst is timeframes per trigger, frames per timeframe is as-is
+                pass
+            case ("hardware", "step_scan"):
+                # frames per timeframe is 1, timeframes is as-is
+                pass
+            case ("hardware", "continuous"):
+                # frames per timeframe and timeframes are not used in continuous mode
+                pass
+
+    def _stop_histogramming(self):
+        """Stop the histogrammer."""
+        self.histogrammer.setRun(False)

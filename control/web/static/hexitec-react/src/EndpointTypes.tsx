@@ -347,6 +347,7 @@ export interface AcquisitionTypes extends ParamNode {
       mode: string;
       frames_per_timeframe: number;
       number_of_timeframes: number;
+      run_histogramming: boolean;
     };
   };
 }
