@@ -351,3 +351,49 @@ export interface AcquisitionTypes extends ParamNode {
     };
   };
 }
+
+
+// Proxy endpoint types
+
+export interface LokiEnviromentParams extends ParamNode {
+  // This is not all the values but just the ones used here.
+  temperature: {
+    DIODE: number;
+    BLOCK: number;
+  }
+  humidity: {
+    BOARD: number;
+  }
+}
+
+export interface LokiApplicationData extends ParamNode {
+  HV: {
+    ENABLE: number;
+    readback_bias: number;
+    target_bias: number;
+  };
+  peltier: {
+    proportion: number;
+    proportion_save: boolean;
+    count: number;
+    temperature: number;
+    enable: boolean;
+  }
+}
+
+export interface LokiCarrierParams extends ParamNode{
+  environment: LokiEnviromentParams;
+  application: LokiApplicationData;
+}
+
+export interface ProxyParams extends ParamNode{
+  loki: LokiCarrierParams
+  status: {
+    loki: {
+      url: string;
+      status_code: number;
+      error: string;
+      last_update: string;
+    }
+  }
+}

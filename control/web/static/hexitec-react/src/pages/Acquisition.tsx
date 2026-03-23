@@ -34,13 +34,23 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const handleTriggerModeChange = (value: string) => {
     setTriggerModeValue(value);
     let sendVal = {['device']: value};
-    acquisitionEndpoint.put(sendVal, 'config/trigger');
+    acquisitionEndpoint.put(sendVal, 'config/trigger')
+      .then(
+        (response) => {
+          acquisitionEndpoint.mergeData(response, 'config/trigger');
+        }
+      );
   }
 
   const handleAdTriggerModeChange = (value: string) => {
     setAdTriggerModeValue(value);
     let sendVal = {['trigger_mode']: value};
-    acquisitionEndpoint.put(sendVal, 'config/trigger');
+    acquisitionEndpoint.put(sendVal, 'config/trigger')
+      .then(
+        (response) => {
+          acquisitionEndpoint.mergeData(response, 'config/trigger');
+        }
+      );
   }
 
   const est_duration = ((acquisitionData?.config?.trigger?.frames_per_timeframe * acquisitionData?.config?.trigger?.number_of_timeframes) / 1000000);

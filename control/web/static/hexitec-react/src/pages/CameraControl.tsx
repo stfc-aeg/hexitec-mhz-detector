@@ -2,49 +2,7 @@ import { Container, Row, Col, Card, Form, Button, Badge, FloatingLabel} from 're
 import { UserAware } from '../components/UserAware';
 import { WithEndpoint, useAdapterEndpoint, type ParamTree } from 'odin-react';
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../utils.js';
-
-interface LokiEnviromentParams extends ParamTree {
-  // This is not all the values but just the ones used here.
-  temperature: {
-    DIODE: number;
-    BLOCK: number;
-  }
-  humidity: {
-    BOARD: number;
-  }
-}
-
-interface LokiApplicationData extends ParamTree {
-  HV: {
-    ENABLE: number;
-    readback_bias: number;
-    target_bias: number;
-  };
-  peltier: {
-    proportion: number;
-    proportion_save: boolean;
-    count: number;
-    temperature: number;
-    enable: boolean;
-  }
-}
-
-interface LokiCarrierParams extends ParamTree{
-  environment: LokiEnviromentParams;
-  application: LokiApplicationData;
-}
-
-interface ProxyParams extends ParamTree{
-  loki: LokiCarrierParams
-  status: {
-    loki: {
-      url: string;
-      status_code: number;
-      error: string;
-      last_update: string;
-    }
-  }
-}
+import type { ProxyParams } from '../EndpointTypes';
 
 interface CameraControlProps {
   endpoint_url: string;

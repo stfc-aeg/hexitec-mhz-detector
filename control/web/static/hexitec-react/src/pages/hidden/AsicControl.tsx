@@ -1,5 +1,5 @@
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
-import { UserAware } from '../components/UserAware';
+import { UserAware } from '../../components/UserAware';
 
 interface AsicControlProps {
   endpoint_url: string;

@@ -1,7 +1,7 @@
 import { Container, Row, Col, Form, Button, FloatingLabel } from 'react-bootstrap';
 import { useAdapterEndpoint, WithEndpoint, TitleCard } from 'odin-react';
-import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../utils.js';
-import type { HistogramTypes, MetadataType } from '../EndpointTypes';
+import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
+import type { HistogramTypes, MetadataType } from '../../EndpointTypes.js';
 
 interface HistogramProps {
   endpoint_url: string;

@@ -17,7 +17,7 @@ const EndpointSelect = WithEndpoint(Form.Select);
 function Processing({ endpoint_url }: ProcessingProps) {
   const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
 
-  const histogramMetadata = histogramEndpoint.metadata as HistogramTypes|undefined;
+  const histogramMetadata = histogramEndpoint.metadata;
   // File uploads: the allowed values here usually match but are separated for consistency
   const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename as MetadataType|undefined;  
   const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename as MetadataType|undefined;
