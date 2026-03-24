@@ -24,12 +24,12 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
           <FileUploads
             histogramEndpoint={histogramEndpoint}
           />
-          <DetectorControls />
         </Col>
         <Col md={6}>
           <Processing
             histogramEndpoint={histogramEndpoint}
           />
+          <DetectorControls />
         </Col>
       </Row>
     </Container>
