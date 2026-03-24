@@ -75,6 +75,34 @@ class AcquisitionController(BaseController):
         self.histogrammer.histogrammer.udpHandler.setupUdp()
 
         self._build_tree()
+        self._handle_default_settings()
+
+    def _handle_default_settings(self):
+        """Take the default configuration options provided and apply them."""
+        # Baseline
+        self.histogrammer.setBaselineMode('baselineDiv', int(self.options.get('baseline_divide', 256)))
+        self.histogrammer.setBaselineMode('enableDither', bool(int(self.options.get('baseline_dither', 0))))
+        # Thresholds
+        self.histogrammer.setThreshold(
+            'absolute', 
+            low=int(self.options.get('thres_abs_low_default', 1)),
+            high=int(self.options.get('thres_abs_high_default', 1000))
+        )
+        self.histogrammer.setThreshold(
+            'lower',
+            low=int(self.options.get('thres_low_neg_default', -35)),
+            high=int(self.options.get('thres_low_pos_default', 25))
+        )
+        self.histogrammer.setThreshold(
+            'main',
+            low=int(self.options.get('thres_main_neg_default', -35)),
+            high=int(self.options.get('thres_main_pos_default', 25))
+        )
+        # Charge-sharing
+        self.histogrammer.SetChargeSharing("enbEdgePos", bool(int(self.options.get('charge_pos_edge', 0))))
+        self.histogrammer.SetChargeSharing("enbSumming", bool(int(self.options.get('charge_sum_enable', 0))))
+        self.histogrammer.SetChargeSharing("enbNegNeb", bool(int(self.options.get('charge_neg_neighbour', 0))))
+        self.histogrammer.SetChargeSharing("enbAdjPosn", bool(int(self.options.get('charge_pos_adjust', 0))))
 
     def _build_tree(self):
         """Build the parameter tree for the acquisition controller."""
