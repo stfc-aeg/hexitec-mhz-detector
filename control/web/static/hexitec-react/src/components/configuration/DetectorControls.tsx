@@ -28,10 +28,7 @@ export default function DetectorControls() {
         </UserAware>
 
         <Row className="mt-3">
-          <Col sm={6}>
-            <Button variant="success" className="w-100">Initialise Detector</Button>
-          </Col>
-          <Col sm={6}>
+          <Col>
             <Button variant="danger" className="w-100">Reboot Detector</Button>
           </Col>
         </Row>
