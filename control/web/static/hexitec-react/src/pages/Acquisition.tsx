@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { WithEndpoint, EndpointInput, useAdapterEndpoint, TitleCard, EndpointButton } from 'odin-react';
 import { floatingInputStyle, floatingLabelStyle } from '../utils.js'
 import type { AcquisitionTypes, MunirTypes, MetadataType } from '../EndpointTypes';
+import { OverlayTrigger } from 'react-bootstrap';
+import { tooltips } from '../tooltips';
 
 interface AcquisitionProps {
   endpoint_url: string;
@@ -12,14 +14,14 @@ const EndpointSelect = WithEndpoint(Form.Select);
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
-  const munirEndpoint = useAdapterEndpoint<MunirTypes>('munir', endpoint_url, 500);
+  const munirEndpoint = useAdapterEndpoint<MunirTypes>('munir', endpoint_url, 1000);
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
   const acquisitionData = acquisitionEndpoint?.data;
 
   const acquisitionMetadata = acquisitionEndpoint?.metadata;
   const binmode_metadata = acquisitionMetadata?.config?.bin_mode as MetadataType|undefined;
 
-  const [triggerModeValue, setTriggerModeValue] = useState('hardware');
+  const [triggerModeValue, setTriggerModeValue] = useState('software');
   const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst');
   const triggerModeRadios = [
     { name: 'Hardware', value: 'hardware' },
@@ -83,19 +85,21 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             <Row className="mt-3">
               <ButtonGroup>
                 {triggerModeRadios.map((radio, idx) => (
-                  <ToggleButton
-                    key={idx}
-                    className='equal-width-buttongroup'
-                    id={`radio-${idx}`}
-                    type="radio"
-                    variant='outline-primary'
-                    name="triggerModeRadio"
-                    value={radio.value}
-                    checked={triggerModeValue === radio.value}
-                    onChange={(e) => handleTriggerModeChange(e.currentTarget.value)}
-                  >
-                    {radio.name}
-                  </ToggleButton>
+                  <OverlayTrigger placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
+                    <ToggleButton
+                      key={idx}
+                      className='equal-width-buttongroup'
+                      id={`radio-${idx}`}
+                      type="radio"
+                      variant='outline-primary'
+                      name="triggerModeRadio"
+                      value={radio.value}
+                      checked={triggerModeValue === radio.value}
+                      onChange={(e) => handleTriggerModeChange(e.currentTarget.value)}
+                    >
+                      {radio.name}
+                    </ToggleButton>
+                  </OverlayTrigger>
                 ))}
               </ButtonGroup>
               {/* Show AD trigger mode options if hardware trigger mode is selected. needs centering */}
@@ -214,15 +218,17 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 </Row>
                 <Row>
                   <Col>
-                    <FloatingLabel label="Est. Duration (s)">
-                      <Form.Control
-                        type="text"
-                        value={
-                          triggerModeValue==='hardware' ? est_duration.toString() + ' per trigger' : est_duration}
-                        readOnly
-                        style={floatingLabelStyle}
-                      />
-                    </FloatingLabel>
+                    <OverlayTrigger placement="top" overlay={tooltips.acquisition.est_duration}>
+                      <FloatingLabel label="Est. Duration (s)">
+                        <Form.Control
+                          type="text"
+                          value={
+                            triggerModeValue==='hardware' ? est_duration.toString() + ' per trigger' : est_duration}
+                          readOnly
+                          style={floatingLabelStyle}
+                        />
+                      </FloatingLabel>
+                    </OverlayTrigger>
                   </Col>
                 </Row>
               </Col>

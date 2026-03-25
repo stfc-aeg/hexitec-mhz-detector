@@ -10,7 +10,6 @@ interface ProcessingProps {
 }
 
 const EndpointFormControl = WithEndpoint(Form.Control);
-const EndpointSelect = WithEndpoint(Form.Select);
 const EndpointCheck = WithEndpoint(Form.Check);
 
 export default function Processing( {histogramEndpoint}: ProcessingProps) {
@@ -19,7 +18,6 @@ export default function Processing( {histogramEndpoint}: ProcessingProps) {
   const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename as MetadataType | undefined;
   const posfile_metadata = histogramMetadata?.config?.charge_sharing?.mc_filename as MetadataType | undefined;
   const mcfile_metadata = histogramMetadata?.config?.charge_sharing?.pos_filename as MetadataType | undefined;
-  const baselinedivide_metadata = histogramMetadata?.config?.baseline?.divide as MetadataType | undefined;
 
   return (
     <Card className="mt-3">
