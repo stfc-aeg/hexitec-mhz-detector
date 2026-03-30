@@ -339,6 +339,10 @@ export interface FrameProcStatus extends ParamNode {
 export interface AcquisitionTypes extends ParamNode {
   acquisition: {
     run: boolean;
+    preview: {
+      toggle: boolean;
+      frames_per_hist: number;
+    }
   };
   config: {
     bin_mode: string;

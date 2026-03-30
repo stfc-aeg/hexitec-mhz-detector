@@ -35,6 +35,9 @@ class AcquisitionController(BaseController):
         self.bin_mode = options.get('default_bin_mode', 'histogram_1024')
         self.munir_subsystem = options.get('munir_subsystem', 'hexitec_mhz')
 
+        # Are we in 'preview' mode - i.e. liveview without data capture
+        self.is_previewing = False
+        self.preview_frames_per_hist = 1000000
         self.acquiring = False
 
     def initialize(self, adapters: Adapters):
@@ -109,15 +112,22 @@ class AcquisitionController(BaseController):
         config_tree = self.configuration.tree
         self.param_tree = ParameterTree({
             'acquisition': {
-                'run': (lambda: self.acquiring, self.run_acquisition)
+                'run': (lambda: self.acquiring, self.run_acquisition),
+                'preview': {
+                    'toggle': (lambda: self.is_previewing, self.toggle_preview),
+                    'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hit)
+                }
             },
             'config': config_tree,
         })
 
-    def _start_preview(self):
+    def toggle_preview(self, toggle):
+        self.is_previewing = bool(toggle)
         pass
 
-    def _stop_preview(self):
+    def set_preview_frames_per_hist(self, frames):
+        self.preview_frames_per_hist = int(frames)
+        # Other logic e.g. pass value to alveo
         pass
 
     def run_acquisition(self, value):
@@ -134,8 +144,14 @@ class AcquisitionController(BaseController):
         # Check histogrammer details are sensible
         # Configure odin data with histogrammer details
         # Tell odin data to start acquisition
+            # odin-data needs to be armed before capturing - for that it needs the name and path
+                    # have a local set_filename/path that handles acq_id stuff and arms it as soon as both are truthy
+            # mode -> change it if wrong
+            # filepath, filename (see odin_data_config, acquisition_id? where is UI pointing), # frames (if hardware/unknown, set it to 0)
         # Start histogrammer to send data
         # Need some awaiting of acquisition end signal?
+        # check acquisition progress: written frames vs target.
+            # if unknown frame target, have to stop acquiring manually
 
     def _stop_acquisition(self):
         self.acquiring = False

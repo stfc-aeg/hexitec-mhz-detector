@@ -7,7 +7,7 @@ import { MinMaxInput } from '../MinMaxInput';
 import { ClickableImage } from './ClickableImage';
 import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils'
 import { tooltips } from '../../tooltips';
-import type { MetadataType } from '../../EndpointTypes';
+import type { MetadataType, AcquisitionTypes } from '../../EndpointTypes';
 
 import { RegionSelectionInput } from './RegionSelection';
 
@@ -70,6 +70,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
 
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
+  const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 2000);
 
   // const histogramViewEndpoint = useAdapterEndpoint<HistogramEndpointTypes>(`liveview/_image/${name}/histograms`, endpoint_url, 1000);
   const liveViewData = liveViewEndPoint?.data?.histview?.[name];
@@ -171,7 +172,32 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   }
 
   return (
-    <TitleCard title={`Histogram View - ${name}`}>
+    <TitleCard title={
+      <Row>
+        <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>
+          <strong>{`Histogram View - ${name}`}</strong>
+        </Col>
+        <Col xs={2}>
+          <EndpointButton
+            className="h-100"
+            endpoint={acquisitionEndpoint}
+            fullpath="acquisition/preview/toggle"
+            value={!acquisitionEndpoint.data?.acquisition?.preview?.toggle}
+            variant={acquisitionEndpoint.data?.acquisition?.preview?.toggle ? 'danger' : 'primary'}>
+              {acquisitionEndpoint.data?.acquisition?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
+            </EndpointButton>
+        </Col>
+        <Col xs={3}>
+          <FloatingLabel label="Frames per hist (for preview)">
+            <EndpointFormControl
+              endpoint={acquisitionEndpoint}
+              fullpath="acquisition/preview/frames_per_hist"
+              style={floatingInputStyle}
+            />
+          </FloatingLabel>
+        </Col>
+      </Row>
+    }>
       <Container fluid>
         {/* Timer Display */}
         <Row className="mb-3">
