@@ -34,7 +34,7 @@ class Configuration():
                                          {'min': 1}),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
-                'run_histogramming': (lambda: None, self._start_histogramming)
+                'toggle_acquisition_histogramming': (lambda: None, self.toggle_acquisition_histogramming)
             }
         })
 
@@ -128,7 +128,10 @@ class Configuration():
             raise AcquisitionConfigurationError("Number of timeframes must be a positive integer.")
         self.number_of_timeframes = timeframes
 
-    def run_histogramming(self, value: bool):
+    def toggle_acquisition_histogramming(self, value: bool):
+        """Start or stop dataflow for an acquisition.
+        :param value: boolean deciding whether to start (True) or stop (False) acquisition dataflow
+        """
         if value:
             self.running_histogrammer = True
             self._start_histogramming()
@@ -137,22 +140,24 @@ class Configuration():
             self._stop_histogramming()
 
     def _start_histogramming(self):
-        """Start the histogrammer."""
-        # need a switch case for the different modes
+        """Start and configure the histogrammer depending on the device and mode.
+        With software triggering, the Alveo module is used with the given parameters.
+        For hardware triggering, the interpretation of the values depends on the mode:
+        Burst: # timeframes is timeframes per trigger, frames per timeframe is as expected
+        Step_Scan: # timeframes is always one, frames per timeframe is as expected
+        Continuous: # timeframes and frames per timeframe are unused, relies entirely on trigger
+        """
         match (self.device, self.trigger_mode):
             case ("software", _):
-                # # timeframes and frames per timeframe are as-is here
                 self.histogrammer.setValue("input_frames", self.frames_per_timeframe)
                 self.histogrammer.setValue("output_frames", self.number_of_timeframes)
                 self.histogrammer.setRun(True)
             case ("hardware", "burst"):
-                # burst is timeframes per trigger, frames per timeframe is as-is
                 pass
             case ("hardware", "step_scan"):
-                # frames per timeframe is 1, timeframes is as-is
+                self.number_of_timeframes = 1
                 pass
             case ("hardware", "continuous"):
-                # frames per timeframe and timeframes are not used in continuous mode
                 pass
 
     def _stop_histogramming(self):

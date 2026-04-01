@@ -38,7 +38,7 @@ class AcquisitionController(BaseController):
         # Are we in 'preview' mode - i.e. liveview without data capture
         self.is_previewing = False
         self.preview_frames_per_hist = 1000000
-        self.acquiring = False
+        self.is_acquiring = False
 
     def initialize(self, adapters: Adapters):
         """Initialise the acquisition controller with information about adapters currently loaded
@@ -69,6 +69,10 @@ class AcquisitionController(BaseController):
                 f"{list(self.munir.munir_managers.keys())}"
             )
         self.munir_hexitec = self.munir.munir_managers[self.munir_subsystem]
+
+        # Set a default file name and path
+        setattr(self.munir_hexitec, 'file_path', self.options.get('default_filepath', '/tmp/'))
+        setattr(self.munir_hexitec, 'file_name', self.options.get('default_filename', 'mhz_acquisition'))
 
         # Provide adapters to sub-processess
         self.configuration = Configuration(self.munir_hexitec, self.histogrammer, self.readout)
@@ -112,21 +116,41 @@ class AcquisitionController(BaseController):
         config_tree = self.configuration.tree
         self.param_tree = ParameterTree({
             'acquisition': {
-                'run': (lambda: self.acquiring, self.run_acquisition),
+                'run': (lambda: self.is_acquiring, self.run_acquisition),
                 'preview': {
                     'toggle': (lambda: self.is_previewing, self.toggle_preview),
-                    'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hit)
+                    'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist)
                 }
             },
             'config': config_tree,
         })
 
     def toggle_preview(self, toggle):
+        if self.is_acquiring and toggle:
+            logging.warning("Cannot enable preview mode while acquiring. Please stop acquisition first.")
+            return
+
         self.is_previewing = bool(toggle)
-        pass
+        if self.is_previewing:
+            self._start_preview()
+        else:
+            self._stop_preview()
+
+    def _start_preview(self):
+        """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
+        # TODO: Set up odin data to receive but not write/save data
+        setattr(self.histogrammer.histogrammer.acqHandler, "outFrames", 20_000_000)
+        self.histogrammer.setRun(True)
+
+    def _stop_preview(self):
+        """Stops the preview mode, returning the system to an idle state."""
+        # Stop histogrammer
+        self.histogrammer.setRun(False)
+        # TODO: Stop odin data preview
 
     def set_preview_frames_per_hist(self, frames):
         self.preview_frames_per_hist = int(frames)
+        setattr(self.histogrammer.histogrammer.acqHandler, "impFrames", self.preview_frames_per_hist)
         # Other logic e.g. pass value to alveo
         pass
 
@@ -134,13 +158,17 @@ class AcquisitionController(BaseController):
         """Start or stop an acquisition.
         :param value: boolean: if True, start. If False, stop
         """
+        if self.is_previewing:
+            logging.warning("Disabling preview mode to start acquisition.")
+            self.toggle_preview(False)
+
         if value:
             self._start_acquisition()
         else:
             self._stop_acquisition()
 
     def _start_acquisition(self):
-        self.acquiring = True
+        self.is_acquiring = True
         # Check histogrammer details are sensible
         # Configure odin data with histogrammer details
         # Tell odin data to start acquisition
@@ -154,7 +182,7 @@ class AcquisitionController(BaseController):
             # if unknown frame target, have to stop acquiring manually
 
     def _stop_acquisition(self):
-        self.acquiring = False
+        self.is_acquiring = False
         # Tell histogrammer to stop
         # Tell odin data to stop
         # Restart preview? Perhaps should not turn on automatically, could be optional
