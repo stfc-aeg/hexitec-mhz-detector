@@ -29,7 +29,9 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
           <Processing
             histogramEndpoint={histogramEndpoint}
           />
-          <DetectorControls />
+          <DetectorControls 
+            proxyEndpoint={proxyEndpoint}
+          />
         </Col>
       </Row>
     </Container>
