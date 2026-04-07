@@ -18,6 +18,14 @@ class Configuration():
         self.frames_per_timeframe = 1
         self.number_of_timeframes = 1
 
+        # There is no true 'on/off' setting for this, but a set of commands that do about the same
+        self.baseline_settings = {
+            'enabled': False,
+            'prev_mask': None,
+            'prev_auto_trig': None,
+            'prev_cluster_mode': None
+        }
+
         self.running_histogrammer = False
 
         self.tree = ParameterTree({
@@ -35,6 +43,9 @@ class Configuration():
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
                 'toggle_acquisition_histogramming': (lambda: None, self.toggle_acquisition_histogramming)
+            },
+            'baseline': {
+                'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
             }
         })
 
@@ -163,3 +174,28 @@ class Configuration():
     def _stop_histogramming(self):
         """Stop the histogrammer."""
         self.histogrammer.setRun(False)
+
+    def toggle_baseline(self, value: bool):
+        """Toggle the baseline correction on or off through a set of commands for the same result.
+        clustermode is set to auto, baseline mask is set to fixed, then auto trig mode set to 1 in 2/4
+        The user should be warned that this may lead to frame dropping due to auto trig mode
+        :param value: boolean deciding whether to enable (True) or disable (False) baseline correction
+        """
+        if value:
+            self.baseline_settings['enabled'] = True
+            self.baseline_settings['prev_mask'] = self.histogrammer.enumToString(self.histogrammer.histogrammer.baselineMask)
+            self.baseline_settings['prev_auto_trig'] = self.histogrammer.enumToString(self.histogrammer.histogrammer.autoTrigMode)
+            self.baseline_settings['prev_cluster_mode'] = self.histogrammer.enumToString(self.histogrammer.histogrammer.clusterMode)
+
+            self.histogrammer.setBaselineMode(setting="baselineMask", value="FIXED")
+            self.histogrammer.setCluster(setting="clusterMode", value="AUTO")
+            self.histogrammer.setCluster(setting="autoTrigMode", value='AUTOTRIG_1IN4')
+        else:
+            self.baseline_settings['enabled'] = False
+            prev_mask = self.histogrammer.stringToEnum(self.baseline_settings['prev_mask'])
+            prev_auto_trig = self.histogrammer.stringToEnum(self.baseline_settings['prev_auto_trig'])
+            prev_cluster_mode = self.histogrammer.stringToEnum(self.baseline_settings['prev_cluster_mode'])
+
+            self.histogrammer.setBaselineMode(setting="baselineMask", value=prev_mask)
+            self.histogrammer.setCluster(setting="clusterMode", value=prev_cluster_mode)
+            self.histogrammer.setCluster(setting="autoTrigMode", value=prev_auto_trig)

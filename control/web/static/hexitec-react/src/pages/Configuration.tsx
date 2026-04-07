@@ -13,6 +13,7 @@ interface ConfigurationProps {
 function Configuration({ endpoint_url }: ConfigurationProps) {
   const proxyEndpoint = useAdapterEndpoint<ProxyParams>('proxy', endpoint_url, 1000);
   const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
+  const acquisitionEndpoint = useAdapterEndpoint('acquisition', endpoint_url, 1000);
 
   return (
     <Container>
@@ -28,6 +29,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
         <Col md={6}>
           <Processing
             histogramEndpoint={histogramEndpoint}
+            acquisitionEndpoint={acquisitionEndpoint}
           />
           <DetectorControls 
             proxyEndpoint={proxyEndpoint}

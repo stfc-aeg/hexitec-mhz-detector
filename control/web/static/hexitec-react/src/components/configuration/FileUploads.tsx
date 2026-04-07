@@ -1,4 +1,4 @@
-import { Row, Col, Card, Form } from 'react-bootstrap';
+import { Row, Col, Card, Form, Accordion } from 'react-bootstrap';
 import { FilePicker } from '../FilePicker';
 import type { MetadataType } from '../../EndpointTypes';
 
@@ -11,6 +11,9 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
   const histogramMetadata = histogramEndpoint.metadata;
   const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename as MetadataType | undefined;
   const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename as MetadataType | undefined;
+  const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename as MetadataType | undefined;
+  const posfile_metadata = histogramMetadata?.config?.charge_sharing?.mc_filename as MetadataType | undefined;
+  const mcfile_metadata = histogramMetadata?.config?.charge_sharing?.pos_filename as MetadataType | undefined;
 
   return (
     <Card className="mt-3">
@@ -54,6 +57,46 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
             />
           </Col>
         </Row>
+        <Accordion defaultActiveKey="0" className="mb-3" >
+          <Accordion.Item eventKey="0">
+            <Accordion.Header>Charge Share File Uploads</Accordion.Header>
+            <Accordion.Body>
+              <Row className="mb-2">
+                <Form.Label>L3 File load</Form.Label>
+                <FilePicker
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/l3_filename"
+                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename}
+                  param_metadata={l3file_metadata}
+                  loadButton
+                  loadPath="config/charge_sharing/l3_load"
+                />
+              </Row>
+              <Row className="mb-2">
+                <Form.Label>MC File load</Form.Label>
+                <FilePicker
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/mc_filename"
+                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename}
+                  param_metadata={mcfile_metadata}
+                  loadButton
+                  loadPath="config/charge_sharing/mc_load"
+                />
+              </Row>
+              <Row className="mb-2">
+                <Form.Label>Pos File load</Form.Label>
+                <FilePicker
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/pos_filename"
+                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename}
+                  param_metadata={posfile_metadata}
+                  loadButton
+                  loadPath="config/charge_sharing/pos_load"
+                />
+              </Row>
+            </Accordion.Body>
+          </Accordion.Item>
+        </Accordion>
       </Card.Body>
     </Card>
   );

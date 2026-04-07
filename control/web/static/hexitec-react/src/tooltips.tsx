@@ -29,6 +29,11 @@ export const tooltips = {
         <strong>Charge Sharing.</strong> _
       </Tooltip>
     ),
+    baseline_toggle: (
+      <Tooltip id="tooltip-baseline-toggle">
+        <strong>Dark Tracking Toggle.</strong> Enabling this may lead to some dropped frames due to the settings it requires.
+      </Tooltip>
+    )
   },
   liveview: {
     region_selection: (

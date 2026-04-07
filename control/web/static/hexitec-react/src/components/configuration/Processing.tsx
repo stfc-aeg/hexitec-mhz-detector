@@ -2,28 +2,63 @@ import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'reac
 import { UserAware } from '../UserAware';
 import { WithEndpoint } from 'odin-react';
 import { floatingInputStyle } from '../../utils.js';
+import { OverlayTrigger } from 'react-bootstrap';
+import { tooltips } from '../../tooltips';
 import type { MetadataType } from '../../EndpointTypes';
-import { FilePicker } from '../FilePicker';
 
 interface ProcessingProps {
   histogramEndpoint: any;
+  acquisitionEndpoint: any;
 }
 
 const EndpointFormControl = WithEndpoint(Form.Control);
 const EndpointCheck = WithEndpoint(Form.Check);
+const EndpointSelect = WithEndpoint(Form.Select);
 
-export default function Processing( {histogramEndpoint}: ProcessingProps) {
-    
+export default function Processing( {histogramEndpoint, acquisitionEndpoint }: ProcessingProps) {
+
   const histogramMetadata = histogramEndpoint.metadata;
-  const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename as MetadataType | undefined;
-  const posfile_metadata = histogramMetadata?.config?.charge_sharing?.mc_filename as MetadataType | undefined;
-  const mcfile_metadata = histogramMetadata?.config?.charge_sharing?.pos_filename as MetadataType | undefined;
+  console.log('histogramMetadata', histogramMetadata);
+  const autoTrigModeOptions = histogramMetadata?.config?.clustering?.auto_trig_mode?.allowed_values;
+  const modeOptions = histogramMetadata?.config?.clustering?.mode?.allowed_values;
+
+  // Ordered for grouping: horizontal, vertical, diag1, diag2, quad/all/lone, L1-L4
+  const clusterTypeOrder = [
+    'hoz', 'hoz nl', 'hoz nr',
+    'vert', 'vert na', 'vert nb',
+    'diag1', 'diag1nl', 'diag1nr',
+    'diag2', 'diag2nl', 'diag2nr',
+    'quad', 'all', 'lone',
+    'l1', 'l2', 'l3', 'l4'
+  ];
+
+  const clusterTypeLabels: { [key: string]: string } = {
+    'all': 'All',
+    'diag1': 'Diagonal 1',
+    'diag1nl': 'D.1 No Left',
+    'diag1nr': 'D.1 No Right',
+    'diag2': 'Diagonal 2',
+    'diag2nl': 'D.2 No Left',
+    'diag2nr': 'D.2 No Right',
+    'hoz': 'Horizontal',
+    'hoz nl': 'Horiz. No Left',
+    'hoz nr': 'Horiz. No Right',
+    'l1': 'L1',
+    'l2': 'L2',
+    'l3': 'L3',
+    'l4': 'L4',
+    'lone': 'Lone',
+    'quad': 'Quad',
+    'vert': 'Vertical',
+    'vert na': 'Vert. No Above',
+    'vert nb': 'Vert. No Below'
+  };
 
   return (
     <Card className="mt-3">
       <Card.Header><strong>Processing</strong></Card.Header>
       <Card.Body>
-        <Row className="mb-3">
+        <Row>
           <Col>
             <Form.Label><b>Charge-sharing Options</b></Form.Label>
             <Row>
@@ -62,54 +97,82 @@ export default function Processing( {histogramEndpoint}: ProcessingProps) {
                 />
               </Col>
             </Row>
-            <Accordion defaultActiveKey="0" className="mb-3" >
-              <Accordion.Item eventKey="0">
-                <Accordion.Header>Charge Share File Uploads</Accordion.Header>
-                <Accordion.Body>
-                  <Row className="mb-2">
-                    <Form.Label>L3 File load</Form.Label>
-                    <FilePicker
-                      endpoint={histogramEndpoint}
-                      fullpath="config/charge_sharing/l3_filename"
-                      buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename}
-                      param_metadata={l3file_metadata}
-                      loadButton
-                      loadPath="config/charge_sharing/l3_load"
-                    />
-                  </Row>
-                  <Row className="mb-2">
-                    <Form.Label>MC File load</Form.Label>
-                    <FilePicker
-                      endpoint={histogramEndpoint}
-                      fullpath="config/charge_sharing/mc_filename"
-                      buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename}
-                      param_metadata={mcfile_metadata}
-                      loadButton
-                      loadPath="config/charge_sharing/mc_load"
-                    />
-                  </Row>
-                  <Row className="mb-2">
-                    <Form.Label>Pos File load</Form.Label>
-                    <FilePicker
-                      endpoint={histogramEndpoint}
-                      fullpath="config/charge_sharing/pos_filename"
-                      buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename}
-                      param_metadata={posfile_metadata}
-                      loadButton
-                      loadPath="config/charge_sharing/pos_load"
-                    />
-                  </Row>
-                </Accordion.Body>
-              </Accordion.Item>
-            </Accordion>
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <Form.Label><b>Clustering</b></Form.Label>
+            <Row>
+              <Col>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Auto Trigger Mode">
+                      <EndpointSelect
+                        endpoint={histogramEndpoint}
+                        fullpath="config/clustering/auto_trig_mode"
+                        >
+                          {autoTrigModeOptions?.map((option: string) => (
+                            <option value={option} key={option}>{option}</option>
+                          ))}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel label="Mode">
+                      <EndpointSelect
+                        endpoint={histogramEndpoint}
+                        fullpath="config/clustering/mode"
+                        >
+                          {modeOptions?.map((option: string) => (
+                            <option value={option} key={option}>{option}</option>
+                          ))}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row className="mt-2">
+                  <Col>
+                    <Accordion defaultActiveKey="0">
+                      <Accordion.Item eventKey="0">
+                        <Accordion.Header>Cluster types</Accordion.Header>
+                        <Accordion.Body>
+                          <Row>
+                            {histogramMetadata?.config?.clustering?.types && clusterTypeOrder.map((typeKey: string) => (
+                              <Col sm={6} md={4} key={typeKey}>
+                                <EndpointCheck
+                                  endpoint={histogramEndpoint}
+                                  fullpath={`config/clustering/types/${typeKey}`}
+                                  type="switch"
+                                  label={clusterTypeLabels[typeKey] || typeKey}
+                                />
+                              </Col>
+                            ))}
+                          </Row>
+                        </Accordion.Body>
+                      </Accordion.Item>
+                    </Accordion>
+                  </Col>
+                </Row>
+              </Col>
+            </Row>
           </Col>
         </Row>
 
         <UserAware userLevel="power">
-          <Row className="mb-3">
+          <Row className="mt-3">
             <Col>
               <Form.Label><b>Dark Tracking / Baseline Load</b></Form.Label>
               <Row className="mb-3">
+                <OverlayTrigger placement="top" overlay={tooltips.processing.baseline_toggle}>
+                  <Col>
+                    <EndpointCheck
+                      endpoint={acquisitionEndpoint}
+                      fullpath="config/baseline/toggle"
+                      label="On/off"
+                      type="switch"
+                    />
+                  </Col>
+                </OverlayTrigger>
                 <Col>
                   <EndpointCheck
                     endpoint={histogramEndpoint}
