@@ -7,6 +7,8 @@ import { UserLevelContext } from './components/UserAware';
 import type { HexitecParamTree } from './components/admonitor/MonitorOverlay';
 import Configuration from './pages/Configuration';
 
+import Sequencer from './pages/Sequencer';
+
 function App() {
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
@@ -19,12 +21,14 @@ function App() {
         navLinks={[
           'Configuration',  
           'Acquisition', 
-          'Live View'
+          'Live View',
+          'Sequencer'
         ]}
       >
         <Configuration endpoint_url={endpoint_url} />
         <Acquisition endpoint_url={endpoint_url} />
         <HistogramLiveView endpoint_url={endpoint_url} name={"detector1"}/>
+        <Sequencer endpoint_url={endpoint_url} />
       </OdinApp>
     </UserLevelContext>
   );
