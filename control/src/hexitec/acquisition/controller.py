@@ -12,6 +12,8 @@ from odin.adapters.proxy import ProxyAdapter
 from hexitec.adapter import HexitecAdapter, HexitecController
 from readout_processor.adapter import ReadoutProcessorAdapter, ReadoutProcessorController
 
+from hexitec.util.iac import iac_get, iac_set
+
 class Adapters(TypedDict):
     histogram: HistogramAdapter
     liveview: HistogramLiveViewAdapter
@@ -58,6 +60,7 @@ class AcquisitionController(BaseController):
         self.histogrammer = cast(HistogramController, adapters['histogram'].controller)
         self.liveview = cast(HistogramLiveViewController, adapters['liveview'].controller)
         self.munir = cast(MunirFpController, adapters['munir'].controller)
+        self.munir_ad = cast(MunirAdapter, adapters['munir'])
         self.proxy = cast(ProxyAdapter, adapters['proxy'])
         self.hexitec = cast(HexitecController, adapters['hexitec'].controller)
         self.readout = cast(ReadoutProcessorController, adapters['readout'].controller)
@@ -75,7 +78,7 @@ class AcquisitionController(BaseController):
         setattr(self.munir_hexitec, 'file_name', self.options.get('default_filename', 'mhz_acquisition'))
 
         # Provide adapters to sub-processess
-        self.configuration = Configuration(self.munir_hexitec, self.histogrammer, self.readout)
+        self.configuration = Configuration(self.adapters)
 
         # Connect histogrammer and setup UDP
         self.histogrammer.setConnect(True)
@@ -138,15 +141,16 @@ class AcquisitionController(BaseController):
 
     def _start_preview(self):
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
-        # TODO: Set up odin data to receive but not write/save data
+        iac_set(self.munir_ad, "subsystems/hexitec_mhz", {"start_lv_frames": True})
         setattr(self.histogrammer.histogrammer.acqHandler, "outFrames", 20_000_000)
+        # Set input frames based on tree variable
         self.histogrammer.setRun(True)
 
     def _stop_preview(self):
         """Stops the preview mode, returning the system to an idle state."""
         # Stop histogrammer
         self.histogrammer.setRun(False)
-        # TODO: Stop odin data preview
+        iac_set(self.munir_ad, "subsystems/hexitec_mhz", {"stop_execute": True})
 
     def set_preview_frames_per_hist(self, frames):
         self.preview_frames_per_hist = int(frames)
