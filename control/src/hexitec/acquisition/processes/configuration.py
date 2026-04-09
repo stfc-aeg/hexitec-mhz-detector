@@ -1,17 +1,19 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+import logging
 
 class AcquisitionConfigurationError(Exception):
     """Custom exception for acquisition configuration errors."""
     pass
 
 class Configuration():
-    def __init__(self, munir, histogrammer, readout):
+    def __init__(self, adapters):
         self.bin_mode = "histogram_1024"
-        self.munir_hexitec = munir
-        self.munir_odindata_controller = self.munir_hexitec.odin_data_instances[0]  # Only anticipate one odin data instance for now
-        self.histogrammer = histogrammer
-        self.readout = readout
+        self.munir = adapters["munir"].controller
+        self.munir_odindata_controller = self.munir.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
+        self.histogrammer = adapters["histogram"].controller
+        self.readout = adapters["readout"].controller
+        self.liveview = adapters["liveview"].controller
 
         self.device = "software"
         self.trigger_mode = "burst"
@@ -100,10 +102,9 @@ class Configuration():
         # Change in liveview
         self.liveview.set_num_bins(depth, self.liveview.processors[0])  # Only anticipate one endpoint
 
-        # Restart liveviewing
-        self.histogrammer.setRun(True)
-
+        # Restart liveview if it was running
         if was_executing:
+            self.histogrammer.setRun(True)
             self.munir.set_execute('hexitec_mhz', True)
 
     def set_device(self, device: str):
