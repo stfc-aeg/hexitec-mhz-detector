@@ -181,7 +181,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
           <EndpointButton
             className="h-100"
             endpoint={acquisitionEndpoint}
-            fullpath="acquisition/preview/toggle"
+            fullpath="state/preview/toggle"
             value={!acquisitionEndpoint.data?.acquisition?.preview?.toggle}
             variant={acquisitionEndpoint.data?.acquisition?.preview?.toggle ? 'danger' : 'primary'}
             disabled={acquisitionEndpoint.data?.acquisition?.run}
@@ -193,7 +193,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
           <FloatingLabel label="Frames per hist (for preview)">
             <EndpointFormControl
               endpoint={acquisitionEndpoint}
-              fullpath="acquisition/preview/frames_per_hist"
+              fullpath="state/preview/frames_per_hist"
               style={floatingInputStyle}
             />
           </FloatingLabel>

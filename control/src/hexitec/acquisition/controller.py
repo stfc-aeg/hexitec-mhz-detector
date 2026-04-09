@@ -3,6 +3,7 @@ from hexitec.base.base_controller import BaseController, BaseError
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from hexitec.acquisition.processes.configuration import Configuration
+from hexitec.acquisition.processes.state import State
 
 from typing import TypedDict, cast
 from histogrammer.adapter.adapter import HistogramAdapter, HistogramController
@@ -36,11 +37,6 @@ class AcquisitionController(BaseController):
 
         self.bin_mode = options.get('default_bin_mode', 'histogram_1024')
         self.munir_subsystem = options.get('munir_subsystem', 'hexitec_mhz')
-
-        # Are we in 'preview' mode - i.e. liveview without data capture
-        self.is_previewing = False
-        self.preview_frames_per_hist = 1000000
-        self.is_acquiring = False
 
     def initialize(self, adapters: Adapters):
         """Initialise the acquisition controller with information about adapters currently loaded
@@ -79,6 +75,7 @@ class AcquisitionController(BaseController):
 
         # Provide adapters to sub-processess
         self.configuration = Configuration(self.adapters)
+        self.state = State(self.adapters)
 
         # Connect histogrammer and setup UDP
         self.histogrammer.setConnect(True)
@@ -117,79 +114,11 @@ class AcquisitionController(BaseController):
     def _build_tree(self):
         """Build the parameter tree for the acquisition controller."""
         config_tree = self.configuration.tree
+        state_tree = self.state.tree
         self.param_tree = ParameterTree({
-            'acquisition': {
-                'run': (lambda: self.is_acquiring, self.run_acquisition),
-                'preview': {
-                    'toggle': (lambda: self.is_previewing, self.toggle_preview),
-                    'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist)
-                }
-            },
             'config': config_tree,
+            'state': state_tree
         })
-
-    def toggle_preview(self, toggle):
-        if self.is_acquiring and toggle:
-            logging.warning("Cannot enable preview mode while acquiring. Please stop acquisition first.")
-            return
-
-        self.is_previewing = bool(toggle)
-        if self.is_previewing:
-            self._start_preview()
-        else:
-            self._stop_preview()
-
-    def _start_preview(self):
-        """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
-        iac_set(self.munir_ad, "subsystems/hexitec_mhz", {"start_lv_frames": True})
-        setattr(self.histogrammer.histogrammer.acqHandler, "outFrames", 20_000_000)
-        # Set input frames based on tree variable
-        self.histogrammer.setRun(True)
-
-    def _stop_preview(self):
-        """Stops the preview mode, returning the system to an idle state."""
-        # Stop histogrammer
-        self.histogrammer.setRun(False)
-        iac_set(self.munir_ad, "subsystems/hexitec_mhz", {"stop_execute": True})
-
-    def set_preview_frames_per_hist(self, frames):
-        self.preview_frames_per_hist = int(frames)
-        setattr(self.histogrammer.histogrammer.acqHandler, "impFrames", self.preview_frames_per_hist)
-        # Other logic e.g. pass value to alveo
-        pass
-
-    def run_acquisition(self, value):
-        """Start or stop an acquisition.
-        :param value: boolean: if True, start. If False, stop
-        """
-        if self.is_previewing:
-            logging.warning("Disabling preview mode to start acquisition.")
-            self.toggle_preview(False)
-
-        if value:
-            self._start_acquisition()
-        else:
-            self._stop_acquisition()
-
-    def _start_acquisition(self):
-        self.is_acquiring = True
-        # Check histogrammer details are sensible
-        # Configure odin data with histogrammer details
-        # Tell odin data to start acquisition
-            # odin-data needs to be armed before capturing - for that it needs the name and path
-                    # have a local set_filename/path that handles acq_id stuff and arms it as soon as both are truthy
-            # mode -> change it if wrong
-            # filepath, filename (see odin_data_config, acquisition_id? where is UI pointing), # frames (if hardware/unknown, set it to 0)
-        # Start histogrammer to send data
-        # Need some awaiting of acquisition end signal?
-        # check acquisition progress: written frames vs target.
-            # if unknown frame target, have to stop acquiring manually
-
-    def _stop_acquisition(self):
-        self.is_acquiring = False
-        # Tell histogrammer to stop
-        # Tell odin data to stop
-        # Restart preview? Perhaps should not turn on automatically, could be optional
 
     def get(self, path, with_metadata=False):
         """Get parameter data from controller."""

@@ -325,7 +325,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 <Col>
                   <EndpointButton
                     endpoint={acquisitionEndpoint}
-                    fullpath="acquisition/run"
+                    fullpath="state/acquisition/toggle"
                     variant={acquisitionEndpoint?.data.acquisition?.run ? "danger" : "primary"}
                     value={acquisitionEndpoint?.data.acquisition?.run ? false : true}
                     className="w-100"
