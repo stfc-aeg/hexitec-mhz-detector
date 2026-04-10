@@ -76,6 +76,9 @@ class AcquisitionController(BaseController):
         self.configuration = Configuration(self.adapters)
         self.state = State(self.adapters)
 
+        self.state._register_configuration(self.configuration)
+        self.configuration._register_state(self.state)
+
         # Connect histogrammer and setup UDP
         iac_set(self.histogrammer, "device/connect", True)
         iac_set(self.histogrammer, "udp/setup", True)

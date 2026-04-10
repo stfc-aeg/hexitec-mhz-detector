@@ -1,0 +1,57 @@
+{
+    "hexitec_mhz": {
+      "acquisition_config": {
+        "HexitecMhz": {
+          "update_config": true,
+          "rx_enable": false,
+          "proc_enable": true,
+          "rx_frames": 1000
+        },
+        "hdf": {
+          "file": {
+            "path": "/tmp"
+          },
+          "frames": 1000,
+          "acquisition_id": "acquisition_id",
+          "write": true
+        }
+      },
+      "start_config": {
+        "HexitecMhz": {
+          "update_config": true,
+          "rx_enable": true
+        },
+        "hdf": {
+          "write": true
+        }
+      },
+      "arm_config": {
+        "HexitecMhz": {
+          "update_config": true,
+          "proc_enable": true
+      }, 
+      "hdf": {
+          "write": false
+      }
+      },
+      "lv_config": {
+        "HexitecMhz": {
+          "update_config": true,
+          "rx_enable": true
+        },
+        "hdf": {
+          "write": false
+        }
+      },
+      "stop_config": {
+        "HexitecMhz": {
+          "update_config": true,
+          "rx_enable": false,
+          "proc_enable": true
+        },
+        "hdf": {
+          "write": false
+        }
+      }
+    }
+  }

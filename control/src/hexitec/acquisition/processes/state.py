@@ -2,6 +2,7 @@
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
+import time
 
 class AcquisitionStateError(Exception):
     """Custom exception for acquisition state errors."""
@@ -17,6 +18,7 @@ class State():
 
         # Are we in 'preview' mode - i.e. liveview without data capture
         self.is_previewing = False
+        self.was_previewing = False
         self.preview_frames_per_hist = 1000000
         self.is_acquiring = False
 
@@ -29,6 +31,10 @@ class State():
                 'toggle': (lambda: self.is_acquiring, self.toggle_acquisition)
             }
         })
+
+    def _register_configuration(self, configuration):
+        """Get a reference to the configuration class."""
+        self.configuration = configuration
 
     def toggle_preview(self, toggle):
         if self.is_acquiring and toggle:
@@ -78,6 +84,40 @@ class State():
 
     def _start_acquisition(self):
         self.is_acquiring = True
+
+        if self.is_previewing:
+            self.toggle_preview(False)
+            self.is_previewing = False
+            self.was_previewing = True
+
+        # Check modes are compatible
+        try:
+            num_bins = iac_get(self.histogrammer, "config/hist_format/num_bins")
+            num_bins = "histogram_" + str(num_bins)
+            munir_mode = iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status")
+            munir_mode = munir_mode[0].get("HexitecMhz", {}).get("mode", "")
+            # munir_mode = iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status/HexitecMhz/mode")
+        except Exception as error:
+            logging.error(f"Error checking modes before acquisition: {error}")
+            raise AcquisitionStateError(f"Error checking modes before acquisition: {error}")
+        if num_bins != munir_mode:
+            logging.warning(f"Histogrammer num_bins {num_bins} does not match munir mode {munir_mode}. Changing bin modes to match histogrammer.")
+            self.configuration.change_bin_mode(num_bins)
+            while iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status/HexitecMhz/mode") != num_bins:
+                logging.warning(f"Waiting for odin data to reconfigure to new bin mode...")
+                time.sleep(0.5)
+
+        # TODO: Check min and max input frames vs bin mode
+
+        # TODO: Consider filename overwriting?
+        
+        # No. frames handle in configuration.start_histogramming
+        self.configuration._configure_histogramming()
+
+        # Start sending data
+        iac_set(self.munir, "execute", {'hexitec_mhz': True})
+        iac_set(self.histogrammer, "acquisition/run", True)
+        
         # Check histogrammer details are sensible
         # Configure odin data with histogrammer details
         # Tell odin data to start acquisition
@@ -92,6 +132,9 @@ class State():
 
     def _stop_acquisition(self):
         self.is_acquiring = False
-        # Tell histogrammer to stop
-        # Tell odin data to stop
-        # Restart preview? Perhaps should not turn on automatically, could be optional
+
+        iac_set(self.histogrammer, "acquisition/run", False)
+        iac_set(self.munir, "subsystems/hexitec_mhz/stop_execute", False)
+
+        if self.was_previewing:
+            self.toggle_preview(True)

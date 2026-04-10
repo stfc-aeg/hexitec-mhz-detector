@@ -182,11 +182,11 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
             className="h-100"
             endpoint={acquisitionEndpoint}
             fullpath="state/preview/toggle"
-            value={!acquisitionEndpoint.data?.acquisition?.preview?.toggle}
-            variant={acquisitionEndpoint.data?.acquisition?.preview?.toggle ? 'danger' : 'primary'}
-            disabled={acquisitionEndpoint.data?.acquisition?.run}
+            value={!acquisitionEndpoint.data?.state?.preview?.toggle}
+            variant={acquisitionEndpoint.data?.state?.preview?.toggle ? 'danger' : 'primary'}
+            disabled={acquisitionEndpoint.data?.state?.acquisition?.toggle}
             >
-              {acquisitionEndpoint.data?.acquisition?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
+              {acquisitionEndpoint.data?.state?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
             </EndpointButton>
         </Col>
         <Col xs={3}>

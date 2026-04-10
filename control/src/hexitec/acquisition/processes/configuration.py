@@ -45,12 +45,16 @@ class Configuration():
                                          {'min': 1}),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
-                'toggle_acquisition_histogramming': (lambda: None, self.toggle_acquisition_histogramming)
+                'configure_histogramming': (lambda: None, self._configure_histogramming)
             },
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
             }
         })
+
+    def _register_state(self, state):
+        """Get a reference to the configuration class."""
+        self.state = state
 
     def change_bin_mode(self, bin_mode: str):
         """Change the number of bins used by the sensor.
@@ -72,7 +76,7 @@ class Configuration():
                 hist_value='1024'
 
         # Stop odin-data
-        if self.munir.execute_flags['hexitec_mhz']:
+        if self.munir.controller.execute_flags['hexitec_mhz']:
             was_executing = True
             iac_set(self.munir, 'execute/hexitec_mhz', False)
 
@@ -80,7 +84,7 @@ class Configuration():
         iac_set(self.histogrammer, "acquisition/run", False)
 
         # Change via histogrammer
-        iac_set(self.histogrammer, "config/hist_format/num_bins", int(hist_value))
+        iac_set(self.histogrammer, "config/hist_format/num_bins", hist_value)
 
         # Change in odin data
         cfg = {
@@ -141,41 +145,32 @@ class Configuration():
             raise AcquisitionConfigurationError("Number of timeframes must be a positive integer.")
         self.number_of_timeframes = timeframes
 
-    def toggle_acquisition_histogramming(self, value: bool):
-        """Start or stop dataflow for an acquisition.
-        :param value: boolean deciding whether to start (True) or stop (False) acquisition dataflow
-        """
-        if value:
-            self.running_histogrammer = True
-            self._start_histogramming()
-        else:
-            self.running_histogrammer = False
-            self._stop_histogramming()
-
-    def _start_histogramming(self):
-        """Start and configure the histogrammer depending on the device and mode.
+    def _configure_histogramming(self):
+        """Configure histogrammer and munir depending on the operating mode of the detector.
         With software triggering, the Alveo module is used with the given parameters.
         For hardware triggering, the interpretation of the values depends on the mode:
         Burst: # timeframes is timeframes per trigger, frames per timeframe is as expected
         Step_Scan: # timeframes is always one, frames per timeframe is as expected
         Continuous: # timeframes and frames per timeframe are unused, relies entirely on trigger
         """
+        def use_software(cls):
+            iac_set(cls.histogrammer, "acquisition/input_frames", cls.frames_per_timeframe)
+            iac_set(cls.histogrammer, "acquisition/output_frames", cls.number_of_timeframes)
+            iac_set(cls.histogrammer, "acquisition/run", True)
+            # For software, number of histograms is number of frames in dataset
+            iac_set(cls.munir, "subsystems/hexitec_mhz/args/num_frames", cls.number_of_timeframes)
+        
+        # For now, no hardware triggering so these all point in the same direction
         match (self.device, self.trigger_mode):
             case ("software", _):
-                iac_set(self.histogrammer, "acquisition/input_frames", self.frames_per_timeframe)
-                iac_set(self.histogrammer, "acquisition/output_frames", self.number_of_timeframes)
-                iac_set(self.histogrammer, "acquisition/run", True)
+                use_software(self)
             case ("hardware", "burst"):
-                pass
+                use_software(self)
             case ("hardware", "step_scan"):
-                self.number_of_timeframes = 1
-                pass
+                # self.number_of_timeframes = 1
+                use_software(self)
             case ("hardware", "continuous"):
-                pass
-
-    def _stop_histogramming(self):
-        """Stop the histogrammer."""
-        iac_set(self.histogrammer, "acquisition/run", False)
+                use_software(self)
 
     def toggle_baseline(self, value: bool):
         """Toggle the baseline correction on or off through a set of commands for the same result.
@@ -189,9 +184,9 @@ class Configuration():
             self.baseline_settings['prev_auto_trig'] = iac_get(self.histogrammer, "config/clustering/auto_trig_mode")
             self.baseline_settings['prev_cluster_mode'] = iac_get(self.histogrammer, "config/clustering/mode")
 
-            iac_set(self.histogrammer, "config/baseline/mask", "FIXED")
-            iac_set(self.histogrammer, "config/clustering/mode", "AUTO")
-            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'AUTOTRIG_1IN4')
+            iac_set(self.histogrammer, "config/baseline/mask", "fixed")
+            iac_set(self.histogrammer, "config/clustering/mode", "auto")
+            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'autotrig 1in2')
         else:
             self.baseline_settings['enabled'] = False
 

@@ -337,21 +337,26 @@ export interface FrameProcStatus extends ParamNode {
 }
 
 export interface AcquisitionTypes extends ParamNode {
-  acquisition: {
-    run: boolean;
-    preview: {
-      toggle: boolean;
-      frames_per_hist: number;
-    }
-  };
   config: {
+    baseline: {
+      toggle: boolean;
+    };
     bin_mode: string;
     trigger: {
       device: string;
-      mode: string;
       frames_per_timeframe: number;
       number_of_timeframes: number;
-      run_histogramming: boolean;
+      toggle_acquisition_histogramming: null | boolean;
+      trigger_mode: string;
+    };
+  };
+  state: {
+    acquisition: {
+      toggle: boolean;
+    };
+    preview: {
+      frames_per_hist: number;
+      toggle: boolean;
     };
   };
 }

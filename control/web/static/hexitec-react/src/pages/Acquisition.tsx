@@ -326,11 +326,11 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   <EndpointButton
                     endpoint={acquisitionEndpoint}
                     fullpath="state/acquisition/toggle"
-                    variant={acquisitionEndpoint?.data.acquisition?.run ? "danger" : "primary"}
-                    value={acquisitionEndpoint?.data.acquisition?.run ? false : true}
+                    variant={acquisitionEndpoint?.data?.state?.acquisition?.toggle ? "danger" : "primary"}
+                    value={acquisitionEndpoint?.data?.state?.acquisition?.toggle ? false : true}
                     className="w-100"
                   >
-                    {acquisitionEndpoint?.data.acquisition?.run ? 'Stop acquisition' : 'Start acquisition'}
+                    {acquisitionEndpoint?.data?.state?.acquisition?.toggle ? 'Stop acquisition' : 'Start acquisition'}
                   </EndpointButton>
                 </Col>
               </Row>
