@@ -26,9 +26,9 @@ class HistogramLiveViewController(BaseController):
         endpoints = [
             item.strip() for item in options.get('histogram_endpoint', '').split(",")
         ]
-        self.names = [
-            item.strip() for item in options.get('endpoint_name', '').split(",")
-        ]
+        # We won't have more than two endpoints and likely only one
+        # A future refactor will just have the one endpoint and no name subtrees.
+        self.names = ["mhz", "raw"]
 
         # Parse dimensions
         dimensions = list(map(int, options.get('data_dimensions', '80x80x1024').split('x')))

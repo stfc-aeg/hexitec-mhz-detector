@@ -1,6 +1,7 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
+from hexitec.util.iac import iac_get, iac_set
 
 class AcquisitionConfigurationError(Exception):
     """Custom exception for acquisition configuration errors."""
@@ -9,11 +10,11 @@ class AcquisitionConfigurationError(Exception):
 class Configuration():
     def __init__(self, adapters):
         self.bin_mode = "histogram_1024"
-        self.munir = adapters["munir"].controller
-        self.munir_odindata_controller = self.munir.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
-        self.histogrammer = adapters["histogram"].controller
-        self.readout = adapters["readout"].controller
-        self.liveview = adapters["liveview"].controller
+        self.munir = adapters["munir"]
+        self.munir_odindata_controller = self.munir.controller.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
+        self.histogrammer = adapters["histogram"]
+        self.readout = adapters["readout"]
+        self.liveview = adapters["liveview"]
 
         self.device = "software"
         self.trigger_mode = "burst"
@@ -73,13 +74,13 @@ class Configuration():
         # Stop odin-data
         if self.munir.execute_flags['hexitec_mhz']:
             was_executing = True
-            self.munir.set_execute('hexitec_mhz', False)
+            iac_set(self.munir, 'execute/hexitec_mhz', False)
 
         # Disable histogrammer
-        self.histogrammer.setRun(False)
+        iac_set(self.histogrammer, "acquisition/run", False)
 
         # Change via histogrammer
-        self.histogrammer.setHistFormat(setting=hist_mode, value=hist_value)
+        iac_set(self.histogrammer, "config/hist_format/num_bins", int(hist_value))
 
         # Change in odin data
         cfg = {
@@ -100,12 +101,12 @@ class Configuration():
         response = self.munir_odindata_controller.set_config(cfg)
 
         # Change in liveview
-        self.liveview.set_num_bins(depth, self.liveview.processors[0])  # Only anticipate one endpoint
+        iac_set(self.liveview, "histview/mhz/image/num_bins", depth)
 
         # Restart liveview if it was running
         if was_executing:
-            self.histogrammer.setRun(True)
-            self.munir.set_execute('hexitec_mhz', True)
+            iac_set(self.histogrammer, "acquisition/run", True)
+            iac_set(self.munir, 'execute/hexitec_mhz', True)
 
     def set_device(self, device: str):
         """Set the trigger device, which may be software or hardware
@@ -161,9 +162,9 @@ class Configuration():
         """
         match (self.device, self.trigger_mode):
             case ("software", _):
-                self.histogrammer.setValue("input_frames", self.frames_per_timeframe)
-                self.histogrammer.setValue("output_frames", self.number_of_timeframes)
-                self.histogrammer.setRun(True)
+                iac_set(self.histogrammer, "acquisition/input_frames", self.frames_per_timeframe)
+                iac_set(self.histogrammer, "acquisition/output_frames", self.number_of_timeframes)
+                iac_set(self.histogrammer, "acquisition/run", True)
             case ("hardware", "burst"):
                 pass
             case ("hardware", "step_scan"):
@@ -174,7 +175,7 @@ class Configuration():
 
     def _stop_histogramming(self):
         """Stop the histogrammer."""
-        self.histogrammer.setRun(False)
+        iac_set(self.histogrammer, "acquisition/run", False)
 
     def toggle_baseline(self, value: bool):
         """Toggle the baseline correction on or off through a set of commands for the same result.
@@ -184,19 +185,16 @@ class Configuration():
         """
         if value:
             self.baseline_settings['enabled'] = True
-            self.baseline_settings['prev_mask'] = self.histogrammer.enumToString(self.histogrammer.histogrammer.baselineMask)
-            self.baseline_settings['prev_auto_trig'] = self.histogrammer.enumToString(self.histogrammer.histogrammer.autoTrigMode)
-            self.baseline_settings['prev_cluster_mode'] = self.histogrammer.enumToString(self.histogrammer.histogrammer.clusterMode)
+            self.baseline_settings['prev_mask'] = iac_get(self.histogrammer, "config/baseline/mask")
+            self.baseline_settings['prev_auto_trig'] = iac_get(self.histogrammer, "config/clustering/auto_trig_mode")
+            self.baseline_settings['prev_cluster_mode'] = iac_get(self.histogrammer, "config/clustering/mode")
 
-            self.histogrammer.setBaselineMode(setting="baselineMask", value="FIXED")
-            self.histogrammer.setCluster(setting="clusterMode", value="AUTO")
-            self.histogrammer.setCluster(setting="autoTrigMode", value='AUTOTRIG_1IN4')
+            iac_set(self.histogrammer, "config/baseline/mask", "FIXED")
+            iac_set(self.histogrammer, "config/clustering/mode", "AUTO")
+            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'AUTOTRIG_1IN4')
         else:
             self.baseline_settings['enabled'] = False
-            prev_mask = self.histogrammer.stringToEnum(self.baseline_settings['prev_mask'])
-            prev_auto_trig = self.histogrammer.stringToEnum(self.baseline_settings['prev_auto_trig'])
-            prev_cluster_mode = self.histogrammer.stringToEnum(self.baseline_settings['prev_cluster_mode'])
 
-            self.histogrammer.setBaselineMode(setting="baselineMask", value=prev_mask)
-            self.histogrammer.setCluster(setting="clusterMode", value=prev_cluster_mode)
-            self.histogrammer.setCluster(setting="autoTrigMode", value=prev_auto_trig)
+            iac_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
+            iac_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
+            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])

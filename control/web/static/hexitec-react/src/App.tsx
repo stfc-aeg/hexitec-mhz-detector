@@ -27,7 +27,7 @@ function App() {
       >
         <Configuration endpoint_url={endpoint_url} />
         <Acquisition endpoint_url={endpoint_url} />
-        <HistogramLiveView endpoint_url={endpoint_url} name={"detector1"}/>
+        <HistogramLiveView endpoint_url={endpoint_url} name={"mhz"}/>
         <Sequencer endpoint_url={endpoint_url} />
       </OdinApp>
     </UserLevelContext>

@@ -9,11 +9,11 @@ class AcquisitionStateError(Exception):
 
 class State():
     def __init__(self, adapters):
-        self.munir = adapters["munir"].controller
-        self.munir_odindata_controller = self.munir.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
-        self.histogrammer = adapters["histogram"].controller
-        self.readout = adapters["readout"].controller
-        self.liveview = adapters["liveview"].controller
+        self.munir = adapters["munir"]
+        self.munir_odindata_controller = self.munir.controller.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
+        self.histogrammer = adapters["histogram"]
+        self.readout = adapters["readout"]
+        self.liveview = adapters["liveview"]
 
         # Are we in 'preview' mode - i.e. liveview without data capture
         self.is_previewing = False
@@ -43,22 +43,25 @@ class State():
 
     def _start_preview(self):
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
-        iac_set(self.munir_ad, "subsystems/hexitec_mhz", {"start_lv_frames": True})
-        setattr(self.histogrammer.histogrammer.acqHandler, "outFrames", 20_000_000)
-        # Set input frames based on tree variable
-        self.histogrammer.setRun(True)
+        iac_set(self.munir, "subsystems/hexitec_mhz", {"start_lv_frames": True})
+
+        iac_set(self.histogrammer, "acquisition/output_frames", 20_000_000)
+        iac_set(self.histogrammer, "acquisition/input_frames", self.preview_frames_per_hist)
+        iac_set(self.histogrammer, "acquisition/run", True)
 
     def _stop_preview(self):
         """Stops the preview mode, returning the system to an idle state."""
         # Stop histogrammer
-        self.histogrammer.setRun(False)
-        iac_set(self.munir_ad, "subsystems/hexitec_mhz", {"stop_execute": True})
+        iac_set(self.histogrammer, "acquisition/run", False)
+        iac_set(self.munir, "subsystems/hexitec_mhz", {"stop_execute": True})
 
     def set_preview_frames_per_hist(self, frames):
+        """Set the number of frames per histogram for preview mode.
+        The setting is applied immediately only while previewing. When previewing starts this
+        value is used."""
         self.preview_frames_per_hist = int(frames)
-        setattr(self.histogrammer.histogrammer.acqHandler, "impFrames", self.preview_frames_per_hist)
-        # Other logic e.g. pass value to alveo
-        pass
+        if self.is_previewing:
+            iac_set(self.histogrammer, "acquisition/input_frames", self.preview_frames_per_hist)
 
     def toggle_acquisition(self, value):
         """Start or stop an acquisition.

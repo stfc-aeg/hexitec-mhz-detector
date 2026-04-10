@@ -53,42 +53,43 @@ class AcquisitionController(BaseController):
             raise AcquisitionError(f"Missing required adapters: {missing}")
         
         # Cast and store adapter controllers
-        self.histogrammer = cast(HistogramController, adapters['histogram'].controller)
-        self.liveview = cast(HistogramLiveViewController, adapters['liveview'].controller)
-        self.munir = cast(MunirFpController, adapters['munir'].controller)
-        self.munir_ad = cast(MunirAdapter, adapters['munir'])
+        self.histogrammer = cast(HistogramAdapter, adapters['histogram'])
+        self.liveview = cast(HistogramLiveViewController, adapters['liveview'])
+        self.munir = cast(MunirFpController, adapters['munir'])
         self.proxy = cast(ProxyAdapter, adapters['proxy'])
-        self.hexitec = cast(HexitecController, adapters['hexitec'].controller)
-        self.readout = cast(ReadoutProcessorController, adapters['readout'].controller)
+        self.hexitec = cast(HexitecController, adapters['hexitec'])
+        self.readout = cast(ReadoutProcessorController, adapters['readout'])
 
         # Verify munir subsystem exists
-        if self.munir_subsystem not in self.munir.munir_managers:
+        if self.munir_subsystem not in self.munir.controller.munir_managers:
             raise AcquisitionError(
                 f"Could not find munir subsystem '{self.munir_subsystem}' in available managers: "
-                f"{list(self.munir.munir_managers.keys())}"
+                f"{list(self.munir.controller.munir_managers.keys())}"
             )
-        self.munir_hexitec = self.munir.munir_managers[self.munir_subsystem]
 
         # Set a default file name and path
-        setattr(self.munir_hexitec, 'file_path', self.options.get('default_filepath', '/tmp/'))
-        setattr(self.munir_hexitec, 'file_name', self.options.get('default_filename', 'mhz_acquisition'))
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", self.options.get('default_filepath', '/tmp/'))
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", self.options.get('default_filename', 'mhz_acquisition'))
 
         # Provide adapters to sub-processess
+
         self.configuration = Configuration(self.adapters)
         self.state = State(self.adapters)
 
         # Connect histogrammer and setup UDP
-        self.histogrammer.setConnect(True)
-        self.histogrammer.histogrammer.udpHandler.setupUdp()
+        iac_set(self.histogrammer, "device/connect", True)
+        iac_set(self.histogrammer, "udp/setup", True)
 
         self._build_tree()
         self._handle_default_settings()
 
+
     def _handle_default_settings(self):
         """Take the default configuration options provided and apply them."""
         # Baseline
-        self.histogrammer.setBaselineMode('baselineDiv', int(self.options.get('baseline_divide', 256)))
-        self.histogrammer.setBaselineMode('enableDither', bool(int(self.options.get('baseline_dither', 0))))
+        iac_set(self.histogrammer, "config/baseline/divide", int(self.options.get('baseline_divide', 256)))
+        iac_set(self.histogrammer, "config/baseline/dither", bool(int(self.options.get('baseline_dither', 0))))
+        
         # Thresholds
         self.histogrammer.setThreshold(
             'absolute', 
@@ -105,11 +106,19 @@ class AcquisitionController(BaseController):
             low=int(self.options.get('thres_main_neg_default', -35)),
             high=int(self.options.get('thres_main_pos_default', 25))
         )
+        # At present there's a bug preventing the set-through-paramtree from working for these.
+        # iac_set(self.histogrammer, "config/thresholds/absolute/low", int(self.options.get('thres_abs_low_default', 1)))
+        # iac_set(self.histogrammer, "config/thresholds/absolute/high", int(self.options.get('thres_abs_high_default', 1000)))
+        # iac_set(self.histogrammer, "config/thresholds/lower/low", int(self.options.get('thres_low_neg_default', -35)))
+        # iac_set(self.histogrammer, "config/thresholds/lower/high", int(self.options.get('thres_low_pos_default', 25)))
+        # iac_set(self.histogrammer, "config/thresholds/main/low", int(self.options.get('thres_main_neg_default', -35)))
+        # iac_set(self.histogrammer, "config/thresholds/main/high", int(self.options.get('thres_main_pos_default', 25)))
+
         # Charge-sharing
-        self.histogrammer.SetChargeSharing("enbEdgePos", bool(int(self.options.get('charge_pos_edge', 0))))
-        self.histogrammer.SetChargeSharing("enbSumming", bool(int(self.options.get('charge_sum_enable', 0))))
-        self.histogrammer.SetChargeSharing("enbNegNeb", bool(int(self.options.get('charge_neg_neighbour', 0))))
-        self.histogrammer.SetChargeSharing("enbAdjPosn", bool(int(self.options.get('charge_pos_adjust', 0))))
+        iac_set(self.histogrammer, "config/charge_sharing/positive_edge", bool(int(self.options.get('charge_pos_edge', 0))))
+        iac_set(self.histogrammer, "config/charge_sharing/sum_enable", bool(int(self.options.get('charge_sum_enable', 0))))
+        iac_set(self.histogrammer, "config/charge_sharing/negative_neighbour", bool(int(self.options.get('charge_neg_neighbour', 0))))
+        iac_set(self.histogrammer, "config/charge_sharing/position_adjust", bool(int(self.options.get('charge_pos_adjust', 0))))
 
     def _build_tree(self):
         """Build the parameter tree for the acquisition controller."""
