@@ -147,7 +147,7 @@ class HistogramLiveViewController(BaseController):
         """
         # If array is empty, reset to full region. This avoids needing a separate reset function
         if not value:
-            rounded_value = [[0.0, 1.0], [0.0, 1.0]]
+            rounded_value = None
         else:
             # Round to nearest pixel: scale up, round, scale back down
             width, height = processor.orig_dims[0], processor.orig_dims[1]

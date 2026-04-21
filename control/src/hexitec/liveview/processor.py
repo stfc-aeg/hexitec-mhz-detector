@@ -113,10 +113,11 @@ class HistogramLiveViewProcessor:
             dtype = header.get('dtype', 'uint32')
             
             # Decompress if needed
-            if len(msg[1]) != 80*80*self.orig_dims[-1]*4:
+            if len(msg[1]) == 80*80*self.orig_dims[-1]*4:
                 data = np.frombuffer(msg[1], dtype=dtype)
             else:
-                data = np.frombuffer(msg[1], dtype=dtype)
+                uncompressed = blosc.decompress(msg[1])
+                data = np.frombuffer(uncompressed, dtype=dtype)
                 
             # Reshape to 3D array
             data_3d = data.reshape(self.orig_dims)
