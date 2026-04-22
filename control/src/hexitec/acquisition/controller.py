@@ -92,30 +92,14 @@ class AcquisitionController(BaseController):
         # Baseline
         iac_set(self.histogrammer, "config/baseline/divide", int(self.options.get('baseline_divide', 256)))
         iac_set(self.histogrammer, "config/baseline/dither", bool(int(self.options.get('baseline_dither', 0))))
-        
-        # Thresholds
-        self.histogrammer.setThreshold(
-            'absolute', 
-            low=int(self.options.get('thres_abs_low_default', 1)),
-            high=int(self.options.get('thres_abs_high_default', 1000))
-        )
-        self.histogrammer.setThreshold(
-            'lower',
-            low=int(self.options.get('thres_low_neg_default', -35)),
-            high=int(self.options.get('thres_low_pos_default', 25))
-        )
-        self.histogrammer.setThreshold(
-            'main',
-            low=int(self.options.get('thres_main_neg_default', -35)),
-            high=int(self.options.get('thres_main_pos_default', 25))
-        )
+
         # At present there's a bug preventing the set-through-paramtree from working for these.
-        # iac_set(self.histogrammer, "config/thresholds/absolute/low", int(self.options.get('thres_abs_low_default', 1)))
-        # iac_set(self.histogrammer, "config/thresholds/absolute/high", int(self.options.get('thres_abs_high_default', 1000)))
-        # iac_set(self.histogrammer, "config/thresholds/lower/low", int(self.options.get('thres_low_neg_default', -35)))
-        # iac_set(self.histogrammer, "config/thresholds/lower/high", int(self.options.get('thres_low_pos_default', 25)))
-        # iac_set(self.histogrammer, "config/thresholds/main/low", int(self.options.get('thres_main_neg_default', -35)))
-        # iac_set(self.histogrammer, "config/thresholds/main/high", int(self.options.get('thres_main_pos_default', 25)))
+        iac_set(self.histogrammer, "config/thresholds/absolute/low", int(self.options.get('thres_abs_low_default', 1)))
+        iac_set(self.histogrammer, "config/thresholds/absolute/high", int(self.options.get('thres_abs_high_default', 1000)))
+        iac_set(self.histogrammer, "config/thresholds/low/neg", int(self.options.get('thres_low_neg_default', -35)))
+        iac_set(self.histogrammer, "config/thresholds/low/pos", int(self.options.get('thres_low_pos_default', 25)))
+        iac_set(self.histogrammer, "config/thresholds/main/neg", int(self.options.get('thres_main_neg_default', -35)))
+        iac_set(self.histogrammer, "config/thresholds/main/pos", int(self.options.get('thres_main_pos_default', 25)))
 
         # Charge-sharing
         iac_set(self.histogrammer, "config/charge_sharing/positive_edge", bool(int(self.options.get('charge_pos_edge', 0))))
