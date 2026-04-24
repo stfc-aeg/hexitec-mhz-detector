@@ -106,6 +106,16 @@ class AcquisitionController(BaseController):
         iac_set(self.histogrammer, "config/charge_sharing/sum_enable", bool(int(self.options.get('charge_sum_enable', 0))))
         iac_set(self.histogrammer, "config/charge_sharing/negative_neighbour", bool(int(self.options.get('charge_neg_neighbour', 0))))
         iac_set(self.histogrammer, "config/charge_sharing/position_adjust", bool(int(self.options.get('charge_pos_adjust', 0))))
+        
+        # UDP settings
+        iac_set(self.readout, "udp/core_0/dest_mac", self.options.get('core_0_dest_mac', 'E8:EB:D3:CC:A9:00'))
+        iac_set(self.readout, "udp/core_0/src_mac", self.options.get('core_0_src_mac', '62:00:00:00:01:0A'))
+        iac_set(self.readout, "udp/core_0/dest_ip", self.options.get('core_0_dest_ip', '10.0.100.8'))
+        iac_set(self.readout, "udp/core_0/src_ip", self.options.get('core_0_src_ip', '10.0.100.108'))
+        iac_set(self.readout, "udp/core_1/dest_mac", self.options.get('core_1_dest_mac', 'E8:EB:D3:CC:A9:00'))
+        iac_set(self.readout, "udp/core_1/src_mac", self.options.get('core_1_src_mac', '62:00:00:00:01:0A'))
+        iac_set(self.readout, "udp/core_1/dest_ip", self.options.get('core_1_dest_ip', '10.0.100.8'))
+        iac_set(self.readout, "udp/core_1/src_ip", self.options.get('core_1_src_ip', '10.0.100.108'))
 
     def _build_tree(self):
         """Build the parameter tree for the acquisition controller."""
