@@ -4,17 +4,15 @@ import logging
 from hexitec.util.iac import iac_get, iac_set
 import time
 
-class AcquisitionStateError(Exception):
-    """Custom exception for acquisition state errors."""
-    pass
-
 class State():
-    def __init__(self, adapters):
+    def __init__(self, adapters, AcquisitionError):
         self.munir = adapters["munir"]
         self.munir_odindata_controller = self.munir.controller.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
         self.histogrammer = adapters["histogram"]
         self.readout = adapters["readout"]
         self.liveview = adapters["liveview"]
+
+        self.AcquisitionError = AcquisitionError
 
         # Are we in 'preview' mode - i.e. liveview without data capture
         self.is_previewing = False
@@ -99,7 +97,7 @@ class State():
             # munir_mode = iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status/HexitecMhz/mode")
         except Exception as error:
             logging.error(f"Error checking modes before acquisition: {error}")
-            raise AcquisitionStateError(f"Error checking modes before acquisition: {error}")
+            raise self.AcquisitionError(f"Error checking modes before acquisition: {error}")
         if num_bins != munir_mode:
             logging.warning(f"Histogrammer num_bins {num_bins} does not match munir mode {munir_mode}. Changing bin modes to match histogrammer.")
             self.configuration.change_bin_mode(num_bins)

@@ -3,18 +3,16 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
 
-class AcquisitionConfigurationError(Exception):
-    """Custom exception for acquisition configuration errors."""
-    pass
-
 class Configuration():
-    def __init__(self, adapters):
+    def __init__(self, adapters, AcquisitionError):
         self.bin_mode = "histogram_1024"
         self.munir = adapters["munir"]
         self.munir_odindata_controller = self.munir.controller.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
         self.histogrammer = adapters["histogram"]
         self.readout = adapters["readout"]
         self.liveview = adapters["liveview"]
+
+        self.AcquisitionError = AcquisitionError
 
         self.device = "software"
         self.trigger_mode = "burst"
@@ -130,8 +128,35 @@ class Configuration():
         :param frames: positive integer representing the number of frames per timeframe
         """
         if frames < 1:
-            raise AcquisitionConfigurationError("Frames per timeframe must be a positive integer.")
+            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
+
+        # The min frames per timeframe is based on the bin mode, and at what point 
+        # this is less efficient than raw data. This is roughly 350 at 128 bins, 700 at 256, etc.
+        match self.bin_mode:
+            case 'histogram_128':
+                min_frames_per_timeframe = 350
+            case 'histogram_256':
+                min_frames_per_timeframe = 700
+            case 'histogram_512':
+                 min_frames_per_timeframe = 1400
+            case 'histogram_1024':
+                min_frames_per_timeframe = 2800
+            case 'histogram_2048':
+                min_frames_per_timeframe = 5600
+            case 'histogram_4096':
+                min_frames_per_timeframe = 11200
+        if frames < min_frames_per_timeframe:
+            raise self.AcquisitionError(f"Frames per timeframe must be at least {min_frames_per_timeframe}.")
+
         self.frames_per_timeframe = frames
+
+        # Bin Mode	Histograms / sec	Min frames per TF
+        # 128	        2930	            341
+        # 256	        1465	            683
+        # 512	        732	                1365
+        # 1024	        366	                2731
+        # 2048	        183	                5461
+        # 4096	        92                  10923
 
     def set_number_of_timeframes(self, timeframes: int):
         """Set the number of timeframes to be acquired.
@@ -142,8 +167,9 @@ class Configuration():
         :param timeframes: positive integer representing the number of timeframes
         """
         if timeframes < 1:
-            raise AcquisitionConfigurationError("Number of timeframes must be a positive integer.")
+            raise self.AcquisitionError("Number of timeframes must be a positive integer.")
         self.number_of_timeframes = timeframes
+
 
     def _configure_histogramming(self):
         """Configure histogrammer and munir depending on the operating mode of the detector.
