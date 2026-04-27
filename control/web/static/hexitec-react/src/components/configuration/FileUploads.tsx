@@ -57,7 +57,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
             />
           </Col>
         </Row>
-        <Accordion defaultActiveKey="0" className="mb-3" >
+        <Accordion defaultActiveKey="1" className="mb-3" >
           <Accordion.Item eventKey="0">
             <Accordion.Header>Charge Share File Uploads</Accordion.Header>
             <Accordion.Body>

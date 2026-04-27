@@ -29,9 +29,9 @@ export default function DetectorControls({ proxyEndpoint }: DetectorControlsProp
                 variant="outline-secondary"
                 style={floatingInputStyle}
                 >
-                  <option value="7">7fF</option>
-                  <option value="14">14fF</option>
-                  <option value="21">21fF</option>
+                  <option value="7">7fF (High)</option>
+                  <option value="14">14fF (Medium)</option>
+                  <option value="21">21fF (Low)</option>
               </EndpointSelect>
             </FloatingLabel>
           </Col>

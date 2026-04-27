@@ -18,9 +18,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
   const acquisitionData = acquisitionEndpoint?.data;
 
-  const acquisitionMetadata = acquisitionEndpoint?.metadata;
-  const binmode_metadata = acquisitionMetadata?.config?.bin_mode as MetadataType|undefined;
-
   const [triggerModeValue, setTriggerModeValue] = useState('software');
   const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst');
   const triggerModeRadios = [
@@ -63,25 +60,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
         {/* Trigger Settings */}
         <Col md={6} className="mt-3">
           <TitleCard title={<strong>Trigger Settings</strong>}>
-            <Row>
-              <Col>
-                <FloatingLabel
-                  label="Bin Mode">
-                  <EndpointSelect
-                    endpoint={acquisitionEndpoint}
-                    fullpath="config/bin_mode"
-                    variant="outline-secondary"
-                    buttonText={acquisitionData?.config?.bin_mode}
-                    style={floatingInputStyle}>
-                      {(binmode_metadata?.allowed_values ?? ['?']).map(
-                        (selection, index) => (
-                          <option value={selection} key={index}>{selection}</option>
-                        )
-                      )}
-                  </EndpointSelect>
-                </FloatingLabel>
-              </Col>
-            </Row>
             <Row className="mt-3">
               <ButtonGroup>
                 {triggerModeRadios.map((radio, idx) => (
@@ -313,12 +291,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 <Col>
                   <Form.Label>Acquisition Progress</Form.Label>
                   <ProgressBar now={0} label="0%" />
-                </Col>
-              </Row>
-              <Row className="mb-3">
-                <Col>
-                  <Form.Label>Estimated File Size</Form.Label>
-                  <Form.Control type="text" value="0 MB" readOnly />
                 </Col>
               </Row>
               <Row className="mb-3">
