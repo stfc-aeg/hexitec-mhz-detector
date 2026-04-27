@@ -81,6 +81,15 @@ class State():
             self._stop_acquisition()
 
     def _start_acquisition(self):
+        
+        # First, check if acquisition can work with data rate
+        data_rate = self.configuration.calculate_estimated_data_rate()
+        if data_rate >= 12.5:
+            raise self.AcquisitionError(
+                f"Estimated data rate of {data_rate:.2f} GB/s exceeds 100 Gb/s Ethernet limit. Please increase frames per histogram or reduce number of bins."
+                )
+            return
+
         self.is_acquiring = True
 
         if self.is_previewing:

@@ -16,8 +16,9 @@ class Configuration():
 
         self.device = "software"
         self.trigger_mode = "burst"
-        self.frames_per_timeframe = 1
-        self.number_of_timeframes = 1
+        self.frames_per_timeframe = 200000
+        self.number_of_timeframes = 20
+        self.data_rate = self.calculate_estimated_data_rate()
 
         # There is no true 'on/off' setting for this, but a set of commands that do about the same
         self.baseline_settings = {
@@ -47,7 +48,8 @@ class Configuration():
             },
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
-            }
+            },
+            'estimated_data_rate': (lambda: self.data_rate, None)
         })
 
     def _register_state(self, state):
@@ -150,6 +152,8 @@ class Configuration():
 
         self.frames_per_timeframe = frames
 
+        self.calculate_estimated_data_rate()
+
         # Bin Mode	Histograms / sec	Min frames per TF
         # 128	        2930	            341
         # 256	        1465	            683
@@ -197,6 +201,17 @@ class Configuration():
                 use_software(self)
             case ("hardware", "continuous"):
                 use_software(self)
+    
+    def calculate_estimated_data_rate(self):
+        """Calculate the estimated data rate based on the current configuration."""
+        bin_mode = self.bin_mode
+        num_bins = bin_mode.split('_')[-1]
+        # Data rate is hists/second * size per hist / 1_000_000_000 for GB/s
+        # hists_per_second is 1M (frames per second) divided by frames per hist
+        hists_per_second = 1_000_000 // self.frames_per_timeframe
+        data_rate = hists_per_second * (80*80*int(num_bins)*4) / 1_000_000_000
+        self.data_rate = data_rate
+        return self.data_rate
 
     def toggle_baseline(self, value: bool):
         """Toggle the baseline correction on or off through a set of commands for the same result.

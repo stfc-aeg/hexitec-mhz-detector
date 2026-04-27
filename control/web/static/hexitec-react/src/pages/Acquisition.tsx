@@ -1,7 +1,7 @@
 import { Container, Row, Col, Card, Form, Button, ProgressBar, FloatingLabel, ToggleButton, ButtonGroup } from 'react-bootstrap';
 import { useState } from 'react';
 import { WithEndpoint, EndpointInput, useAdapterEndpoint, TitleCard, EndpointButton } from 'odin-react';
-import { floatingInputStyle, floatingLabelStyle } from '../utils.js'
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../utils.js'
 import type { AcquisitionTypes, MunirTypes, MetadataType } from '../EndpointTypes';
 import { OverlayTrigger } from 'react-bootstrap';
 import { tooltips } from '../tooltips';
@@ -20,6 +20,12 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const [triggerModeValue, setTriggerModeValue] = useState('software');
   const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst');
+
+  const estimatedDataRate = Number(acquisitionData?.config?.estimated_data_rate ?? 0);
+  const rateTooHigh = estimatedDataRate > 12.5;
+  const isAcquiring = acquisitionEndpoint?.data?.state?.acquisition?.toggle;
+  const acquisitionButtonDisabled = rateTooHigh && !isAcquiring;
+  const acquisitionButtonVariant = isAcquiring ? 'danger' : rateTooHigh ? 'danger' : 'primary';
   const triggerModeRadios = [
     { name: 'Hardware', value: 'hardware' },
     { name: 'Software', value: 'software' }
@@ -185,9 +191,12 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <Form.Control
                         type="text"
                         value={
-                          triggerModeValue==='hardware' 
-                            ? acquisitionData?.config?.trigger?.number_of_timeframes.toString() + ' per trigger'
-                            : acquisitionData?.config?.trigger?.number_of_timeframes}
+                          triggerModeValue === 'software' 
+                            ? acquisitionData?.config?.trigger?.number_of_timeframes.toString()
+                            : adTriggerModeValue === 'burst' 
+                              ? acquisitionData?.config?.trigger?.number_of_timeframes.toString() + ' per trigger'
+                              : '1 per trigger'
+                        }
                         readOnly
                         style={floatingLabelStyle}
                       />
@@ -201,7 +210,14 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                         <Form.Control
                           type="text"
                           value={
-                            triggerModeValue==='hardware' ? est_duration.toString() + ' per trigger' : est_duration}
+                            triggerModeValue === 'software'
+                              ? est_duration.toString()
+                              : adTriggerModeValue === 'burst'
+                                ? est_duration.toString() + ' per trigger'
+                                : adTriggerModeValue === 'continuous'
+                                  ? '-'
+                                  : (1 / (acquisitionData?.config?.trigger?.frames_per_timeframe || 1)).toFixed(6) + ' per trigger'
+                          }
                           readOnly
                           style={floatingLabelStyle}
                         />
@@ -216,7 +232,11 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Frames per histogram">
                       <Form.Control
                         type="text"
-                        value={acquisitionData?.config?.trigger?.frames_per_timeframe}
+                        value={
+                          triggerModeValue === 'hardware' && adTriggerModeValue === 'continuous'
+                            ? '-'
+                            : acquisitionData?.config?.trigger?.frames_per_timeframe
+                        }
                         readOnly
                         style={floatingLabelStyle}
                       />
@@ -228,26 +248,18 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Total Storage">
                       <Form.Control
                         type="text"
-                        value={false}
+                        value={
+                          triggerModeValue === 'hardware' ?
+                            acquisitionData?.config?.estimated_data_rate + ' GB/s' :
+                            acquisitionData?.config?.estimated_data_rate * est_duration + ' GB'
+                        }
                         readOnly
                         style={floatingLabelStyle}
+                        className={rateTooHigh ? 'border border-danger text-danger bg-danger bg-opacity-10' : ''}
                       />
                     </FloatingLabel>
                   </Col>
                 </Row>
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col>
-                <EndpointButton
-                  endpoint={acquisitionEndpoint}
-                  fullpath="config/trigger/run_histogramming"
-                  variant={acquisitionEndpoint?.data.config?.trigger?.run_histogramming ? "danger" : "outline-primary"}
-                  value={acquisitionEndpoint?.data.config?.trigger?.run_histogramming ? false : true}
-                  className="w-100"
-                >
-                  {acquisitionEndpoint?.data.config?.trigger?.run_histogramming ? 'Stop histogramming' : 'Start histogramming'}
-                </EndpointButton>
               </Col>
             </Row>
           </TitleCard>
@@ -298,12 +310,18 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   <EndpointButton
                     endpoint={acquisitionEndpoint}
                     fullpath="state/acquisition/toggle"
-                    variant={acquisitionEndpoint?.data?.state?.acquisition?.toggle ? "danger" : "primary"}
+                    variant={acquisitionButtonVariant}
                     value={acquisitionEndpoint?.data?.state?.acquisition?.toggle ? false : true}
                     className="w-100"
+                    disabled={acquisitionButtonDisabled}
                   >
                     {acquisitionEndpoint?.data?.state?.acquisition?.toggle ? 'Stop acquisition' : 'Start acquisition'}
                   </EndpointButton>
+                  {rateTooHigh && (
+                    <div className="text-danger mt-2">
+                      Estimated data rate exceeds network capacity (12.5 GB/s). Increase frames per timeframe or reduce the bin count via bin mode on the Configuration page.
+                    </div>
+                  )}
                 </Col>
               </Row>
             </Card.Body>

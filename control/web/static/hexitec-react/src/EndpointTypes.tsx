@@ -349,6 +349,7 @@ export interface AcquisitionTypes extends ParamNode {
       toggle_acquisition_histogramming: null | boolean;
       trigger_mode: string;
     };
+    estimated_data_rate: number;
   };
   state: {
     acquisition: {
