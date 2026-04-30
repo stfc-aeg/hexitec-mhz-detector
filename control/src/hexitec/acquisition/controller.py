@@ -94,8 +94,8 @@ class AcquisitionController(BaseController):
         iac_set(self.histogrammer, "config/baseline/dither", bool(int(self.options.get('baseline_dither', 0))))
 
         # Thresholds
-        iac_set(self.histogrammer, "config/thresholds/absolute/low", int(self.options.get('thres_abs_low_default', 1)))
         iac_set(self.histogrammer, "config/thresholds/absolute/high", int(self.options.get('thres_abs_high_default', 1000)))
+        iac_set(self.histogrammer, "config/thresholds/absolute/low", int(self.options.get('thres_abs_low_default', 1)))
         iac_set(self.histogrammer, "config/thresholds/low/neg", int(self.options.get('thres_low_neg_default', -35)))
         iac_set(self.histogrammer, "config/thresholds/low/pos", int(self.options.get('thres_low_pos_default', 25)))
         iac_set(self.histogrammer, "config/thresholds/main/neg", int(self.options.get('thres_main_neg_default', -35)))
