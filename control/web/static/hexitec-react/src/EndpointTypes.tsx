@@ -1,4 +1,4 @@
-import type { ParamTree } from 'odin-react';
+import type { ParamNode } from 'odin-react';
 
 export interface MetadataType {
   value: any;
@@ -10,7 +10,7 @@ export interface MetadataType {
 
 // Histogram Endpoint Types
 
-export interface HistogramTypes extends ParamTree {
+export interface HistogramTypes extends ParamNode {
   acquisition: {
     count: {
       complete_time_frames: number;
@@ -127,7 +127,7 @@ export interface HistogramTypes extends ParamTree {
 
 // Munir Endpoint Types
 
-export interface MunirTypes extends ParamTree {
+export interface MunirTypes extends ParamNode {
   execute: {
     hexitec_mhz: boolean;
   };
@@ -155,7 +155,7 @@ export interface MunirTypes extends ParamTree {
   }
 };
 
-export interface HexitecMhzStatus extends ParamTree{
+export interface HexitecMhzStatus extends ParamNode {
   FrameWrapperCore_0: {
     core_usage: number;
     frames_processed: number;
@@ -290,7 +290,7 @@ export interface HexitecMhzStatus extends ParamTree{
   };
 }
 
-export interface FrameProcStatus extends ParamTree{
+export interface FrameProcStatus extends ParamNode {
   HexitecMhz: HexitecMhzStatus;
   Liveview: {
     timing: {
@@ -334,4 +334,76 @@ export interface FrameProcStatus extends ParamTree{
   shared_memory: {
     configured: boolean;
   };
+}
+
+export interface AcquisitionTypes extends ParamNode {
+  config: {
+    baseline: {
+      toggle: boolean;
+    };
+    bin_mode: string;
+    trigger: {
+      device: string;
+      frames_per_timeframe: number;
+      number_of_timeframes: number;
+      toggle_acquisition_histogramming: null | boolean;
+      trigger_mode: string;
+    };
+    estimated_data_rate: number;
+  };
+  state: {
+    acquisition: {
+      toggle: boolean;
+    };
+    preview: {
+      frames_per_hist: number;
+      toggle: boolean;
+    };
+  };
+}
+
+
+// Proxy endpoint types
+
+export interface LokiEnviromentParams extends ParamNode {
+  // This is not all the values but just the ones used here.
+  temperature: {
+    DIODE: number;
+    BLOCK: number;
+  }
+  humidity: {
+    BOARD: number;
+  }
+}
+
+export interface LokiApplicationData extends ParamNode {
+  HV: {
+    ENABLE: number;
+    readback_bias: number;
+    target_bias: number;
+  };
+  peltier: {
+    proportion: number;
+    proportion_save: boolean;
+    count: number;
+    temperature: number;
+    enable: boolean;
+  }
+}
+
+export interface LokiCarrierParams extends ParamNode{
+  environment: LokiEnviromentParams;
+  application: LokiApplicationData;
+}
+
+export interface ProxyParams extends ParamNode{
+  loki: LokiCarrierParams
+  status: {
+    loki: {
+      url: string;
+      status_code: number;
+      error: string;
+      last_update: string;
+    }
+  }
 }

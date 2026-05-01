@@ -25,12 +25,11 @@ def iac_get(adapter: AnyAdapter, path: str, as_dict: bool = False) -> dict[str, 
     """
     
     try:
-
         param = path.split('/')[-1]
         request = ApiAdapterRequest(None, accept="application/json")
         response = adapter.get(path, request)
     except Exception:
-        raise IACError("Unknown error in IAC GET for for adapter %s, path %s",
+        raise IACError("Unknown error in IAC GET for adapter %s, path %s",
                        adapter.name, path)
 
     if response.status_code != 200:

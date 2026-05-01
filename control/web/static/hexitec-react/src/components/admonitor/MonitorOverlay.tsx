@@ -1,10 +1,10 @@
-import { EndpointButton, OdinTable, OdinTableRow, useAdapterEndpoint, type ParamTree } from "odin-react";
+import { EndpointButton, OdinTable, OdinTableRow, useAdapterEndpoint, type ParamNode } from "odin-react";
 import { Alert, Badge, Modal, ProgressBar } from "react-bootstrap";
 
 import type { ComponentProps } from "react";
 import style from "./style.module.css";
 
-interface ResetHistory extends ParamTree{
+interface ResetHistory extends ParamNode {
   count: number;
   reason: string;
   retry_attempt: number;
@@ -21,7 +21,7 @@ const isCriticalState = (x: States): boolean => {
     return (!["System Idle", "Initialising", "Monitoring"].includes(x));
 }
 
-interface MonitorTree extends ParamTree{
+interface MonitorTree extends ParamNode {
   clear_history: null;  // Trigger param, clears the reset history
   current_retry: number;
   monitoring: boolean;
@@ -34,7 +34,7 @@ interface MonitorTree extends ParamTree{
   next_state: string[];
 }
 
-interface HexitecParamTree extends ParamTree {
+interface HexitecParamTree extends ParamNode {
   user_type: "basic" | "power";
   mhz_monitor: MonitorTree;
 }

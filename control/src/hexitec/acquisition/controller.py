@@ -2,12 +2,18 @@ import logging
 from hexitec.base.base_controller import BaseController, BaseError
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
+from hexitec.acquisition.processes.configuration import Configuration
+from hexitec.acquisition.processes.state import State
+
 from typing import TypedDict, cast
 from histogrammer.adapter.adapter import HistogramAdapter, HistogramController
 from hexitec.liveview.adapter import HistogramLiveViewAdapter, HistogramLiveViewController
 from munir.adapter import MunirAdapter, MunirFpController, MunirController
 from odin.adapters.proxy import ProxyAdapter
 from hexitec.adapter import HexitecAdapter, HexitecController
+from readout_processor.adapter import ReadoutProcessorAdapter, ReadoutProcessorController
+
+from hexitec.util.iac import iac_get, iac_set
 
 class Adapters(TypedDict):
     histogram: HistogramAdapter
@@ -15,6 +21,7 @@ class Adapters(TypedDict):
     munir: MunirAdapter
     proxy: ProxyAdapter
     hexitec: HexitecAdapter
+    readout: ReadoutProcessorController
 
 class AcquisitionError(BaseError):
     """Exception raised for errors in the AcquisitionController."""
@@ -31,13 +38,6 @@ class AcquisitionController(BaseController):
         self.bin_mode = options.get('default_bin_mode', 'histogram_1024')
         self.munir_subsystem = options.get('munir_subsystem', 'hexitec_mhz')
 
-        self.param_tree = ParameterTree({
-            'bin_mode': (lambda: self.bin_mode, self.change_bin_mode, 
-                         {'allowed_values':
-                            ["histogram_1024","histogram_128","histogram_2048","histogram_256","histogram_4096","histogram_512"]
-                        })
-        })
-
     def initialize(self, adapters: Adapters):
         """Initialise the acquisition controller with information about adapters currently loaded
         into the running application.
@@ -46,107 +46,85 @@ class AcquisitionController(BaseController):
         self.adapters = adapters
         
         # Verify all required adapters are present
-        required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec']
+        required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec', 'readout']
         missing = [name for name in required_adapters if name not in adapters]
         if missing:
-            raise AcquisitionError(f"Missing required adapters: {', '.join(missing)}")
+            missing = ", ".join(missing)
+            raise AcquisitionError(f"Missing required adapters: {missing}")
         
         # Cast and store adapter controllers
-        self.histogrammer = cast(HistogramController, adapters['histogram'].controller)
-        self.liveview = cast(HistogramLiveViewController, adapters['liveview'].controller)
-        self.munir = cast(MunirFpController, adapters['munir'].controller)
+        self.histogrammer = cast(HistogramAdapter, adapters['histogram'])
+        self.liveview = cast(HistogramLiveViewController, adapters['liveview'])
+        self.munir = cast(MunirFpController, adapters['munir'])
         self.proxy = cast(ProxyAdapter, adapters['proxy'])
-        self.hexitec = cast(HexitecController, adapters['hexitec'].controller)
-        
+        self.hexitec = cast(HexitecController, adapters['hexitec'])
+        self.readout = cast(ReadoutProcessorController, adapters['readout'])
+
         # Verify munir subsystem exists
-        if self.munir_subsystem not in self.munir.munir_managers:
+        if self.munir_subsystem not in self.munir.controller.munir_managers:
             raise AcquisitionError(
                 f"Could not find munir subsystem '{self.munir_subsystem}' in available managers: "
-                f"{list(self.munir.munir_managers.keys())}"
+                f"{list(self.munir.controller.munir_managers.keys())}"
             )
-        self.munir_hexitec = self.munir.munir_managers[self.munir_subsystem]
+
+        # Set a default file name and path
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", self.options.get('default_filepath', '/tmp/'))
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", self.options.get('default_filename', 'mhz_acquisition'))
+
+        # Provide adapters to sub-processess
+
+        self.configuration = Configuration(self.adapters, AcquisitionError)
+        self.state = State(self.adapters, AcquisitionError)
+
+        self.state._register_configuration(self.configuration)
+        self.configuration._register_state(self.state)
 
         # Connect histogrammer and setup UDP
-        self.histogrammer.setConnect(True)
-        self.histogrammer.setupUDP()
+        iac_set(self.histogrammer, "device/connect", True)
+        iac_set(self.histogrammer, "udp/setup", True)
 
-    def _start_preview(self):
-        pass
+        self._build_tree()
+        self._handle_default_settings()
 
-    def _stop_preview(self):
-        pass
 
-    def change_bin_mode(self, bin_mode: str):
-        """Change the number of bins used by the sensor.
-        This function stops data operation, configures parameters in the histogrammer, odin-data, and the liveview, and then restarts liveview.
-        :param bin_mode: string representing the operating mode, typically a number of bins. See allowed values metadata
-        """
-        munir_odindata_controller = self.munir_hexitec.odin_data_instances[0]
-        was_executing = False
+    def _handle_default_settings(self):
+        """Take the default configuration options provided and apply them."""
+        # Baseline
+        iac_set(self.histogrammer, "config/baseline/divide", int(self.options.get('baseline_divide', 256)))
+        iac_set(self.histogrammer, "config/baseline/dither", bool(int(self.options.get('baseline_dither', 0))))
 
-        # Done this way for futureproofing, e.g. mapped modes might be 'histogram_1024_map' and need different handling
-        match bin_mode:
-            case ('histogram_128' | 'histogram_256' | 'histogram_512' | 'histogram_1024' | 'histogram_2048' | 'histogram_4096'):
-                self.bin_mode = bin_mode
-                hist_value = bin_mode.split('_')[-1]
-                depth = int(hist_value)
-                hist_mode="numBins"
-            case _:
-                depth=1024
-                hist_mode="numBins"
-                hist_value='1024'
+        # Thresholds
+        iac_set(self.histogrammer, "config/thresholds/absolute/high", int(self.options.get('thres_abs_high_default', 1000)))
+        iac_set(self.histogrammer, "config/thresholds/absolute/low", int(self.options.get('thres_abs_low_default', 1)))
+        iac_set(self.histogrammer, "config/thresholds/low/neg", int(self.options.get('thres_low_neg_default', -35)))
+        iac_set(self.histogrammer, "config/thresholds/low/pos", int(self.options.get('thres_low_pos_default', 25)))
+        iac_set(self.histogrammer, "config/thresholds/main/neg", int(self.options.get('thres_main_neg_default', -35)))
+        iac_set(self.histogrammer, "config/thresholds/main/pos", int(self.options.get('thres_main_pos_default', 25)))
 
-        # Stop odin-data
-        if self.munir.execute_flags['hexitec_mhz']:
-            was_executing = True
-            self.munir.set_execute('hexitec_mhz', False)
+        # Charge-sharing
+        iac_set(self.histogrammer, "config/charge_sharing/positive_edge", bool(int(self.options.get('charge_pos_edge', 0))))
+        iac_set(self.histogrammer, "config/charge_sharing/sum_enable", bool(int(self.options.get('charge_sum_enable', 0))))
+        iac_set(self.histogrammer, "config/charge_sharing/negative_neighbour", bool(int(self.options.get('charge_neg_neighbour', 0))))
+        iac_set(self.histogrammer, "config/charge_sharing/position_adjust", bool(int(self.options.get('charge_pos_adjust', 0))))
+        
+        # UDP settings
+        iac_set(self.readout, "udp/core_0/dest_mac", self.options.get('core_0_dest_mac', 'E8:EB:D3:CC:A9:00'))
+        iac_set(self.readout, "udp/core_0/src_mac", self.options.get('core_0_src_mac', '62:00:00:00:01:0A'))
+        iac_set(self.readout, "udp/core_0/dest_ip", self.options.get('core_0_dest_ip', '10.0.100.8'))
+        iac_set(self.readout, "udp/core_0/src_ip", self.options.get('core_0_src_ip', '10.0.100.108'))
+        iac_set(self.readout, "udp/core_1/dest_mac", self.options.get('core_1_dest_mac', 'E8:EB:D3:CC:A9:00'))
+        iac_set(self.readout, "udp/core_1/src_mac", self.options.get('core_1_src_mac', '62:00:00:00:01:0A'))
+        iac_set(self.readout, "udp/core_1/dest_ip", self.options.get('core_1_dest_ip', '10.0.100.8'))
+        iac_set(self.readout, "udp/core_1/src_ip", self.options.get('core_1_src_ip', '10.0.100.108'))
 
-        # Disable histogrammer
-        self.histogrammer.setRun(False)
-
-        # Change via histogrammer
-        self.histogrammer.setHistFormat(setting=hist_mode, value=hist_value)
-
-        # Change in odin data
-        cfg = {
-            "HexitecMhz": {
-                "mode": self.bin_mode
-            },
-            "hdf":{
-                "dataset": {
-                        "dummy": {
-                            "datatype": "uint32",
-                            "dims": [80, 80, depth],
-                            "compression": "none"
-                        }
-                    },
-                    "write": False,
-                }
-        }
-        response = munir_odindata_controller.set_config(cfg)
-
-        # Change in liveview
-        self.liveview.set_num_bins(depth, self.liveview.processors[0])  # Only anticipate one endpoint
-
-        # Restart liveviewing
-        self.histogrammer.setRun(True)
-
-        if was_executing:
-            self.munir.set_execute('hexitec_mhz', True)
-
-    def _start_acquisition(self):
-        # Check histogrammer details are sensible
-        # Configure odin data with histogrammer details
-        # Tell odin data to start acquisition
-        # Start histogrammer to send data
-        # Need some awaiting of acquisition end signal?
-        pass
-
-    def _stop_acquisition(self):
-        # Tell histogrammer to stop
-        # Tell odin data to stop
-        # Restart preview? Perhaps should not turn on automatically, could be optional
-        pass
+    def _build_tree(self):
+        """Build the parameter tree for the acquisition controller."""
+        config_tree = self.configuration.tree
+        state_tree = self.state.tree
+        self.param_tree = ParameterTree({
+            'config': config_tree,
+            'state': state_tree
+        })
 
     def get(self, path, with_metadata=False):
         """Get parameter data from controller."""

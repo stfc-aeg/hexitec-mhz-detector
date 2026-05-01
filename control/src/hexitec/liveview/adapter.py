@@ -1,11 +1,8 @@
 import logging
 from hexitec.base.base_adapter import BaseAdapter
 from odin.adapters.adapter import ApiAdapterResponse, wants_metadata
-from hexitec.liveview.controller import HistogramLiveViewController
+from hexitec.liveview.controller import HistogramLiveViewController, HistogramLiveViewError
 
-class HistogramError(Exception):
-    """Custom exception class for histogram-related errors."""
-    pass
 
 class HistogramLiveViewAdapter(BaseAdapter):
     """
@@ -15,7 +12,7 @@ class HistogramLiveViewAdapter(BaseAdapter):
     handling histogram data streams and visualization parameters.
     """
     controller_cls = HistogramLiveViewController
-    error_cls = HistogramError
+    error_cls = HistogramLiveViewError
 
     def get(self, path, request):
         """BaseAdapter get override to handle image processing."""

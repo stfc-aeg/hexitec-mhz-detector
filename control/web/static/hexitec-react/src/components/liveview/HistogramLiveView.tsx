@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useAdapterEndpoint } from 'odin-react';
-import { Container, Row, Col, Form, Button } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, OverlayTrigger } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import { TitleCard, WithEndpoint } from 'odin-react';
+import { useAdapterEndpoint, TitleCard, WithEndpoint, type ParamNode } from 'odin-react';
 import { ColourScale } from './ColourScale';
 import { MinMaxInput } from '../MinMaxInput';
 import { ClickableImage } from './ClickableImage';
 import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils'
-import type { MetadataType } from '../../EndpointTypes';
+import { tooltips } from '../../tooltips';
+import type { MetadataType, AcquisitionTypes } from '../../EndpointTypes';
 
-import type { ParamTree } from 'odin-react';
 import { RegionSelectionInput } from './RegionSelection';
 
-export interface HistogramRegion extends ParamTree {
+export interface HistogramRegion extends ParamNode {
   x: [number, number];
   y: [number, number];
   width: number;
@@ -20,7 +19,7 @@ export interface HistogramRegion extends ParamTree {
 }
 
 // Derived from processor.py
-export interface HistogramData extends ParamTree {
+export interface HistogramData extends ParamNode {
   counts: number[];
   bins: number[];
   mean: number;
@@ -30,7 +29,7 @@ export interface HistogramData extends ParamTree {
   region: HistogramRegion;
 }
 
-interface LiveViewTypes extends ParamTree {
+interface LiveViewTypes extends ParamNode {
     histview: {
       [detectorName: string]: {
         endpoint: string;
@@ -71,6 +70,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
 
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
+  const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 2000);
 
   // const histogramViewEndpoint = useAdapterEndpoint<HistogramEndpointTypes>(`liveview/_image/${name}/histograms`, endpoint_url, 1000);
   const liveViewData = liveViewEndPoint?.data?.histview?.[name];
@@ -79,7 +79,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   // This appears as the ranges stuck together so it needs formatting into (x - y)
   const energyRange = `(0 - ${liveViewData?.image['num_bins'] -1})`;
 
-  const liveViewMetadata = liveViewEndPoint?.metadata as LiveViewTypes|undefined;
+  const liveViewMetadata = liveViewEndPoint?.metadata;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
 
   // Timer effects remain the same...
@@ -172,7 +172,34 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   }
 
   return (
-    <TitleCard title={`Histogram View - ${name}`}>
+    <TitleCard title={
+      <Row>
+        <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>
+          <strong>{`Histogram View - ${name}`}</strong>
+        </Col>
+        <Col xs={2}>
+          <EndpointButton
+            className="h-100"
+            endpoint={acquisitionEndpoint}
+            fullpath="state/preview/toggle"
+            value={!acquisitionEndpoint.data?.state?.preview?.toggle}
+            variant={acquisitionEndpoint.data?.state?.preview?.toggle ? 'danger' : 'primary'}
+            disabled={acquisitionEndpoint.data?.state?.acquisition?.toggle}
+            >
+              {acquisitionEndpoint.data?.state?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
+            </EndpointButton>
+        </Col>
+        <Col xs={3}>
+          <FloatingLabel label="Frames per hist (for preview)">
+            <EndpointFormControl
+              endpoint={acquisitionEndpoint}
+              fullpath="state/preview/frames_per_hist"
+              style={floatingInputStyle}
+            />
+          </FloatingLabel>
+        </Col>
+      </Row>
+    }>
       <Container fluid>
         {/* Timer Display */}
         <Row className="mb-3">
@@ -299,14 +326,16 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 </div>
               </Col>
               <Col>
-                <Row>
-                  <RegionSelectionInput
-                    imageHeight={80}
-                    imageWidth={80}
-                    value={liveViewData?.image?.region || undefined}
-                    onApply={(region) => liveViewEndPoint.put({ 'region': region}, imgPath)}
-                  />
-                </Row>
+                <OverlayTrigger placement="top" overlay={tooltips.liveview.region_selection}>
+                  <Row>
+                    <RegionSelectionInput
+                      imageHeight={80}
+                      imageWidth={80}
+                      value={liveViewData?.image?.region || undefined}
+                      onApply={(region) => liveViewEndPoint.put({ 'region': region}, imgPath)}
+                    />
+                  </Row>
+                </OverlayTrigger>
                 <Row className="mt-3">
                   <Col>
                     <FloatingLabel label="Occupancy %">
@@ -336,17 +365,19 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 />
               </Col>
               <Col>
+              <OverlayTrigger placement="bottom-end" overlay={tooltips.liveview.energybin_range}>
                 <Row>
-                  <MinMaxInput
-                    label={`Manual Energy Bin Range ${energyRange}`}
-                    value={liveViewData?.image?.energy_range || [0, 0]}
-                    onApply={(range) => {
-                      liveViewEndPoint.put(
-                        { energy_range: range }, imgPath
-                      );
-                    }}
-                  />
+                    <MinMaxInput
+                      label={`Manual Energy Bin Range ${energyRange}`}
+                      value={liveViewData?.image?.energy_range || [0, 0]}
+                      onApply={(range) => {
+                        liveViewEndPoint.put(
+                          { energy_range: range }, imgPath
+                        );
+                      }}
+                    />
                 </Row>
+              </OverlayTrigger>
                 <Row>
                   <Col className="justify-content-end">
                     <EndpointButton

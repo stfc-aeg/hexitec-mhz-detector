@@ -1,11 +1,7 @@
 import logging
 from hexitec.base.base_adapter import BaseAdapter
 from odin.adapters.adapter import ApiAdapterResponse, wants_metadata
-from hexitec.acquisition.controller import AcquisitionController
-
-class AcquisitionError(Exception):
-    """Custom exception class for acquisition-related errors."""
-    pass
+from hexitec.acquisition.controller import AcquisitionController, AcquisitionError
 
 class AcquisitionAdapter(BaseAdapter):
     """Adapter for the acquisition process.
