@@ -49,6 +49,7 @@ class State():
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
         iac_set(self.munir, "subsystems/hexitec_mhz", {"start_lv_frames": True})
 
+        iac_set(self.histogrammer, "acquisition/mode", "count frames")
         iac_set(self.histogrammer, "acquisition/output_frames", 20_000_000)
         iac_set(self.histogrammer, "acquisition/input_frames", self.preview_frames_per_hist)
         iac_set(self.histogrammer, "acquisition/run", True)
@@ -102,7 +103,8 @@ class State():
             num_bins = iac_get(self.histogrammer, "config/hist_format/num_bins")
             num_bins = "histogram_" + str(num_bins)
             munir_mode = iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status")
-            munir_mode = munir_mode[0].get("HexitecMhz", {}).get("mode", "")
+            munir_mode = str(munir_mode[0].get("HexitecMhz", {}).get("mode", ""))
+            logging.warning(f"Checking modes before acquisition: histogrammer num_bins={num_bins}, munir mode={munir_mode}")
             # munir_mode = iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status/HexitecMhz/mode")
         except Exception as error:
             logging.error(f"Error checking modes before acquisition: {error}")
@@ -114,31 +116,18 @@ class State():
                 logging.warning(f"Waiting for odin data to reconfigure to new bin mode...")
                 time.sleep(0.5)
 
-        # TODO: Check min and max input frames vs bin mode
-
-        # TODO: Consider filename overwriting?
-        
-        # No. frames handle in configuration.start_histogramming
-        self.configuration._configure_histogramming()
-
-        # Start sending data
+        # Start listening for data
         iac_set(self.munir, "execute", {'hexitec_mhz': True})
+
+        # Configure how data should be sent
+        self.configuration._configure_histogramming()
         iac_set(self.histogrammer, "acquisition/run", True)
-        
-        # Check histogrammer details are sensible
-        # Configure odin data with histogrammer details
-        # Tell odin data to start acquisition
-            # odin-data needs to be armed before capturing - for that it needs the name and path
-                    # have a local set_filename/path that handles acq_id stuff and arms it as soon as both are truthy
-            # mode -> change it if wrong
-            # filepath, filename (see odin_data_config, acquisition_id? where is UI pointing), # frames (if hardware/unknown, set it to 0)
-        # Start histogrammer to send data
-        # Need some awaiting of acquisition end signal?
-        # check acquisition progress: written frames vs target.
-            # if unknown frame target, have to stop acquiring manually
 
     def _stop_acquisition(self):
         self.is_acquiring = False
+
+        # Back to software for the purpose of previewing
+        iac_set(self.readout, "trigger/enable", False)
 
         iac_set(self.histogrammer, "acquisition/run", False)
         iac_set(self.munir, "subsystems/hexitec_mhz/stop_execute", False)

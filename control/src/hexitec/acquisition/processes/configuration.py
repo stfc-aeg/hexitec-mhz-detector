@@ -177,31 +177,34 @@ class Configuration():
 
     def _configure_histogramming(self):
         """Configure histogrammer and munir depending on the operating mode of the detector.
-        With software triggering, the Alveo module is used with the given parameters.
-        For hardware triggering, the interpretation of the values depends on the mode:
-        Burst: # timeframes is timeframes per trigger, frames per timeframe is as expected
-        Step_Scan: # timeframes is always one, frames per timeframe is as expected
-        Continuous: # timeframes and frames per timeframe are unused, relies entirely on trigger
+        The same parameters are used for each but interpreted differently depending on the mode.
         """
-        def use_software(cls):
-            iac_set(cls.histogrammer, "acquisition/input_frames", cls.frames_per_timeframe)
-            iac_set(cls.histogrammer, "acquisition/output_frames", cls.number_of_timeframes)
-            iac_set(cls.histogrammer, "acquisition/run", True)
-            # For software, number of histograms is number of frames in dataset
-            iac_set(cls.munir, "subsystems/hexitec_mhz/args/num_frames", cls.number_of_timeframes)
-        
-        # For now, no hardware triggering so these all point in the same direction
+        def use_hardware(cls: Configuration, mode: str):
+            iac_set(cls.munir, "subsystems/hexitec_mhz/args/num_frames", 0)
+            iac_set(cls.readout, "trigger/enable", True)
+            iac_set(cls.readout, "trigger/mode", mode)
+            iac_set(cls.histogrammer, "acquisition/mode", "continuous")
+
         match (self.device, self.trigger_mode):
             case ("software", _):
-                use_software(self)
+                # Software: alveo module configured with frames per timeframe and number of timeframes
+                iac_set(self.histogrammer, "acquisition/mode", "count frames")
+                iac_set(self.munir, "subsystems/hexitec_mhz/args/num_frames", self.number_of_timeframes)
+                iac_set(self.histogrammer, "acquisition/input_frames", self.frames_per_timeframe)
+                iac_set(self.histogrammer, "acquisition/output_frames", self.number_of_timeframes)
             case ("hardware", "burst"):
-                use_software(self)
+                # Burst: X frames per timeframe, Y timeframes per trigger
+                use_hardware(self, "burst mode")
+                iac_set(self.readout, "trigger/frame_limits/frame_in_hist", self.frames_per_timeframe)
+                iac_set(self.readout, "trigger/frame_limits/hist_in_trigger", self.number_of_timeframes)
             case ("hardware", "step_scan"):
-                # self.number_of_timeframes = 1
-                use_software(self)
+                # Step scan: one timeframe pre trigger, X frames per timeframe
+                use_hardware(self, "step scan")
+                iac_set(self.readout, "trigger/frame_limits/frame_in_hist", self.frames_per_timeframe)
             case ("hardware", "continuous"):
-                use_software(self)
-    
+                # Continuous: write frames to a timeframe until another trigger is fired
+                use_hardware(self, "continuous mode")
+
     def calculate_estimated_data_rate(self):
         """Calculate the estimated data rate based on the current configuration."""
         bin_mode = self.bin_mode
