@@ -1,6 +1,6 @@
 import { Container, Row, Col } from 'react-bootstrap';
 import { useAdapterEndpoint } from 'odin-react';
-import type { ProxyParams, HistogramTypes, MetadataType } from '../EndpointTypes';
+import type { ProxyParams, HistogramTypes, AcquisitionTypes } from '../EndpointTypes';
 import Environmental from '../components/configuration/Environmental';
 import Processing from '../components/configuration/Processing';
 import FileUploads from '../components/configuration/FileUploads';
@@ -13,7 +13,7 @@ interface ConfigurationProps {
 function Configuration({ endpoint_url }: ConfigurationProps) {
   const proxyEndpoint = useAdapterEndpoint<ProxyParams>('proxy', endpoint_url, 1000);
   const histogramEndpoint = useAdapterEndpoint<HistogramTypes>('histogram', endpoint_url, 500);
-  const acquisitionEndpoint = useAdapterEndpoint('acquisition', endpoint_url, 1000);
+  const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
 
   return (
     <Container>
@@ -31,7 +31,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
             histogramEndpoint={histogramEndpoint}
             acquisitionEndpoint={acquisitionEndpoint}
           />
-          <DetectorControls 
+          <DetectorControls
             proxyEndpoint={proxyEndpoint}
           />
         </Col>

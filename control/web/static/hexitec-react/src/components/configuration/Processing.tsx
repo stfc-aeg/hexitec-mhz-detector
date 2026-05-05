@@ -1,14 +1,14 @@
 import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint } from 'odin-react';
+import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
 import { floatingInputStyle } from '../../utils.js';
 import { OverlayTrigger } from 'react-bootstrap';
 import { tooltips } from '../../tooltips';
-import type { MetadataType } from '../../EndpointTypes';
+import type { AcquisitionTypes, HistogramTypes } from '../../EndpointTypes';
 
 interface ProcessingProps {
-  histogramEndpoint: any;
-  acquisitionEndpoint: any;
+  histogramEndpoint: AdapterEndpoint<HistogramTypes>;
+  acquisitionEndpoint: AdapterEndpoint<AcquisitionTypes>;
 }
 
 const EndpointFormControl = WithEndpoint(Form.Control);
@@ -24,7 +24,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint }: P
 
   const acquisitionData = acquisitionEndpoint?.data;
   const acquisitionMetadata = acquisitionEndpoint?.metadata;
-  const binmode_metadata = acquisitionMetadata?.config?.bin_mode as MetadataType|undefined;
+  const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
 
   // Ordered for grouping: horizontal, vertical, diag1, diag2, quad/all/lone, L1-L4
   const clusterTypeOrder = [

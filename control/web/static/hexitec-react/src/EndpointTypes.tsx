@@ -1,11 +1,11 @@
 import type { ParamNode } from 'odin-react';
 
-export interface MetadataType {
-  value: any;
+export interface MetadataType<T> {
+  value: T;
   writeable: boolean;
   min?: number;
   max?: number;
-  allowed_values?: any[]
+  allowed_values?: T[]
 }
 
 // Histogram Endpoint Types
@@ -37,12 +37,12 @@ export interface HistogramTypes extends ParamNode {
     };
     charge_sharing: {
       l3_filename: string;
-      l3_load: any;
+      l3_load: null;
       mc_filename: string;
-      mc_load: any;
+      mc_load: null;
       negative_neighbour: boolean;
       pos_filename: string;
-      pos_load: any;
+      pos_load: null;
       position_adjust: boolean;
       positive_edge: boolean;
       sum_enable: boolean;
@@ -50,14 +50,14 @@ export interface HistogramTypes extends ParamNode {
     hdf_filename: string;
     linearity_correction: {
       gain_filename: string;
-      gain_load: any;
+      gain_load: null;
       lin_filename: string;
-      lin_load: any;
+      lin_load: null;
       offset: number;
       scale: number;
     };
-    load_hdf: any;
-    save_hdf: any;
+    load_hdf: null;
+    save_hdf: null;
     clustering: {
       auto_trig_mode: string;
       mode: string;
@@ -116,7 +116,7 @@ export interface HistogramTypes extends ParamNode {
       ip: string;
       port: number;
     };
-    setup: any;
+    setup: null;
     source: {
       ip: string;
       port: number;
