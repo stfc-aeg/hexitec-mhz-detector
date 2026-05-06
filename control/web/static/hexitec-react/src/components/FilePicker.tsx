@@ -1,24 +1,24 @@
-import { WithEndpoint } from 'odin-react';
+import { WithEndpoint, EndpointButton } from 'odin-react';
+import type { AdapterEndpoint } from 'odin-react';
 import type { MetadataType } from '../EndpointTypes';
-import { Form, InputGroup, Button } from 'react-bootstrap';
+import { Form, InputGroup } from 'react-bootstrap';
 
 // Convenience component for picking a file to send to an endpoint
 // This component does assume the histogrammer component as all config files are loaded there
 
 interface FilePickerProps {
-  endpoint: any;
+  endpoint: AdapterEndpoint;
   fullpath: string;
-  buttonText: any;  // e.g. endpoint.data.path_a.path_b.param
-  param_metadata: MetadataType | undefined;
+  buttonText: string;  // e.g. endpoint.data.path_a.path_b.param
+  param_metadata?: MetadataType<string>;
   defaultLabel?: string;
   loadButton?: boolean;  // Do you need a button to load the file
   loadPath?: string;  // Optional as is the button
 }
 
 const EndpointSelect = WithEndpoint(Form.Select);
-const EndpointButton = WithEndpoint(Button);
 
-export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, defaultLabel="Select file...", loadButton=true, loadPath=fullpath }: FilePickerProps) {
+export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, defaultLabel="Select file...", loadButton=true, }: FilePickerProps) {
   return (
     <InputGroup>
       <EndpointSelect
@@ -31,7 +31,7 @@ export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, def
         {(param_metadata?.allowed_values ?? [])
           .filter((selection): selection is string => Boolean(selection))  // Removes non-truthy options like "" or null
           .map(
-          (selection, index) => (
+          (selection) => (
             <option value={selection} key={selection}>
               {selection}
             </option>

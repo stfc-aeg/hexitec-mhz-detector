@@ -1,16 +1,15 @@
-import { Container, Row, Col, Card, Form, Button, ProgressBar, FloatingLabel, ToggleButton, ButtonGroup } from 'react-bootstrap';
+import { EndpointButton, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
 import { useState } from 'react';
-import { WithEndpoint, EndpointInput, useAdapterEndpoint, TitleCard, EndpointButton } from 'odin-react';
-import { checkNull, floatingInputStyle, floatingLabelStyle } from '../utils.js'
-import type { AcquisitionTypes, MunirTypes, MetadataType } from '../EndpointTypes';
-import { OverlayTrigger } from 'react-bootstrap';
+import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
+import type { AcquisitionTypes, MunirTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
+import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
 
 interface AcquisitionProps {
   endpoint_url: string;
 }
 
-const EndpointSelect = WithEndpoint(Form.Select);
+// const EndpointSelect = WithEndpoint(Form.Select);
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
@@ -35,10 +34,10 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
     { name: 'Continuous', value: 'continuous' },
     { name: 'Step scan', value: 'step_scan' }
   ];
-
+  // your manual use of endpoint.put rather than the WithEndpoint components makes me sad :()
   const handleTriggerModeChange = (value: string) => {
     setTriggerModeValue(value);
-    let sendVal = {['device']: value};
+    const sendVal = {['device']: value};
     acquisitionEndpoint.put(sendVal, 'config/trigger')
       .then(
         (response) => {
@@ -49,7 +48,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const handleAdTriggerModeChange = (value: string) => {
     setAdTriggerModeValue(value);
-    let sendVal = {['trigger_mode']: value};
+    const sendVal = {['trigger_mode']: value};
     acquisitionEndpoint.put(sendVal, 'config/trigger')
       .then(
         (response) => {

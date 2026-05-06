@@ -1,7 +1,9 @@
+import type { AdapterEndpoint } from 'odin-react';
 import { Badge, Card, ListGroup } from 'react-bootstrap';
+import type { HexitecParamTree } from './MonitorOverlay';
 
 interface StatusOverviewProps {
-  endpoint: any;
+  endpoint: AdapterEndpoint<HexitecParamTree>;
 }
 
 export function StatusOverview({ endpoint }: StatusOverviewProps) {
