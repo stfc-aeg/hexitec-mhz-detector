@@ -1,4 +1,4 @@
-import type { AdapterEndpoint_t } from 'odin-react';
+import type { AdapterEndpoint } from 'odin-react';
 import { useState, useEffect, useCallback } from 'react';
 
 type Point = [number, number];
@@ -6,7 +6,7 @@ type Region2D = [[number, number], [number, number]];
 type Region1D = [number, number];
 
 interface ClickableImageProps {
-  endpoint: AdapterEndpoint_t;
+  endpoint: AdapterEndpoint;
   imgPath: string;
   coordsPath?: string;
   coordsParam?: string;
@@ -213,9 +213,10 @@ export function ClickableImage(props: ClickableImageProps) {
 
     // If no selection function provided, send direct to endpoint
     if (!onSelection) {
-      const sendVal = {[coordsParam]: coords};
-      // console.log("sendval:", JSON.stringify(sendVal));
-      endpoint.put(sendVal, coordsPath);
+      if (coordsParam && coordsPath) {
+        const sendVal = {[coordsParam]: coords};
+        endpoint.put(sendVal, coordsPath);
+      }      
     }
     else {
       onSelection(coords);

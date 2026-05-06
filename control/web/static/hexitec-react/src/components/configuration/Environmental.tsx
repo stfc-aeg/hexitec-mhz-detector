@@ -1,10 +1,11 @@
 import { Row, Col, Card, Form, Button, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint } from 'odin-react';
+import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
+import type { ProxyParams } from '../../EndpointTypes';
 
 interface EnvironmentalProps {
-  proxyEndpoint: any;
+  proxyEndpoint: AdapterEndpoint<ProxyParams>;
 }
 
 const EndpointFormControl = WithEndpoint(Form.Control);

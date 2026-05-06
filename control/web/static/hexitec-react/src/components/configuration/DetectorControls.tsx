@@ -1,17 +1,18 @@
 import { Row, Col, Card, Form, Button, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint } from 'odin-react';
+import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
 import { floatingInputStyle } from '../../utils';
+import type { ProxyParams } from '../../EndpointTypes';
 
 interface DetectorControlsProps {
-  proxyEndpoint: any;
+  proxyEndpoint: AdapterEndpoint<ProxyParams>;
 }
 
 const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function DetectorControls({ proxyEndpoint }: DetectorControlsProps) {
 
-  const lokiData = proxyEndpoint.data?.loki?.application;
+  // const lokiData = proxyEndpoint.data?.loki?.application;
 
   return (
     <Card className="mt-3">

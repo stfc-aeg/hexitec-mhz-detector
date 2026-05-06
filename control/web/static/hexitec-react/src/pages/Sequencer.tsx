@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAdapterEndpoint } from 'odin-react';
 import { OdinSequencer } from 'odin-sequencer-react-ui';
 

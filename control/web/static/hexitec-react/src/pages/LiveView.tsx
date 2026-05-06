@@ -1,10 +1,10 @@
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
 
-interface LiveViewProps {
-  endpoint_url: string;
-}
+// interface LiveViewProps {
+//   endpoint_url: string;
+// }
 
-function LiveView({ endpoint_url }: LiveViewProps) {
+function LiveView() {
   return (
     <Container>
       <Row>

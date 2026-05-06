@@ -1,19 +1,20 @@
 import { Row, Col, Card, Form, Accordion } from 'react-bootstrap';
 import { FilePicker } from '../FilePicker';
-import type { MetadataType } from '../../EndpointTypes';
+import type { HistogramTypes } from '../../EndpointTypes';
+import type { AdapterEndpoint } from 'odin-react';
 
 interface FileUploadsProps {
-  histogramEndpoint: any;
+  histogramEndpoint: AdapterEndpoint<HistogramTypes>;
 }
 
 export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
 
   const histogramMetadata = histogramEndpoint.metadata;
-  const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename as MetadataType | undefined;
-  const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename as MetadataType | undefined;
-  const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename as MetadataType | undefined;
-  const posfile_metadata = histogramMetadata?.config?.charge_sharing?.mc_filename as MetadataType | undefined;
-  const mcfile_metadata = histogramMetadata?.config?.charge_sharing?.pos_filename as MetadataType | undefined;
+  const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename;
+  const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename;
+  const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename;
+  const posfile_metadata = histogramMetadata?.config?.charge_sharing?.mc_filename;
+  const mcfile_metadata = histogramMetadata?.config?.charge_sharing?.pos_filename;
 
   return (
     <Card className="mt-3">
