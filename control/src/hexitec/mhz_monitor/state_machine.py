@@ -333,6 +333,7 @@ class MonitorControl(StateMachine):
     monitor = (
         initialising.to(monitoring, unless="is_error")
         | monitoring.to(monitoring, internal=True, unless="is_error", cond="is_running")
+        | error.to(monitoring)
     )
 
     # branch to pick which reset step to begin
@@ -379,9 +380,6 @@ class MonitorControl(StateMachine):
                             cond=["!is_timeout", "!is_loki_asic"], unless="is_error")
         | loki_asic_init.to(monitoring, cond="is_loki_asic", unless="is_error")
     )
-
-    # recover from error state
-    recover = Event(error.to(monitoring))
 
     # start the state machine
     start = Event(idle.to(initialising))
@@ -456,5 +454,5 @@ class StateMonitor:
         state = self.machine.current_state
 
         if state == self.machine.error:
-            self.machine.send("recover")
+            self.machine.send("monitor")
             self.run_monitor(True)
