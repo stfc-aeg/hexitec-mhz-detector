@@ -1,12 +1,10 @@
-import React from 'react';
-
 interface ColourScaleProps {
     min: number;
     max: number;
     colormap: string;
 }
 
-export function ColourScale({ min, max, colormap }: ValueRangeControlProps) {
+export function ColourScale({ min, max, colormap }: ColourScaleProps) {
     const height = 400;
     const width = 30;
     const labelWidth = 75;

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Button, OverlayTrigger } from 'react-bootstrap';
+import { EndpointButton, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from 'odin-react';
+import React, { useEffect, useState } from 'react';
+import { Col, Container, Form, OverlayTrigger, Row } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import { useAdapterEndpoint, TitleCard, WithEndpoint, type ParamNode } from 'odin-react';
-import { ColourScale } from './ColourScale';
+import type { AcquisitionTypes } from '../../EndpointTypes';
+import { tooltips } from '../../tooltips';
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils';
 import { MinMaxInput } from '../MinMaxInput';
 import { ClickableImage } from './ClickableImage';
-import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils'
-import { tooltips } from '../../tooltips';
-import type { MetadataType, AcquisitionTypes } from '../../EndpointTypes';
+import { ColourScale } from './ColourScale';
 
 import { RegionSelectionInput } from './RegionSelection';
 
@@ -35,10 +35,9 @@ interface LiveViewTypes extends ParamNode {
         endpoint: string;
         image: {
           colour: string;
-          data: any | null;
+          data: undefined | null; //this doesn't exist on the Param Tree?
           energy_range: [number, number];
           num_bins: number;
-          histograms: any | null;
           region: [[number, number],[number, number]];
           scale: number;
           value_range: [number, number];
@@ -57,7 +56,7 @@ interface LiveViewTypes extends ParamNode {
     };
 }
 
-const EndpointButton = WithEndpoint(Button);
+// const EndpointButton = WithEndpoint(Button);
 const EndpointFormControl = WithEndpoint(Form.Control);
 
 interface HistogramLiveViewProps {
@@ -80,7 +79,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const energyRange = `(0 - ${liveViewData?.image['num_bins'] -1})`;
 
   const liveViewMetadata = liveViewEndPoint?.metadata;
-  const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour as MetadataType|undefined;
+  const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour;
 
   // Timer effects remain the same...
   useEffect(() => {
@@ -275,8 +274,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     style={floatingInputStyle}
                     value={liveViewData?.image?.colour || 'Select a colour'}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
-                      let selectedColour = e.currentTarget.value;
-                      liveViewEndPoint.put(selectedColour, `${imgPath}/colour`);
+                      const selectedColour = e.currentTarget.value;
+                      liveViewEndPoint.put({colour: selectedColour}, `${imgPath}`);
                     }}>
                     {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
                       <option key={index} value={effect}>
