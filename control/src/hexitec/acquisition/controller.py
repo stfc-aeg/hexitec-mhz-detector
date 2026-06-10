@@ -73,8 +73,8 @@ class AcquisitionController(BaseController):
 
         # Provide adapters to sub-processess
 
-        self.configuration = Configuration(self.adapters, AcquisitionError)
-        self.state = State(self.adapters, AcquisitionError)
+        self.configuration = Configuration(self.adapters, self.munir_subsystem, AcquisitionError)
+        self.state = State(self.adapters, self.munir_subsystem, AcquisitionError)
 
         self.state._register_configuration(self.configuration)
         self.configuration._register_state(self.state)

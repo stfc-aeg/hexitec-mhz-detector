@@ -4,10 +4,14 @@ import logging
 from hexitec.util.iac import iac_get, iac_set
 import time
 
+from tornado.concurrent import run_on_executor
+
 class State():
-    def __init__(self, adapters, AcquisitionError):
+    def __init__(self, adapters, munir_subsystem, AcquisitionError):
+        self.munir_subsystem = munir_subsystem
+
         self.munir = adapters["munir"]
-        self.munir_odindata_controller = self.munir.controller.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
+        self.munir_odindata_controller = self.munir.controller.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
         self.histogrammer = adapters["histogram"]
         self.readout = adapters["readout"]
         self.liveview = adapters["liveview"]
@@ -20,14 +24,22 @@ class State():
         self.preview_frames_per_hist = 1000000
         self.is_acquiring = False
 
+        self.acquisition_progress_task_enable = False
+        self.acquisition_progress_task_interval = 0.5
+        self.acquisition_progress = 0.0
+
         self.tree = ParameterTree({
             'preview': {
                 'toggle': (lambda: self.is_previewing, self.toggle_preview),
                 'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist)
             },
             'acquisition': {
-                'toggle': (lambda: self.is_acquiring, self.toggle_acquisition)
-            }
+                'toggle': (lambda: self.is_acquiring, self.toggle_acquisition),
+                "progress_task": {
+                    "interval": (lambda: self.acquisition_progress_task_interval, self.set_progress_task_interval),
+                    "progress": (lambda: self.acquisition_progress, None)
+                }
+            },
         })
 
     def _register_configuration(self, configuration):
@@ -47,7 +59,7 @@ class State():
 
     def _start_preview(self):
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
-        iac_set(self.munir, "subsystems/hexitec_mhz", {"start_lv_frames": True})
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
         iac_set(self.histogrammer, "acquisition/mode", "count frames")
         iac_set(self.histogrammer, "acquisition/output_frames", 20_000_000)
@@ -58,7 +70,7 @@ class State():
         """Stops the preview mode, returning the system to an idle state."""
         # Stop histogrammer
         iac_set(self.histogrammer, "acquisition/run", False)
-        iac_set(self.munir, "subsystems/hexitec_mhz", {"stop_execute": True})
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"stop_execute": True})
 
     def set_preview_frames_per_hist(self, frames):
         """Set the number of frames per histogram for preview mode.
@@ -102,26 +114,30 @@ class State():
         try:
             num_bins = iac_get(self.histogrammer, "config/hist_format/num_bins")
             num_bins = "histogram_" + str(num_bins)
-            munir_mode = iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status")
+            munir_mode = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
             munir_mode = str(munir_mode[0].get("HexitecMhz", {}).get("mode", ""))
             logging.warning(f"Checking modes before acquisition: histogrammer num_bins={num_bins}, munir mode={munir_mode}")
-            # munir_mode = iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status/HexitecMhz/mode")
+            # munir_mode = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status/HexitecMhz/mode")
         except Exception as error:
             logging.error(f"Error checking modes before acquisition: {error}")
             raise self.AcquisitionError(f"Error checking modes before acquisition: {error}")
         if num_bins != munir_mode:
             logging.warning(f"Histogrammer num_bins {num_bins} does not match munir mode {munir_mode}. Changing bin modes to match histogrammer.")
             self.configuration.change_bin_mode(num_bins)
-            while iac_get(self.munir, "subsystems/hexitec_mhz/frame_procs/status/HexitecMhz/mode") != num_bins:
+            while iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status/HexitecMhz/mode") != num_bins:
                 logging.warning(f"Waiting for odin data to reconfigure to new bin mode...")
                 time.sleep(0.5)
 
         # Start listening for data
-        iac_set(self.munir, "execute", {'hexitec_mhz': True})
+        iac_set(self.munir, "execute", {self.munir_subsystem: True})
 
         # Configure how data should be sent
-        iac_set(self.munir, "subsystems/hexitec_mhz/args/num_frames", self.configuration.number_of_timeframes)
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
         iac_set(self.histogrammer, "acquisition/run", True)
+
+        # This task runs in the thread execution pool
+        self.acquisition_progress_task_enable = True
+        self.acquisition_progress_task()
 
     def _stop_acquisition(self):
         self.is_acquiring = False
@@ -130,7 +146,22 @@ class State():
         iac_set(self.readout, "trigger/enable", False)
 
         iac_set(self.histogrammer, "acquisition/run", False)
-        iac_set(self.munir, "subsystems/hexitec_mhz/stop_execute", False)
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/stop_execute", False)
 
         if self.was_previewing:
             self.toggle_preview(True)
+
+    @run_on_executor
+    def acquisition_progress_task(self):
+        while self.acquisition_progress_task_enable:
+            while self.acquisition_progress < 100:
+                frames_received = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/status/frames_written")
+                self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
+            else:
+                # Acquisition complete, disable this task and stop the acquisition
+                self.acquisition_progress_task_enable = False
+                self._stop_acquisition()
+        
+            time.sleep(self.acquisition_progress_task_interval)
+        
+        logging.debug("Stopping acquisition progress background task.")

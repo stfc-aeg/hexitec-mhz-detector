@@ -3,10 +3,12 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
 class Configuration():
-    def __init__(self, adapters, AcquisitionError):
+    def __init__(self, adapters, munir_subsystem, AcquisitionError):
+        self.munir_subsystem = munir_subsystem
+
         self.bin_mode = "histogram_1024"
         self.munir = adapters["munir"]
-        self.munir_odindata_controller = self.munir.controller.munir_managers['hexitec_mhz'].odin_data_instances[0]  # Only anticipate one odin data instance for now
+        self.munir_odindata_controller = self.munir.controller.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
         self.histogrammer = adapters["histogram"]
         self.readout = adapters["readout"]
         self.liveview = adapters["liveview"]
@@ -86,9 +88,9 @@ class Configuration():
                 hist_value='1024'
 
         # Stop odin-data
-        if self.munir.controller.execute_flags['hexitec_mhz']:
+        if self.munir.controller.execute_flags[self.munir_subsystem]:
             was_executing = True
-            iac_set(self.munir, 'execute/hexitec_mhz', False)
+            iac_set(self.munir, f'execute/{self.munir_subsystem}', False)
 
         # Disable histogrammer
         iac_set(self.histogrammer, "acquisition/run", False)
@@ -120,7 +122,7 @@ class Configuration():
         # Restart liveview if it was running
         if was_executing:
             iac_set(self.histogrammer, "acquisition/run", True)
-            iac_set(self.munir, 'execute/hexitec_mhz', True)
+            iac_set(self.munir, f'execute/{self.munir_subsystem}', True)
 
     def set_device(self, device: str):
         """Set the trigger device, which may be software or hardware
@@ -196,7 +198,7 @@ class Configuration():
         """
         try:
             # Frame target for acquisition
-            iac_set(self.munir, "subsystems/hexitec_mhz/args/num_frames", timeframes)
+            iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", timeframes)
             # Software, internal timeframe generator. Not used in this way for 
             iac_set(self.histogrammer, "acquisition/output_frames", timeframes)
             self.number_of_timeframes = timeframes
