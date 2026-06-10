@@ -128,11 +128,11 @@ class State():
                 logging.warning(f"Waiting for odin data to reconfigure to new bin mode...")
                 time.sleep(0.5)
 
-        # Start listening for data
-        iac_set(self.munir, "execute", {self.munir_subsystem: True})
-
         # Configure how data should be sent
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
+
+        # Start listening for data
+        iac_set(self.munir, "execute", {self.munir_subsystem: True})
         iac_set(self.histogrammer, "acquisition/run", True)
 
         # This task runs in the thread execution pool

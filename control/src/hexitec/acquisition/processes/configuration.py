@@ -124,6 +124,8 @@ class Configuration():
             iac_set(self.histogrammer, "acquisition/run", True)
             iac_set(self.munir, f'execute/{self.munir_subsystem}', True)
 
+        self.calculate_estimated_data_rate()
+
     def set_device(self, device: str):
         """Set the trigger device, which may be software or hardware
         :param device: string representing the trigger device, either 'software' or 'hardware'

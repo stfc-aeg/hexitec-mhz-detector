@@ -66,6 +66,16 @@ class AcquisitionController(BaseController):
                 f"Could not find munir subsystem '{self.munir_subsystem}' in available managers: "
                 f"{list(self.munir.controller.munir_managers.keys())}"
             )
+        
+        if 'sequencer' in self.adapters:
+            logging.debug("Acquisition controller registering context with sequencer")
+            self.adapters['sequencer'].add_context('acquisition', self)
+            self.adapters['sequencer'].add_context('monitor', self.hexitec.controller)
+            self.adapters['sequencer'].add_context('liveview', self.liveview.controller)
+            self.adapters['sequencer'].add_context('histogram', self.histogrammer.controller)
+            self.adapters['sequencer'].add_context('munir', self.munir.controller)
+            self.adapters['sequencer'].add_context('proxy', self.proxy)
+            self.adapters['sequencer'].add_context('readout', self.readout.controller)
 
         # Set a default file name and path
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", self.options.get('default_filepath', '/tmp/'))
