@@ -120,7 +120,7 @@ class State():
         iac_set(self.munir, "execute", {'hexitec_mhz': True})
 
         # Configure how data should be sent
-        self.configuration._configure_histogramming()
+        iac_set(self.munir, "subsystems/hexitec_mhz/args/num_frames", self.configuration.number_of_timeframes)
         iac_set(self.histogrammer, "acquisition/run", True)
 
     def _stop_acquisition(self):
