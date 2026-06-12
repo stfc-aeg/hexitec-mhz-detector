@@ -55,8 +55,7 @@ class Configuration():
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
                 'timeframes_per_trigger': (lambda: self.timeframes_per_trigger, self.set_timeframes_per_trigger,
-                                           {'min': 1}),
-                'configure_histogramming': (lambda: None, self._configure_histogramming)
+                                           {'min': 1})
             },
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
@@ -225,9 +224,9 @@ class Configuration():
         num_bins = bin_mode.split('_')[-1]
         # Data rate is hists/second * size per hist / 1_000_000_000 for GB/s
         # hists_per_second is 1M (frames per second) divided by frames per hist
-        hists_per_second = 1_000_000 // self.frames_per_timeframe
+        hists_per_second = 1_000_000 / self.frames_per_timeframe
         data_rate = hists_per_second * (80*80*int(num_bins)*4) / 1_000_000_000
-        self.data_rate = data_rate
+        self.data_rate = round(data_rate, 4)
         return self.data_rate
 
     def toggle_baseline(self, value: bool):

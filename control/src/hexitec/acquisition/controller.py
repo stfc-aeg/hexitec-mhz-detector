@@ -68,7 +68,7 @@ class AcquisitionController(BaseController):
             )
         
         if 'sequencer' in self.adapters:
-            logging.debug("Acquisition controller registering context with sequencer")
+            logging.debug("Acquisition controller registering contexts with sequencer")
             self.adapters['sequencer'].add_context('acquisition', self)
             self.adapters['sequencer'].add_context('monitor', self.hexitec.controller)
             self.adapters['sequencer'].add_context('liveview', self.liveview.controller)

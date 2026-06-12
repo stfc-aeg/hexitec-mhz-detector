@@ -42,6 +42,10 @@ class State():
             },
         })
 
+    def set_progress_task_interval(self, time: float):
+        """Set the acquisition progress task update rate."""
+        self.acquisition_progress_task_interval = time
+
     def _register_configuration(self, configuration):
         """Get a reference to the configuration class."""
         self.configuration = configuration
