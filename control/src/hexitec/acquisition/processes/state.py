@@ -3,6 +3,7 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
 import time
+from datetime import datetime
 
 from tornado.concurrent import run_on_executor
 
@@ -28,6 +29,11 @@ class State():
         self.acquisition_progress_task_interval = 0.5
         self.acquisition_progress = 0.0
 
+        # File settings (as convenience functions for munir)
+        self.file_name = "mhz_acquisition"
+        self.file_path = "/tmp"
+        self.file_timestamp = False
+
         self.tree = ParameterTree({
             'preview': {
                 'toggle': (lambda: self.is_previewing, self.toggle_preview),
@@ -38,9 +44,34 @@ class State():
                 "progress_task": {
                     "interval": (lambda: self.acquisition_progress_task_interval, self.set_progress_task_interval),
                     "progress": (lambda: self.acquisition_progress, None)
-                }
-            },
+                },
+                'file_name': (lambda: self.file_name, self.set_file_name),
+                'file_path': (lambda: self.file_path, self.set_file_path),
+                'add_timestamp': (lambda: self.file_timestamp, self.toggle_file_timestamp)
+            }
         })
+
+    def set_file_name(self, filename: str):
+        """Set the name of the file to be saved through munir arguments.
+        :param filename: string representing the name of the file
+        """
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
+        self.filename = filename
+
+    def set_file_path(self, filepath: str):
+        """Set the path that the file is to be saved to through munir arguments.
+        :param filepath: string representing the filepath
+        """
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", filepath)
+        self.filepath = filepath
+
+    def toggle_file_timestamp(self, enable: bool):
+        """Set the file timestamp toggle to True or False.
+        This adds a timestamp to the name of the file at time of acquisition start.
+        The format is: _YYMMDD_HHMMSS 
+        :param enable: boolean representing the state of the toggle
+        """
+        self.file_timestamp = bool(enable)
 
     def set_progress_task_interval(self, time: float):
         """Set the acquisition progress task update rate."""
@@ -133,6 +164,14 @@ class State():
             while iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status/HexitecMhz/mode") != num_bins:
                 logging.warning(f"Waiting for odin data to reconfigure to new bin mode...")
                 time.sleep(0.5)
+
+        # Timestamp
+        if self.file_timestamp:
+            filename = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name")
+            stamp = datetime.now().strftime('%y%m%d_%H%M%S')
+            filename = filename + "_" + stamp
+            self.file_name = filename
+            iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", self.file_name)
 
         # Configure how data should be sent
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)

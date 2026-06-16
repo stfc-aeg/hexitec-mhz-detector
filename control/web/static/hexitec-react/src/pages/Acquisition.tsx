@@ -1,4 +1,4 @@
-import { EndpointButton, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
+import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
 import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
 import type { AcquisitionTypes, MunirTypes } from '../EndpointTypes';
@@ -214,40 +214,47 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             <Card.Header><strong>Acquisition Status</strong></Card.Header>
             <Card.Body>
               {/* File Name */}
-              <Row className="mb-3">
+              <Row>
                 <Col>
                   <FloatingLabel 
                     label="File Name (without .h5 extension)">
                       <EndpointInput
-                        endpoint={munirEndpoint} fullpath="subsystems/hexitec_mhz/args/file_name"
+                        endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_name"
                         type="text"
                         style={floatingInputStyle}
                       />
                   </FloatingLabel>
-
+                </Col>
+              </Row>
+              <Row classname="mt-2">
+                <Col>
+                  <EndpointCheckbox
+                    endpoint={acquisitionEndpoint} fullpath="state/acquisition/add_timestamp"
+                    label="Add timestamp to file"
+                  />
                 </Col>
               </Row>
 
               {/* (File Path) */}
-              <Row className="mb-3">
+              <Row className="mt-3">
                 <Col>
                   <FloatingLabel 
                     label="File Path">
                       <EndpointInput
-                        endpoint={munirEndpoint} fullpath="subsystems/hexitec_mhz/args/file_path"
+                        endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_path"
                         type="text"
                         style={floatingInputStyle}
                       />
                   </FloatingLabel>
                 </Col>
               </Row>
-              <Row className="mb-3">
+              <Row className="mt-3">
                 <Col>
                   <Form.Label>Acquisition Progress</Form.Label>
                   <ProgressBar now={acquisitionProgress} label={acquisitionProgressLabel} />
                 </Col>
               </Row>
-              <Row className="mb-3">
+              <Row className="mt-3">
                 <Col>
                   <EndpointButton
                     endpoint={acquisitionEndpoint}
