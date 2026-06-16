@@ -72,8 +72,10 @@ class State():
 
     def _stop_preview(self):
         """Stops the preview mode, returning the system to an idle state."""
-        # Stop histogrammer
         iac_set(self.histogrammer, "acquisition/run", False)
+        # Reset histogram settings
+        iac_set(self.histogrammer, "acquisition/input_frames", self.configuration.frames_per_timeframe)
+        iac_set(self.histogrammer, "acquisition/output_frames", self.configuration.number_of_timeframes)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"stop_execute": True})
 
     def set_preview_frames_per_hist(self, frames):
@@ -159,7 +161,8 @@ class State():
     def acquisition_progress_task(self):
         while self.acquisition_progress_task_enable:
             while self.acquisition_progress < 100:
-                frames_received = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/status/frames_written")
+                munir_status = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/status/")
+                frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
                 self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
             else:
                 # Acquisition complete, disable this task and stop the acquisition
