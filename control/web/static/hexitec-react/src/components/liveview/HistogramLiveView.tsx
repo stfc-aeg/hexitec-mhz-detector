@@ -290,14 +290,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
           <Col md={9}>
             <Row className="mb-3">
               <Col> {/* Counts map and histogram */}
-                <Row>
-                  <Col xs={6} className="justify-content-left">
-                    <label className="text-muted">0</label>
-                  </Col>
-                  <Col xs={6} className="text-end">
-                    <label className="text-muted">80</label>
-                  </Col>
-                </Row>
                 <div style={{position:'relative', width: '100%'}}>
                   <div
                     style={{
@@ -312,8 +304,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       color: 'rgba(0,0,0,0.75)',
                       pointerEvents: 'none'
                     }}>
-                      <span>0</span>
                       <span>80</span>
+                      <span>0</span>
                   </div>
                   <ClickableImage
                     endpoint={liveViewEndPoint}
@@ -323,6 +315,11 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     region={liveViewData?.image?.region ?? null}
                   />
                 </div>
+                <Row>
+                  <Col xs={12} className="text-end">
+                    <label className="text-muted">80</label>
+                  </Col>
+                </Row>
               </Col>
               <Col>
                 <OverlayTrigger placement="top" overlay={tooltips.liveview.region_selection}>
