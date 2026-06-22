@@ -354,6 +354,10 @@ export interface AcquisitionTypes extends ParamNode {
   state: {
     acquisition: {
       toggle: boolean;
+      progress_task: {
+        interval: number;
+        progress: number;
+      }
     };
     preview: {
       frames_per_hist: number;

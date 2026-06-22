@@ -66,6 +66,16 @@ class AcquisitionController(BaseController):
                 f"Could not find munir subsystem '{self.munir_subsystem}' in available managers: "
                 f"{list(self.munir.controller.munir_managers.keys())}"
             )
+        
+        if 'sequencer' in self.adapters:
+            logging.debug("Acquisition controller registering contexts with sequencer")
+            self.adapters['sequencer'].add_context('acquisition', self)
+            self.adapters['sequencer'].add_context('monitor', self.hexitec.controller)
+            self.adapters['sequencer'].add_context('liveview', self.liveview.controller)
+            self.adapters['sequencer'].add_context('histogram', self.histogrammer.controller)
+            self.adapters['sequencer'].add_context('munir', self.munir.controller)
+            self.adapters['sequencer'].add_context('proxy', self.proxy)
+            self.adapters['sequencer'].add_context('readout', self.readout.controller)
 
         # Set a default file name and path
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", self.options.get('default_filepath', '/tmp/'))
@@ -73,8 +83,8 @@ class AcquisitionController(BaseController):
 
         # Provide adapters to sub-processess
 
-        self.configuration = Configuration(self.adapters, AcquisitionError)
-        self.state = State(self.adapters, AcquisitionError)
+        self.configuration = Configuration(self.adapters, self.munir_subsystem, AcquisitionError)
+        self.state = State(self.adapters, self.munir_subsystem, AcquisitionError)
 
         self.state._register_configuration(self.configuration)
         self.configuration._register_state(self.state)
@@ -145,3 +155,6 @@ class AcquisitionController(BaseController):
     def cleanup(self):
         """Clean up controller resources."""
         logging.debug("Cleaning up AcquisitionController")
+        # Stop background task
+        self.state.acquisition_progress_task_enable = False
+        logging.debug(f"Stopped acquisition progress task")
