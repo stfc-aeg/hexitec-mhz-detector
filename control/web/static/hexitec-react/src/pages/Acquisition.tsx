@@ -220,7 +220,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     label="File Name (without .h5 extension)">
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_name"
-                        type="text"
                         style={floatingInputStyle}
                       />
                   </FloatingLabel>
@@ -242,7 +241,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     label="File Path">
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_path"
-                        type="text"
                         style={floatingInputStyle}
                       />
                   </FloatingLabel>
@@ -251,7 +249,11 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
               <Row className="mt-3">
                 <Col>
                   <Form.Label>Acquisition Progress</Form.Label>
-                  <ProgressBar now={acquisitionProgress} label={acquisitionProgressLabel} />
+                  <ProgressBar
+                    now={acquisitionProgress ?? 0}
+                    label={acquisitionProgressLabel}
+                    variant={acquisitionProgress === 100 ? 'success' : undefined}
+                  />
                 </Col>
               </Row>
               <Row className="mt-3">

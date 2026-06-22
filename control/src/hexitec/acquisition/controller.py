@@ -155,3 +155,6 @@ class AcquisitionController(BaseController):
     def cleanup(self):
         """Clean up controller resources."""
         logging.debug("Cleaning up AcquisitionController")
+        # Stop background task
+        self.state.acquisition_progress_task_enable = False
+        logging.debug(f"Stopped acquisition progress task")

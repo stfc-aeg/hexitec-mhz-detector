@@ -6,8 +6,12 @@ import time
 from datetime import datetime
 
 from tornado.concurrent import run_on_executor
+from concurrent import futures
 
 class State():
+
+    executor = futures.ThreadPoolExecutor(max_workers=1)
+
     def __init__(self, adapters, munir_subsystem, AcquisitionError):
         self.munir_subsystem = munir_subsystem
 
@@ -56,14 +60,14 @@ class State():
         :param filename: string representing the name of the file
         """
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
-        self.filename = filename
+        self.file_name = filename
 
     def set_file_path(self, filepath: str):
         """Set the path that the file is to be saved to through munir arguments.
         :param filepath: string representing the filepath
         """
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", filepath)
-        self.filepath = filepath
+        self.file_path = filepath
 
     def toggle_file_timestamp(self, enable: bool):
         """Set the file timestamp toggle to True or False.
@@ -131,6 +135,7 @@ class State():
             self._stop_acquisition()
 
     def _start_acquisition(self):
+
         
         # First, check if acquisition can work with data rate
         data_rate = self.configuration.calculate_estimated_data_rate()
@@ -141,6 +146,7 @@ class State():
             return
 
         self.is_acquiring = True
+        self.acquisition_progress = 0
 
         if self.is_previewing:
             self.toggle_preview(False)
@@ -170,8 +176,8 @@ class State():
             filename = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name")
             stamp = datetime.now().strftime('%y%m%d_%H%M%S')
             filename = filename + "_" + stamp
-            self.file_name = filename
-            iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", self.file_name)
+            # self.file_name = filename
+            iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
 
         # Configure how data should be sent
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
@@ -185,6 +191,7 @@ class State():
         self.acquisition_progress_task()
 
     def _stop_acquisition(self):
+        self.acquisition_progress_task_enable = False  # Stopping manually also must stop background
         self.is_acquiring = False
 
         # Back to software for the purpose of previewing
@@ -199,15 +206,21 @@ class State():
     @run_on_executor
     def acquisition_progress_task(self):
         while self.acquisition_progress_task_enable:
-            while self.acquisition_progress < 100:
-                munir_status = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/status/")
-                frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
-                self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
-            else:
+            munir_status = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
+            frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
+            frames_received += 1  # n-1 bug in histogrammer
+
+            self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
+
+            if self.acquisition_progress >= 100:
+                # Force a wait of ~1 frame's worth of time to ensure synchronicity
+                wait = self.configuration.frames_per_timeframe / 1_000_000
+                wait = 5 if wait > 5 else wait  # Upper limit on the wait
+                time.sleep(wait)
                 # Acquisition complete, disable this task and stop the acquisition
                 self.acquisition_progress_task_enable = False
                 self._stop_acquisition()
-        
+
             time.sleep(self.acquisition_progress_task_interval)
         
         logging.debug("Stopping acquisition progress background task.")
