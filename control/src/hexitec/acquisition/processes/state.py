@@ -72,7 +72,7 @@ class State():
     def toggle_file_timestamp(self, enable: bool):
         """Set the file timestamp toggle to True or False.
         This adds a timestamp to the name of the file at time of acquisition start.
-        The format is: _YYMMDD_HHMMSS 
+        The format is: _YYYY-MM-DD_HH-MM-SS (ISO 8601)
         :param enable: boolean representing the state of the toggle
         """
         self.file_timestamp = bool(enable)
@@ -135,8 +135,6 @@ class State():
             self._stop_acquisition()
 
     def _start_acquisition(self):
-
-        
         # First, check if acquisition can work with data rate
         data_rate = self.configuration.calculate_estimated_data_rate()
         if data_rate >= 12.5:
@@ -174,7 +172,7 @@ class State():
         # Timestamp
         if self.file_timestamp:
             filename = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name")
-            stamp = datetime.now().strftime('%y%m%d_%H%M%S')
+            stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             filename = filename + "_" + stamp
             # self.file_name = filename
             iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
