@@ -98,6 +98,8 @@ class State():
 
     def _start_preview(self):
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
+        iac_set(self.munir, f'subsystems/{self.munir_subsystem}/args/num_frames', 0)
+        self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, 0)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
         iac_set(self.histogrammer, "acquisition/mode", "count frames")
