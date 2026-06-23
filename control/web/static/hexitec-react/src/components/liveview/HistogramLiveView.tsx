@@ -1,4 +1,4 @@
-import { EndpointButton, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from 'odin-react';
+import { EndpointButton, EndpointCheckbox, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from 'odin-react';
 import React, { useEffect, useState } from 'react';
 import { Col, Container, Form, OverlayTrigger, Row } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
@@ -214,36 +214,11 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         {/* Main Content */}
         <Row>
           {/* Left Column - Image and Controls */}
-          <Col xs={12} md={3} className="mb-4 justify-content-center">
+          <Col xs={12} md={3} className="mb-3 justify-content-center">
             <div className="d-flex">
 
               {/* Color scale */}
               <div className="me-3">
-                <MinMaxInput
-                  label="Value Range"
-                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
-                  value={liveViewData?.image?.value_range ?? [0,1000]}
-                  onApply={(range) => {
-                    liveViewEndPoint.put(
-                      { value_range: range }, imgPath
-                    );
-                  }}
-                />
-                <EndpointButton
-                  endpoint={liveViewEndPoint}
-                  fullpath={`${imgPath}/value_range`}
-                  value={[]}
-                  variant='outline-primary'
-                  style={{width:30}}
-                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
-                >
-                  Reset Value Range
-                </EndpointButton>
-                <ColourScale 
-                  min={liveViewData?.image?.value_range[0] ?? 0}
-                  max={liveViewData?.image?.value_range[1] ?? 1000}
-                  colormap={liveViewData?.image?.colour || 'bone'}
-                />
                 <Row>
                   <Col>
                     <EndpointButton
@@ -268,8 +243,44 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     </FloatingLabel>
                   </Col>
                 </Row>
+                <MinMaxInput
+                  label="Value Range"
+                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
+                  value={liveViewData?.image?.value_range ?? [0,1000]}
+                  onApply={(range) => {
+                    liveViewEndPoint.put(
+                      { value_range: range }, imgPath
+                    );
+                  }}
+                />
+                <Row>
+                  <Col xs={7}>
+                    <EndpointButton
+                      endpoint={liveViewEndPoint}
+                      fullpath={`${imgPath}/value_range`}
+                      value={[]}
+                      variant='outline-primary'
+                      style={{width:30}}
+                      disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
+                    >
+                      Reset Value Range
+                    </EndpointButton>
+                  </Col>
+                  <Col>
+                    <EndpointCheckbox
+                      endpoint={liveViewEndPoint} fullpath={`${imgPath}/use_log_scaling`}
+                      label="Use Log Scaling"
+                    />
+                  </Col>
+                </Row>
+                
+                <ColourScale 
+                  min={liveViewData?.image?.value_range[0] ?? 0}
+                  max={liveViewData?.image?.value_range[1] ?? 1000}
+                  colormap={liveViewData?.image?.colour || 'bone'}
+                />
                 <FloatingLabel
-                  label="Colourmap" className="mt-3">
+                  label="Colourmap" className="mt-1">
                   <Form.Select
                     style={floatingInputStyle}
                     value={liveViewData?.image?.colour || 'Select a colour'}
