@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 class HistogramLiveViewProcessor:
     """Process 3D histogram data received over ZMQ and render 2D visualizations."""
     
-    def __init__(self, endpoint, occupancy_threshold, dimensions=(80, 80, 1024), colour='bone', energy_range=None):
+    def __init__(self, endpoint, occupancy_threshold, dimensions=(80, 80, 1024), colour='bone', energy_range=None, use_log_scaling=False, log_eps=1e-6):
         """Initialize the HistogramLiveDataProcessor.
         
         Args:
@@ -45,8 +45,13 @@ class HistogramLiveViewProcessor:
             'max': self.max_pix_val
         }
 
+        # Logarithmic scaling for value-range operations (autoclip and display mapping)
+        self.use_log_scaling = bool(use_log_scaling)
+        # Small epsilon added before log to avoid -inf for zeros
+        self.log_eps = float(log_eps)
+
         # Automatic clipping parameters
-        self.autoclip = False
+        self.autoclip = True
         self.autoclip_percent = 95.0
 
         # Log available colormaps
@@ -108,6 +113,7 @@ class HistogramLiveViewProcessor:
 
     def process_frame(self, msg):
         """Process a single data frame."""
+        logging.error(f"NEW FRAME RECEIVED")
         try:
             header = json_decode(msg[0])
             dtype = header.get('dtype', 'uint32')
@@ -127,27 +133,55 @@ class HistogramLiveViewProcessor:
                                     self.energy_range['min']:self.energy_range['max'] + 1], 
                             axis=2)
             
-            # Clipping and rescaling
+            # Clipping and rescaling with log calculations
             if self.autoclip:
                 lower_q = (100 - self.autoclip_percent) / 2
                 upper_q = 100 - lower_q
-                low = np.percentile(summed_data, lower_q)
-                high = np.percentile(summed_data, upper_q)
-            else:
-                low = self.value_range['min']
-                high = self.value_range['max']
+                if self.use_log_scaling:
+                    # Compute percentiles on log data then convert back to linear values
+                    logged = np.log10(summed_data + self.log_eps)
+                    low_log = np.percentile(logged, lower_q)
+                    high_log = np.percentile(logged, upper_q)
+                    self.value_range['min'] = int(10.0 ** low_log)
+                    self.value_range['max'] = int(10.0 ** high_log)
+                else:
+                    # If not log, autoclip is just a percentile
+                    # Setting value range means autoclip will persist values when turned off
+                    # This serves as a 'baseline' for manual adjustment - autoclip is on by default
+                    self.value_range['min'] = np.percentile(summed_data, lower_q)
+                    self.value_range['max'] = np.percentile(summed_data, upper_q)
+                    # Safety check if values are very close 
+                    if self.value_range['max'] - self.value_range['min'] <= 10:
+                        self.value_range['max'] += 5
+
+            low = float(self.value_range['min'])
+            high = float(self.value_range['max'])
+            try:
+                self.pipe_child.send({"value_range": self.value_range})
+            except:
+                logging.warning(f"Could not sent value range through pipe child")
 
             # Sort high and low to avoid issues
             if high < low:
                 low, high = high, low
 
             if high > low:
-                # Clip to range and scale back over full range of vals
+                # Clip to range
                 clipped = np.clip(summed_data, low, high)
-                scaled = (clipped - low) / (high - low) * 65535.0
-                # 8-bit for display
-                normalised_data = (scaled / 65535.0 * 255.0).astype(np.uint8)
-            else:  # This will avoid divide-by-zero if they are the same
+
+                if self.use_log_scaling:
+                    # Map logarithmically to the display range
+                    denom = (np.log10(high + self.log_eps) - np.log10(low + self.log_eps))
+                    if denom == 0:
+                        normalised_data = np.zeros_like(summed_data, dtype=np.uint8)
+                    else:
+                        scaled = (np.log10(clipped + self.log_eps) - np.log10(low + self.log_eps)) / denom * 65535.0
+                        normalised_data = (scaled / 65535.0 * 255.0).astype(np.uint8)
+                else:
+                    # Linear mapping to the display range
+                    scaled = (clipped - low) / (high - low) * 65535.0
+                    normalised_data = (scaled / 65535.0 * 255.0).astype(np.uint8)
+            else:  # Avoid divide-by-zero if they are the same
                 normalised_data = np.zeros_like(summed_data, dtype=np.uint8)
 
             # Apply colormap to 2D image
@@ -214,7 +248,6 @@ class HistogramLiveViewProcessor:
                     self.pipe_child.send({"occupancy": self.occupancy})
                 except:
                     logging.warning(f"Could not sent occupancy through pipe child")
-            
         except Exception as e:
             logging.error(f"Error processing frame: {str(e)}")
 

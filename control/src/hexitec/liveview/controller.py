@@ -76,6 +76,10 @@ class HistogramLiveViewController(BaseController):
                         lambda p=processor: [p.value_range['min'], p.value_range['max']],
                         partial(self.set_value_range, processor=processor)
                     ),
+                    "use_log_scaling": (
+                        lambda p=processor: p.use_log_scaling,
+                        partial(self.toggle_log_scaling, processor=processor)
+                    ),
                     "colour": (lambda p=processor: p.colour,
                              partial(self.set_colour, processor=processor),
                              {'allowed_values': [colour for colour in processor.colormap_dict.keys()]}),
@@ -165,6 +169,11 @@ class HistogramLiveViewController(BaseController):
         if isinstance(value, list) and len(value) == 2:
             processor.set_value_range(value[0], value[1])
             self.update_processor(processor, {"value_range": processor.value_range})
+
+    def toggle_log_scaling(self, enable: bool, processor: HistogramLiveViewProcessor):
+        """Toggle log scaling for the value range for a given processor."""
+        processor.use_log_scaling = bool(enable)
+        self.update_processor(processor, {"use_log_scaling": processor.use_log_scaling})
 
     def set_colour(self, value, processor):
         """Set colormap."""
