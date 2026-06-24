@@ -102,6 +102,8 @@ class State():
         self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, 0)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
+        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.preview_frames_per_hist)
+
         iac_set(self.histogrammer, "acquisition/mode", "software")
         iac_set(self.histogrammer, "acquisition/num_histograms", 20_000_000)
         iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
@@ -110,7 +112,8 @@ class State():
     def _stop_preview(self):
         """Stops the preview mode, returning the system to an idle state."""
         iac_set(self.histogrammer, "acquisition/run", False)
-        # Reset histogram settings
+        # Reset settings
+        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
         iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.configuration.frames_per_timeframe)
         iac_set(self.histogrammer, "acquisition/num_histograms", self.configuration.number_of_timeframes)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"stop_execute": True})
@@ -179,6 +182,9 @@ class State():
             # self.file_name = filename
             iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
 
+        # For liveview occupancy
+        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.configuration.frames_per_timeframe)
+
         # Configure how data should be sent
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
 
@@ -196,6 +202,8 @@ class State():
 
         # Back to software for the purpose of previewing
         iac_set(self.readout, "trigger/enable", False)
+
+        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
 
         iac_set(self.histogrammer, "acquisition/run", False)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/stop_execute", False)

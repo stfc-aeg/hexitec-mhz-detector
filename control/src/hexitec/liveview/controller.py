@@ -34,7 +34,6 @@ class HistogramLiveViewController(BaseController):
         dimensions = list(map(int, options.get('data_dimensions', '80x80x1024').split('x')))
 
         # Occupancy
-        occupancy_pixel_threshold = int(options.get('occupancy_pixel_threshold', 200),)
         self.occupancy_warning_threshold = int(options.get('occupancy_warning_threshold', 10))
 
         # Last part of dimensions is energy_bins
@@ -56,7 +55,6 @@ class HistogramLiveViewController(BaseController):
         for i, endpoint in enumerate(endpoints):
             processor = HistogramLiveViewProcessor(
                 endpoint,
-                occupancy_threshold=occupancy_pixel_threshold,
                 dimensions=dimensions,
                 energy_range=energy_range
             )
@@ -88,9 +86,13 @@ class HistogramLiveViewController(BaseController):
                         partial(self.set_energy_range, processor=processor)
                     ),
                     "num_bins": (lambda p=processor: p.num_bins,
-                                 partial(self.set_num_bins, processor=processor)),
+                                 partial(self.set_num_bins, processor=processor)
+                    ),
                     "occupancy_percent": (lambda p=processor: p.occupancy, None),
                     "occupancy_threshold": (lambda: self.occupancy_warning_threshold, None),
+                    "frames_per_histogram": (lambda p=processor: p.frames_per_histogram,
+                                             partial(self.set_frames_per_histogram, processor=processor)
+                    ),
                     "autoclip": (lambda p=processor: p.autoclip, partial(self.set_autoclip, processor=processor)),
                     "autoclip_percent": (lambda p=processor: p.autoclip_percent, partial(self.set_autoclip_percent, processor=processor)),
                     "last_update": (lambda p=processor: p.last_update, None)
@@ -209,6 +211,11 @@ class HistogramLiveViewController(BaseController):
             update["energy_range"] = processor.energy_range  # Update whole thing just in case
 
         self.update_processor(update, processor)
+
+    def set_frames_per_histogram(self, frames: int, processor: HistogramLiveViewProcessor):
+        """Set the frames per histogram for the purpose of occupancy calculation."""
+        processor.frames_per_histogram = int(frames)
+        self.update_processor({"frames_per_histogram": processor.frames_per_histogram}, processor)
 
     def set_autoclip(self, enable: bool, processor: HistogramLiveViewProcessor):
         """Set automatic clipping mode."""

@@ -13,7 +13,7 @@ from datetime import datetime
 class HistogramLiveViewProcessor:
     """Process 3D histogram data received over ZMQ and render 2D visualizations."""
     
-    def __init__(self, endpoint, occupancy_threshold, dimensions=(80, 80, 1024), colour='bone', energy_range=None, use_log_scaling=False, log_eps=1e-6):
+    def __init__(self, endpoint, dimensions=(80, 80, 1024), colour='bone', energy_range=None, use_log_scaling=False, log_eps=1e-6):
         """Initialize the HistogramLiveDataProcessor.
         
         Args:
@@ -28,11 +28,12 @@ class HistogramLiveViewProcessor:
         self.last_valid_image = {}
         self.region = None  # Array of region corners normalised to 0-1
         self.occupancy = -1
-        self.occupancy_threshold = occupancy_threshold
 
         self.num_bins = dimensions[2]
 
         self.last_update = "never"
+
+        self.frames_per_histogram = -1
 
         self.max_pix_val = 2**32 * self.num_bins
 
@@ -242,17 +243,25 @@ class HistogramLiveViewProcessor:
             self.pipe_child.send({"last_update": self.last_update})
 
             # Calculate occupancy
-            if self.occupancy_threshold is not None:
-                total_pixels = summed_data.size
-                above = np.count_nonzero(summed_data > self.occupancy_threshold)
-                percent = (above/total_pixels) * 100.0
-                self.occupancy = percent
-
+            if self.frames_per_histogram > 0:
+                total_counts = np.sum(
+                    region_data[
+                        :,
+                        :,
+                        self.energy_range['min']:self.energy_range['max']+1
+                    ]
+                )
+                # Occupany = 100(Sum(xmax,xmin) Sum(ymax,ymin) Sum(emax,emin) Count(x,y,e)) / (frames-per-hist*xRange*yRange)
+                self.occupancy = (
+                    100.0 * total_counts
+                    / (self.frames_per_histogram * region_data.shape[0] * region_data.shape[1])
+                )
                 # Send occupancy back
                 try:
                     self.pipe_child.send({"occupancy": self.occupancy})
                 except:
                     logging.warning(f"Could not sent occupancy through pipe child")
+
         except Exception as e:
             logging.error(f"Error processing frame: {str(e)}")
 
