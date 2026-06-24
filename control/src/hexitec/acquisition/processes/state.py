@@ -103,16 +103,16 @@ class State():
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
         iac_set(self.histogrammer, "acquisition/mode", "count frames")
-        iac_set(self.histogrammer, "acquisition/output_frames", 20_000_000)
-        iac_set(self.histogrammer, "acquisition/input_frames", self.preview_frames_per_hist)
+        iac_set(self.histogrammer, "acquisition/num_histograms", 20_000_000)
+        iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
         iac_set(self.histogrammer, "acquisition/run", True)
 
     def _stop_preview(self):
         """Stops the preview mode, returning the system to an idle state."""
         iac_set(self.histogrammer, "acquisition/run", False)
         # Reset histogram settings
-        iac_set(self.histogrammer, "acquisition/input_frames", self.configuration.frames_per_timeframe)
-        iac_set(self.histogrammer, "acquisition/output_frames", self.configuration.number_of_timeframes)
+        iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.configuration.frames_per_timeframe)
+        iac_set(self.histogrammer, "acquisition/num_histograms", self.configuration.number_of_timeframes)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"stop_execute": True})
 
     def set_preview_frames_per_hist(self, frames):
@@ -121,7 +121,7 @@ class State():
         value is used."""
         self.preview_frames_per_hist = int(frames)
         if self.is_previewing:
-            iac_set(self.histogrammer, "acquisition/input_frames", self.preview_frames_per_hist)
+            iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
 
     def toggle_acquisition(self, value):
         """Start or stop an acquisition.

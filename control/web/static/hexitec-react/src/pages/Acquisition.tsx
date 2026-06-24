@@ -13,7 +13,6 @@ interface AcquisitionProps {
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
-  const munirEndpoint = useAdapterEndpoint<MunirTypes>('munir', endpoint_url, 1000);
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
   const acquisitionData = acquisitionEndpoint?.data;
 
