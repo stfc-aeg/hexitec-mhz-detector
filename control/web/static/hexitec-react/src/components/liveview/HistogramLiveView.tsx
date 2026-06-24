@@ -35,8 +35,9 @@ interface LiveViewTypes extends ParamNode {
         endpoint: string;
         image: {
           colour: string;
-          data: undefined | null; //this doesn't exist on the Param Tree?
           energy_range: [number, number];
+          frames_per_histogram: number;
+          last_update: string;
           num_bins: number;
           region: [[number, number],[number, number]];
           scale: number;
