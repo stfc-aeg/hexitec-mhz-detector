@@ -8,6 +8,7 @@ import logging
 from tornado.escape import json_decode
 from odin_data.control.ipc_channel import IpcChannel
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 class HistogramLiveViewProcessor:
     """Process 3D histogram data received over ZMQ and render 2D visualizations."""
@@ -30,6 +31,8 @@ class HistogramLiveViewProcessor:
         self.occupancy_threshold = occupancy_threshold
 
         self.num_bins = dimensions[2]
+
+        self.last_update = "never"
 
         self.max_pix_val = 2**32 * self.num_bins
 
@@ -113,7 +116,6 @@ class HistogramLiveViewProcessor:
 
     def process_frame(self, msg):
         """Process a single data frame."""
-        logging.error(f"NEW FRAME RECEIVED")
         try:
             header = json_decode(msg[0])
             dtype = header.get('dtype', 'uint32')
@@ -235,6 +237,9 @@ class HistogramLiveViewProcessor:
                 'counts': np.array(buffer_2d).tobytes(),
                 'histogram': np.array(buffer_hist).tobytes()
             })
+            # Last update: now
+            self.last_update = datetime.now().strftime('%H:%M:%S')
+            self.pipe_child.send({"last_update": self.last_update})
 
             # Calculate occupancy
             if self.occupancy_threshold is not None:

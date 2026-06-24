@@ -65,8 +65,6 @@ interface HistogramLiveViewProps {
 }
 
 export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps) {
-  const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
-  const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
 
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 2000);
@@ -81,29 +79,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const liveViewMetadata = liveViewEndPoint?.metadata;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour;
 
-  // Timer effects remain the same...
-  useEffect(() => {
-    if (liveViewData?.image?.data) {
-      setLastUpdateTime(Date.now());
-    }
-  }, [liveViewData?.image?.data]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (lastUpdateTime) {
-        const diff = Date.now() - lastUpdateTime;
-        const seconds = Math.floor(diff / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        
-        setTimeSinceUpdate(
-          `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
-        );
-      }
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [lastUpdateTime]);
+  const lastUpdate = liveViewData?.image?.last_update;
 
   // function to send histogram region selection
   const handleHistSelection = (coords: [[number, number], [number, number]] | null) => {
@@ -204,8 +180,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         <Row className="mb-3">
           <Col>
             <div className="d-flex justify-content-end">
-              <span className={`text-muted ${!lastUpdateTime ? 'text-danger' : ''}`}>
-                Last update: {timeSinceUpdate ? timeSinceUpdate : 'Never'}
+              <span className={`text-muted `}>
+                Last update: {lastUpdate ?? ''}
               </span>
             </div>
           </Col>

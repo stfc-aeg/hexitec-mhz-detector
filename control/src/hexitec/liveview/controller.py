@@ -92,7 +92,8 @@ class HistogramLiveViewController(BaseController):
                     "occupancy_percent": (lambda p=processor: p.occupancy, None),
                     "occupancy_threshold": (lambda: self.occupancy_warning_threshold, None),
                     "autoclip": (lambda p=processor: p.autoclip, partial(self.set_autoclip, processor=processor)),
-                    "autoclip_percent": (lambda p=processor: p.autoclip_percent, partial(self.set_autoclip_percent, processor=processor))
+                    "autoclip_percent": (lambda p=processor: p.autoclip_percent, partial(self.set_autoclip_percent, processor=processor)),
+                    "last_update": (lambda p=processor: p.last_update, None)
                 }
             }
             self.tree['_image'].update({
