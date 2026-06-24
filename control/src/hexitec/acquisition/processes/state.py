@@ -102,7 +102,7 @@ class State():
         self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, 0)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
-        iac_set(self.histogrammer, "acquisition/mode", "count frames")
+        iac_set(self.histogrammer, "acquisition/mode", "software")
         iac_set(self.histogrammer, "acquisition/num_histograms", 20_000_000)
         iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
         iac_set(self.histogrammer, "acquisition/run", True)
