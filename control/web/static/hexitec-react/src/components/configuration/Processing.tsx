@@ -18,7 +18,6 @@ const EndpointSelect = WithEndpoint(Form.Select);
 export default function Processing( {histogramEndpoint, acquisitionEndpoint }: ProcessingProps) {
 
   const histogramMetadata = histogramEndpoint.metadata;
-  console.log('histogramMetadata', histogramMetadata);
   const autoTrigModeOptions = histogramMetadata?.config?.clustering?.auto_trig_mode?.allowed_values;
   const modeOptions = histogramMetadata?.config?.clustering?.mode?.allowed_values;
 

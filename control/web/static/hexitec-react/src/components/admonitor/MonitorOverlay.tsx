@@ -1,4 +1,4 @@
-import { EndpointButton, OdinTable, OdinTableRow, useAdapterEndpoint, type ParamNode } from "odin-react";
+import { EndpointButton, OdinTable, OdinTableRow, useAdapterEndpoint, type ParamNode } from 'odin-react';
 import { Alert, Badge, Modal, ProgressBar } from "react-bootstrap";
 
 import type { ComponentProps } from "react";
@@ -58,7 +58,7 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
         num_resets = 0,
         error = "",
         timeout = 0,
-    } = endpoint.data.mhz_monitor ?? {};
+    } = endpoint.data?.mhz_monitor ?? {};
 
     const max_retries: number = endpoint.metadata?.mhz_monitor?.current_retry?.max ?? 3;
     const max_timeout: number = endpoint.metadata?.mhz_monitor?.timeout?.max ?? 60;

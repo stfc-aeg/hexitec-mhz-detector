@@ -38,7 +38,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
             <FilePicker
               endpoint={histogramEndpoint}
               fullpath="config/thresholds/bad_pixel/filename"
-              buttonText={histogramEndpoint.data?.config?.thresholds?.bad_pixel?.filename}
+              buttonText={histogramEndpoint.data?.config?.thresholds?.bad_pixel?.filename ?? ""}
               param_metadata={badpixthres_metadata}
               loadButton
               loadPath="config/thresholds/bad_pixel/load"
@@ -51,7 +51,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
             <FilePicker
               endpoint={histogramEndpoint}
               fullpath="config/hist_format/bad_pixel_mask/filename"
-              buttonText={histogramEndpoint.data?.config?.hist_format?.bad_pixel_mask?.filename}
+              buttonText={histogramEndpoint.data?.config?.hist_format?.bad_pixel_mask?.filename ?? ""}
               param_metadata={badpixmask_metadata}
               loadButton
               loadPath="config/hist_format/bad_pixel_mask/load"
@@ -67,7 +67,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
                 <FilePicker
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/l3_filename"
-                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename}
+                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename ?? ""}
                   param_metadata={l3file_metadata}
                   loadButton
                   loadPath="config/charge_sharing/l3_load"
@@ -78,7 +78,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
                 <FilePicker
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/mc_filename"
-                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename}
+                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename ?? ""}
                   param_metadata={mcfile_metadata}
                   loadButton
                   loadPath="config/charge_sharing/mc_load"
@@ -89,7 +89,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
                 <FilePicker
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/pos_filename"
-                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename}
+                  buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename ?? ""}
                   param_metadata={posfile_metadata}
                   loadButton
                   loadPath="config/charge_sharing/pos_load"

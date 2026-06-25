@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.7",
-    "odin-react": "github:stfc-aeg/odin-react",
+    "odin-react": "github:stfc-aeg/odin-react#2.1.0",
     "odin-sequencer-react-ui": "github:stfc-aeg/odin-sequencer-ui",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",

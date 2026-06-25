@@ -75,7 +75,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const imgPath = `histview/${name}/image`;
 
   // This appears as the ranges stuck together so it needs formatting into (x - y)
-  const energyRange = `(0 - ${liveViewData?.image['num_bins'] -1})`;
+  const energyRange = `(0 - ${(liveViewData?.image?.['num_bins'] ?? 1024) -1})`;
 
   const liveViewMetadata = liveViewEndPoint?.metadata;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour;
@@ -158,12 +158,12 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
             className="h-100"
             endpoint={acquisitionEndpoint}
             fullpath="state/preview/toggle"
-            value={!acquisitionEndpoint.data?.state?.preview?.toggle}
+            value={acquisitionEndpoint.data?.state?.preview?.toggle ? false : true}
             variant={acquisitionEndpoint.data?.state?.preview?.toggle ? 'danger' : 'primary'}
             disabled={acquisitionEndpoint.data?.state?.acquisition?.toggle}
             >
               {acquisitionEndpoint.data?.state?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
-            </EndpointButton>
+          </EndpointButton>
         </Col>
         <Col xs={3}>
           <FloatingLabel label="Frames per hist (for preview)">
@@ -203,7 +203,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       fullpath={`${imgPath}/autoclip`}
                       value={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? false : true}
                       variant={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'danger' :'primary'}
-                      style={{width:30}}
                       className="mb-3"
                     >
                       {liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'Disable autoclip' : 'Enable autoclip'}
@@ -237,7 +236,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       fullpath={`${imgPath}/value_range`}
                       value={[]}
                       variant='outline-primary'
-                      style={{width:30}}
                       disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
                     >
                       Reset Value Range
@@ -324,7 +322,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   <Col>
                     <FloatingLabel label="Occupancy %">
                       <Form.Control
-                        value={checkNull(liveViewData?.image?.occupancy_percent)}
+                        value={checkNull(liveViewData?.image?.occupancy_percent ?? 0)}
                         disabled
                         style={getOccupancyStyle(
                           liveViewData?.image?.occupancy_percent,
@@ -369,7 +367,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       fullpath={`${imgPath}/energy_range`}
                       value={[]}
                       variant='outline-primary'
-                      style={{width:30}}
                     >
                       Reset Energy Range
                     </EndpointButton>
