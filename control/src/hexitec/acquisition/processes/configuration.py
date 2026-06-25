@@ -2,6 +2,7 @@
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
+
 class Configuration():
     def __init__(self, adapters, munir_subsystem, AcquisitionError):
         self.munir_subsystem = munir_subsystem
@@ -24,8 +25,8 @@ class Configuration():
 
         self.trigger_mode = iac_get(self.readout, "trigger/mode")
 
-        self.frames_per_timeframe = int(iac_get(self.histogrammer, "acquisition/input_frames"))
-        self.number_of_timeframes = int(iac_get(self.histogrammer, "acquisition/output_frames"))
+        self.frames_per_timeframe = int(iac_get(self.histogrammer, "acquisition/frames_per_histogram"))
+        self.number_of_timeframes = int(iac_get(self.histogrammer, "acquisition/num_histograms"))
         self.timeframes_per_trigger = int(iac_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
         self.data_rate = self.calculate_estimated_data_rate()
@@ -62,6 +63,16 @@ class Configuration():
             },
             'estimated_data_rate': (lambda: self.data_rate, None)
         })
+
+        # Ensure bin count matches odin_data as that is the most complicated to change
+        munir_num_bins = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
+        munir_num_bins = str(munir_num_bins[0].get("HexitecMhz", {}).get("mode", ""))
+        # Safety: odin data may not be active and we do not want to launch to an error
+        if munir_num_bins:
+            hist_num_bins = "histogram_" + str(iac_get(self.histogrammer, "config/hist_format/num_bins"))
+            liveview_num_bins = "histogram_" + str(iac_get(self.liveview, "histview/mhz/image/num_bins"))
+            if munir_num_bins != hist_num_bins or hist_num_bins != liveview_num_bins:
+                self.change_bin_mode(munir_num_bins)
 
     def _register_state(self, state):
         """Get a reference to the state class."""
@@ -131,12 +142,9 @@ class Configuration():
         """
         device = device.lower()
         if device in self.device_options:
-            if device == "software":
-                iac_set(self.readout, "trigger/enable", False)
-                iac_set(self.histogrammer, "acquisition/mode", "count frames")
-            elif device == "hardware":
-               iac_set(self.readout, "trigger/enable", True)
-               iac_set(self.histogrammer, "acquisition/mode", "continuous")
+            trigger_enable = False if device=="software" else True
+            iac_set(self.readout, "trigger/enable", trigger_enable)
+            iac_set(self.histogrammer, "acquisition/mode", device)
 
         self.device = device
 
@@ -175,7 +183,7 @@ class Configuration():
 
         try:
             # Software, internal timeframe generator
-            iac_set(self.histogrammer, "acquisition/input_frames", frames)
+            iac_set(self.histogrammer, "acquisition/frames_per_histogram", frames)
             # Hardware, on trigger received
             iac_set(self.readout, "trigger/frame_limits/frame_in_hist", frames)
             self.frames_per_timeframe = frames
@@ -201,7 +209,7 @@ class Configuration():
             # Frame target for acquisition
             iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", timeframes)
             # Software, internal timeframe generator. Not used in this way for 
-            iac_set(self.histogrammer, "acquisition/output_frames", timeframes)
+            iac_set(self.histogrammer, "acquisition/num_histograms", timeframes)
             self.number_of_timeframes = timeframes
         except Exception as err:
             logging.warning(f"Could not set number of timeframes: {err}")
@@ -224,7 +232,8 @@ class Configuration():
         num_bins = bin_mode.split('_')[-1]
         # Data rate is hists/second * size per hist / 1_000_000_000 for GB/s
         # hists_per_second is 1M (frames per second) divided by frames per hist
-        hists_per_second = 1_000_000 / self.frames_per_timeframe
+        frames = self.frames_per_timeframe if self.frames_per_timeframe > 0 else 1
+        hists_per_second = 1_000_000 / frames
         data_rate = hists_per_second * (80*80*int(num_bins)*4) / 1_000_000_000
         self.data_rate = round(data_rate, 4)
         return self.data_rate

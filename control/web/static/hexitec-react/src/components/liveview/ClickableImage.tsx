@@ -58,7 +58,8 @@ export function ClickableImage(props: ClickableImageProps) {
 
   const getPoint = useCallback((e: React.MouseEvent<HTMLImageElement>): Point => {
     const bounds = e.currentTarget.getBoundingClientRect();
-    return [e.clientX - bounds.left, e.clientY - bounds.top];
+    const height = e.currentTarget.clientHeight;
+    return [e.clientX - bounds.left, height - (e.clientY - bounds.top)];
   }, []);
 
   // Draw a square if there are values and the user isn't currently drawing on the image
@@ -111,8 +112,8 @@ export function ClickableImage(props: ClickableImageProps) {
 
     const minX = xMinNorm * width;
     const maxX = xMaxNorm * width;
-    const minY = yMinNorm * height;
-    const maxY = yMaxNorm * height;
+    const minY = (1 - yMaxNorm) * height;
+    const maxY = (1 - yMinNorm) * height;
 
     setPoints([
       [minX, minY],
@@ -125,6 +126,12 @@ export function ClickableImage(props: ClickableImageProps) {
 
   const calculateRectangle = useCallback(() => {
     if (!startPoint || !endPoint) return;
+    const canvas = document.getElementById('canvas') as HTMLElement | null;
+    if (!canvas) return;
+    
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    
     const xCoords = [startPoint[0], endPoint[0]];
     const yCoords = [startPoint[1], endPoint[1]];
     let minX = Math.min(...xCoords);
@@ -132,22 +139,23 @@ export function ClickableImage(props: ClickableImageProps) {
     let minY = Math.min(...yCoords);
     let maxY = Math.max(...yCoords);
     
-    const canvas = document.getElementById('canvas') as HTMLElement | null;
-    if (!canvas) return;
+    // Convert to SVG coordinates (top-left origin)
+    let svgMinY = height - maxY;
+    let svgMaxY = height - minY;
     
     if (maximiseAxis === 'x') {
       minX = 0;
-      maxX = canvas.clientWidth;
+      maxX = width;
     } else if (maximiseAxis === 'y') {
-      minY = 0;
-      maxY = canvas.clientHeight;
+      svgMinY = 0;
+      svgMaxY = height;
     }
     
     const rectanglePoints: Point[] = [
-      [minX, minY],
-      [maxX, minY],
-      [maxX, maxY],
-      [minX, maxY],
+      [minX, svgMinY],
+      [maxX, svgMinY],
+      [maxX, svgMaxY],
+      [minX, svgMaxY],
     ];
     setPoints(rectanglePoints);
   }, [startPoint, endPoint, maximiseAxis]);

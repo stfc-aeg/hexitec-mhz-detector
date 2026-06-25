@@ -9,7 +9,7 @@ import { Form, InputGroup } from 'react-bootstrap';
 interface FilePickerProps {
   endpoint: AdapterEndpoint;
   fullpath: string;
-  buttonText: string;  // e.g. endpoint.data.path_a.path_b.param
+  buttonText: string;  // e.g. endpoint.data?.path_a.path_b.param
   param_metadata?: MetadataType<string>;
   defaultLabel?: string;
   loadButton?: boolean;  // Do you need a button to load the file

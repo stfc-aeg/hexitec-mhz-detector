@@ -12,7 +12,7 @@ class HistogramLiveViewError(Exception):
 class HistogramLiveViewController(BaseController):
     """Controller for 3D histogram live data visualization."""
     
-    def __init__(self, options):
+    def __init__(self, options: dict):
         """Initialize the controller.
         
         Args:
@@ -34,7 +34,6 @@ class HistogramLiveViewController(BaseController):
         dimensions = list(map(int, options.get('data_dimensions', '80x80x1024').split('x')))
 
         # Occupancy
-        occupancy_pixel_threshold = int(options.get('occupancy_pixel_threshold', 200),)
         self.occupancy_warning_threshold = int(options.get('occupancy_warning_threshold', 10))
 
         # Last part of dimensions is energy_bins
@@ -56,7 +55,6 @@ class HistogramLiveViewController(BaseController):
         for i, endpoint in enumerate(endpoints):
             processor = HistogramLiveViewProcessor(
                 endpoint,
-                occupancy_threshold=occupancy_pixel_threshold,
                 dimensions=dimensions,
                 energy_range=energy_range
             )
@@ -76,6 +74,10 @@ class HistogramLiveViewController(BaseController):
                         lambda p=processor: [p.value_range['min'], p.value_range['max']],
                         partial(self.set_value_range, processor=processor)
                     ),
+                    "use_log_scaling": (
+                        lambda p=processor: p.use_log_scaling,
+                        partial(self.toggle_log_scaling, processor=processor)
+                    ),
                     "colour": (lambda p=processor: p.colour,
                              partial(self.set_colour, processor=processor),
                              {'allowed_values': [colour for colour in processor.colormap_dict.keys()]}),
@@ -84,11 +86,16 @@ class HistogramLiveViewController(BaseController):
                         partial(self.set_energy_range, processor=processor)
                     ),
                     "num_bins": (lambda p=processor: p.num_bins,
-                                 partial(self.set_num_bins, processor=processor)),
+                                 partial(self.set_num_bins, processor=processor)
+                    ),
                     "occupancy_percent": (lambda p=processor: p.occupancy, None),
                     "occupancy_threshold": (lambda: self.occupancy_warning_threshold, None),
+                    "frames_per_histogram": (lambda p=processor: p.frames_per_histogram,
+                                             partial(self.set_frames_per_histogram, processor=processor)
+                    ),
                     "autoclip": (lambda p=processor: p.autoclip, partial(self.set_autoclip, processor=processor)),
-                    "autoclip_percent": (lambda p=processor: p.autoclip_percent, partial(self.set_autoclip_percent, processor=processor))
+                    "autoclip_percent": (lambda p=processor: p.autoclip_percent, partial(self.set_autoclip_percent, processor=processor)),
+                    "last_update": (lambda p=processor: p.last_update, None)
                 }
             }
             self.tree['_image'].update({
@@ -100,12 +107,12 @@ class HistogramLiveViewController(BaseController):
 
         self.param_tree = ParameterTree(self.tree)
 
-    def initialize(self, adapters):
+    def initialize(self, adapters: list):
         """Initialize the controller with adapters."""
         self.adapters = adapters
         logging.debug("Initialized HistogramLiveViewController with %d adapters", len(adapters))
 
-    def get_image_from_processor_name(self, name):
+    def get_image_from_processor_name(self, name: str):
         """Return the image (data/histograms) object from the named processor."""
         if name in self.names:
             index = self.names.index(name)
@@ -120,7 +127,7 @@ class HistogramLiveViewController(BaseController):
                 processor.process.terminate()
                 processor.process.join()
 
-    def get(self, path, with_metadata=False):
+    def get(self, path: str, with_metadata=False):
         """Get parameter data from controller."""
         try:
             self.poll_processors()  # Update values when making requests to keep these up-to-date
@@ -129,7 +136,7 @@ class HistogramLiveViewController(BaseController):
             logging.error("Error getting parameter: %s", error)
             raise HistogramLiveViewError(str(error))
 
-    def set(self, path, data):
+    def set(self, path: str, data: dict):
         """Set parameter data in controller."""
         try:
             self.param_tree.set(path, data)
@@ -137,57 +144,62 @@ class HistogramLiveViewController(BaseController):
             logging.error("Error setting parameter: %s", error)
             raise HistogramLiveViewError(str(error))
 
-    def update_processor(self, processor, params):
+    def update_processor(self, params: dict, processor: HistogramLiveViewProcessor):
         """Send parameter updates to processor."""
         processor.update_params(params)
 
-    def set_region(self, value, processor):
+    def set_region(self, region: list[list, list], processor: HistogramLiveViewProcessor):
         """Set region for the histogram.
         :param value: array of coordinations as such: [[x_min,x_max],[y_min,y_max']]
         """
         # If array is empty, reset to full region. This avoids needing a separate reset function
-        if not value:
+        if not region:
             rounded_value = None
         else:
             # Round to nearest pixel: scale up, round, scale back down
             width, height = processor.orig_dims[0], processor.orig_dims[1]
             rounded_value = [
-                [round(coord * width) / width for coord in value[0]],
-                [round(coord * height) / height for coord in value[1]]
+                [round(coord * width) / width for coord in region[0]],
+                [round(coord * height) / height for coord in region[1]]
             ]
         processor.region = rounded_value
-        self.update_processor(processor, {"region": rounded_value})
+        self.update_processor({"region": rounded_value}, processor)
 
-    def set_value_range(self, value, processor):
+    def set_value_range(self, values: list, processor: HistogramLiveViewProcessor):
         """Set value range for clipping and display."""
-        if not value:  # e.g. empty array, None
+        if not values:  # e.g. empty array, None
             processor.value_range = {'min': 0, 'max': processor.max_pix_val}  # Maximum defined in processor init
-        if isinstance(value, list) and len(value) == 2:
-            processor.set_value_range(value[0], value[1])
-            self.update_processor(processor, {"value_range": processor.value_range})
+        if isinstance(values, list) and len(values) == 2:
+            processor.set_value_range(values[0], values[1])
+            self.update_processor({"value_range": processor.value_range}, processor)
 
-    def set_colour(self, value, processor):
+    def toggle_log_scaling(self, enable: bool, processor: HistogramLiveViewProcessor):
+        """Toggle log scaling for the value range for a given processor."""
+        processor.use_log_scaling = bool(enable)
+        self.update_processor({"use_log_scaling": processor.use_log_scaling}, processor)
+
+    def set_colour(self, colour: str, processor: HistogramLiveViewProcessor):
         """Set colormap."""
-        processor.colour = str(value)
-        self.update_processor(processor, {"colour": processor.colour})
+        processor.colour = str(colour)
+        self.update_processor({"colour": processor.colour}, processor)
 
-    def set_energy_range(self, value, processor):
+    def set_energy_range(self, range: list, processor: HistogramLiveViewProcessor):
         """Set energy bin range."""
-        if not value:  # e.g. empty array, then reset
+        if not range:  # e.g. empty array, then reset
             processor.energy_range = {'min': 0, 'max': processor.num_bins - 1}
         else:
-            processor.energy_range['min'] = int(value[0])
-            processor.energy_range['max'] = int(value[1])
-        self.update_processor(processor, {"energy_range": processor.energy_range})
+            processor.energy_range['min'] = int(range[0])
+            processor.energy_range['max'] = int(range[1])
+        self.update_processor({"energy_range": processor.energy_range}, processor)
 
-    def set_num_bins(self, value, processor):
+    def set_num_bins(self, num: int, processor: HistogramLiveViewProcessor):
         """Set number of energy bins."""
-        value = int(value)
+        num = int(num)
         update = {}
-        processor.num_bins = value
+        processor.num_bins = num
 
         # Also update the dataset dimensions
-        processor.orig_dims = (80,80,value)
+        processor.orig_dims = (80,80,num)
         update = {
             'num_bins': processor.num_bins,
             'orig_dims': processor.orig_dims
@@ -198,17 +210,22 @@ class HistogramLiveViewController(BaseController):
             processor.energy_range['max'] = processor.num_bins - 1
             update["energy_range"] = processor.energy_range  # Update whole thing just in case
 
-        self.update_processor(processor, update)
+        self.update_processor(update, processor)
 
-    def set_autoclip(self, value, processor):
+    def set_frames_per_histogram(self, frames: int, processor: HistogramLiveViewProcessor):
+        """Set the frames per histogram for the purpose of occupancy calculation."""
+        processor.frames_per_histogram = int(frames)
+        self.update_processor({"frames_per_histogram": processor.frames_per_histogram}, processor)
+
+    def set_autoclip(self, enable: bool, processor: HistogramLiveViewProcessor):
         """Set automatic clipping mode."""
-        processor.autoclip = bool(value)
-        self.update_processor(processor, {"autoclip": processor.autoclip})
+        processor.autoclip = bool(enable)
+        self.update_processor({"autoclip": processor.autoclip}, processor)
 
-    def set_autoclip_percent(self, value, processor):
+    def set_autoclip_percent(self, percent: float, processor: HistogramLiveViewProcessor):
         """Set automatic clipping percentage."""
-        processor.autoclip_percent = float(value)
-        self.update_processor(processor, {"autoclip_percent": processor.autoclip_percent})
+        processor.autoclip_percent = float(percent)
+        self.update_processor({"autoclip_percent": processor.autoclip_percent}, processor)
 
     def poll_processors(self):
         """Get any values from the processor classes."""

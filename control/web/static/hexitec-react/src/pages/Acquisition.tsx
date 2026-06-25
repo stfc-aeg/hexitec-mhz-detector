@@ -1,7 +1,7 @@
 import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
 import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
-import type { AcquisitionTypes, MunirTypes } from '../EndpointTypes';
+import type { AcquisitionTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
 import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
 
@@ -13,7 +13,6 @@ interface AcquisitionProps {
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
-  const munirEndpoint = useAdapterEndpoint<MunirTypes>('munir', endpoint_url, 1000);
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
   const acquisitionData = acquisitionEndpoint?.data;
 
@@ -41,26 +40,16 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const handleTriggerModeChange = (value: string) => {
     setTriggerModeValue(value);
     const sendVal = {['device']: value};
-    acquisitionEndpoint.put(sendVal, 'config/trigger')
-      .then(
-        (response) => {
-          acquisitionEndpoint.mergeData(response, 'config/trigger');
-        }
-      );
+    acquisitionEndpoint.put(sendVal, 'config/trigger');
   }
 
   const handleAdTriggerModeChange = (value: string) => {
     setAdTriggerModeValue(value);
     const sendVal = {['trigger_mode']: value};
-    acquisitionEndpoint.put(sendVal, 'config/trigger')
-      .then(
-        (response) => {
-          acquisitionEndpoint.mergeData(response, 'config/trigger');
-        }
-      );
+    acquisitionEndpoint.put(sendVal, 'config/trigger');
   }
 
-  const est_duration = ((acquisitionData?.config?.trigger?.frames_per_timeframe * acquisitionData?.config?.trigger?.number_of_timeframes) / 1000000);
+  const est_duration = (((acquisitionData?.config?.trigger?.frames_per_timeframe ?? 0) * (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0)) / 1000000);
 
   return (
     
@@ -195,7 +184,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Total Storage">
                       <Form.Control
                         type="text"
-                        value={acquisitionData?.config?.estimated_data_rate * est_duration + ' GB'}
+                        value={(acquisitionData?.config?.estimated_data_rate ?? 0) * est_duration + ' GB'}
                         readOnly
                         style={floatingLabelStyle}
                         className={rateTooHigh ? 'border border-danger text-danger bg-danger bg-opacity-10' : ''}

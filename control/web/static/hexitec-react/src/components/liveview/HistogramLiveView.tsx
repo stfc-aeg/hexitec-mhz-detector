@@ -1,5 +1,5 @@
-import { EndpointButton, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from 'odin-react';
-import React, { useEffect, useState } from 'react';
+import { EndpointButton, EndpointCheckbox, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from 'odin-react';
+import React from 'react';
 import { Col, Container, Form, OverlayTrigger, Row } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import type { AcquisitionTypes } from '../../EndpointTypes';
@@ -35,8 +35,9 @@ interface LiveViewTypes extends ParamNode {
         endpoint: string;
         image: {
           colour: string;
-          data: undefined | null; //this doesn't exist on the Param Tree?
           energy_range: [number, number];
+          frames_per_histogram: number;
+          last_update: string;
           num_bins: number;
           region: [[number, number],[number, number]];
           scale: number;
@@ -65,8 +66,6 @@ interface HistogramLiveViewProps {
 }
 
 export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps) {
-  const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
-  const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
 
   const liveViewEndPoint = useAdapterEndpoint<LiveViewTypes>('liveview', endpoint_url, 1000);
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 2000);
@@ -76,34 +75,12 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const imgPath = `histview/${name}/image`;
 
   // This appears as the ranges stuck together so it needs formatting into (x - y)
-  const energyRange = `(0 - ${liveViewData?.image['num_bins'] -1})`;
+  const energyRange = `(0 - ${(liveViewData?.image?.['num_bins'] ?? 1024) -1})`;
 
   const liveViewMetadata = liveViewEndPoint?.metadata;
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour;
 
-  // Timer effects remain the same...
-  useEffect(() => {
-    if (liveViewData?.image?.data) {
-      setLastUpdateTime(Date.now());
-    }
-  }, [liveViewData?.image?.data]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (lastUpdateTime) {
-        const diff = Date.now() - lastUpdateTime;
-        const seconds = Math.floor(diff / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        
-        setTimeSinceUpdate(
-          `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
-        );
-      }
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [lastUpdateTime]);
+  const lastUpdate = liveViewData?.image?.last_update;
 
   // function to send histogram region selection
   const handleHistSelection = (coords: [[number, number], [number, number]] | null) => {
@@ -181,12 +158,12 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
             className="h-100"
             endpoint={acquisitionEndpoint}
             fullpath="state/preview/toggle"
-            value={!acquisitionEndpoint.data?.state?.preview?.toggle}
+            value={acquisitionEndpoint.data?.state?.preview?.toggle ? false : true}
             variant={acquisitionEndpoint.data?.state?.preview?.toggle ? 'danger' : 'primary'}
             disabled={acquisitionEndpoint.data?.state?.acquisition?.toggle}
             >
               {acquisitionEndpoint.data?.state?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
-            </EndpointButton>
+          </EndpointButton>
         </Col>
         <Col xs={3}>
           <FloatingLabel label="Frames per hist (for preview)">
@@ -204,8 +181,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         <Row className="mb-3">
           <Col>
             <div className="d-flex justify-content-end">
-              <span className={`text-muted ${!lastUpdateTime ? 'text-danger' : ''}`}>
-                Last update: {timeSinceUpdate ? timeSinceUpdate : 'Never'}
+              <span className={`text-muted `}>
+                Last update: {lastUpdate ?? ''}
               </span>
             </div>
           </Col>
@@ -214,36 +191,11 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         {/* Main Content */}
         <Row>
           {/* Left Column - Image and Controls */}
-          <Col xs={12} md={3} className="mb-4 justify-content-center">
+          <Col xs={12} md={3} className="mb-3 justify-content-center">
             <div className="d-flex">
 
               {/* Color scale */}
               <div className="me-3">
-                <MinMaxInput
-                  label="Value Range"
-                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
-                  value={liveViewData?.image?.value_range ?? [0,1000]}
-                  onApply={(range) => {
-                    liveViewEndPoint.put(
-                      { value_range: range }, imgPath
-                    );
-                  }}
-                />
-                <EndpointButton
-                  endpoint={liveViewEndPoint}
-                  fullpath={`${imgPath}/value_range`}
-                  value={[]}
-                  variant='outline-primary'
-                  style={{width:30}}
-                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
-                >
-                  Reset Value Range
-                </EndpointButton>
-                <ColourScale 
-                  min={liveViewData?.image?.value_range[0] ?? 0}
-                  max={liveViewData?.image?.value_range[1] ?? 1000}
-                  colormap={liveViewData?.image?.colour || 'bone'}
-                />
                 <Row>
                   <Col>
                     <EndpointButton
@@ -251,7 +203,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       fullpath={`${imgPath}/autoclip`}
                       value={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? false : true}
                       variant={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'danger' :'primary'}
-                      style={{width:30}}
                       className="mb-3"
                     >
                       {liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'Disable autoclip' : 'Enable autoclip'}
@@ -268,8 +219,43 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     </FloatingLabel>
                   </Col>
                 </Row>
+                <MinMaxInput
+                  label="Value Range"
+                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
+                  value={liveViewData?.image?.value_range ?? [0,1000]}
+                  onApply={(range) => {
+                    liveViewEndPoint.put(
+                      { value_range: range }, imgPath
+                    );
+                  }}
+                />
+                <Row>
+                  <Col xs={7}>
+                    <EndpointButton
+                      endpoint={liveViewEndPoint}
+                      fullpath={`${imgPath}/value_range`}
+                      value={[]}
+                      variant='outline-primary'
+                      disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
+                    >
+                      Reset Value Range
+                    </EndpointButton>
+                  </Col>
+                  <Col>
+                    <EndpointCheckbox
+                      endpoint={liveViewEndPoint} fullpath={`${imgPath}/use_log_scaling`}
+                      label="Use Log Scaling"
+                    />
+                  </Col>
+                </Row>
+                
+                <ColourScale 
+                  min={liveViewData?.image?.value_range[0] ?? 0}
+                  max={liveViewData?.image?.value_range[1] ?? 1000}
+                  colormap={liveViewData?.image?.colour || 'bone'}
+                />
                 <FloatingLabel
-                  label="Colourmap" className="mt-3">
+                  label="Colourmap" className="mt-1">
                   <Form.Select
                     style={floatingInputStyle}
                     value={liveViewData?.image?.colour || 'Select a colour'}
@@ -290,14 +276,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
           <Col md={9}>
             <Row className="mb-3">
               <Col> {/* Counts map and histogram */}
-                <Row>
-                  <Col xs={6} className="justify-content-left">
-                    <label className="text-muted">0</label>
-                  </Col>
-                  <Col xs={6} className="text-end">
-                    <label className="text-muted">80</label>
-                  </Col>
-                </Row>
                 <div style={{position:'relative', width: '100%'}}>
                   <div
                     style={{
@@ -312,8 +290,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       color: 'rgba(0,0,0,0.75)',
                       pointerEvents: 'none'
                     }}>
-                      <span>0</span>
                       <span>80</span>
+                      <span>0</span>
                   </div>
                   <ClickableImage
                     endpoint={liveViewEndPoint}
@@ -323,6 +301,11 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                     region={liveViewData?.image?.region ?? null}
                   />
                 </div>
+                <Row>
+                  <Col xs={12} className="text-end">
+                    <label className="text-muted">80</label>
+                  </Col>
+                </Row>
               </Col>
               <Col>
                 <OverlayTrigger placement="top" overlay={tooltips.liveview.region_selection}>
@@ -339,7 +322,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   <Col>
                     <FloatingLabel label="Occupancy %">
                       <Form.Control
-                        value={checkNull(liveViewData?.image?.occupancy_percent)}
+                        value={checkNull(liveViewData?.image?.occupancy_percent ?? 0)}
                         disabled
                         style={getOccupancyStyle(
                           liveViewData?.image?.occupancy_percent,
@@ -384,7 +367,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       fullpath={`${imgPath}/energy_range`}
                       value={[]}
                       variant='outline-primary'
-                      style={{width:30}}
                     >
                       Reset Energy Range
                     </EndpointButton>

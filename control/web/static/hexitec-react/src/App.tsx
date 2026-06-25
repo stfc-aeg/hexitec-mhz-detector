@@ -15,7 +15,7 @@ function App() {
   const endpoint = useAdapterEndpoint<HexitecParamTree>('hexitec', endpoint_url);
 
   return (
-    <UserLevelContext value={endpoint.data.user_type}>
+    <UserLevelContext value={endpoint.data?.user_type ?? "basic"}>
       <OdinApp 
         title={'Hexitec-MHZ'} 
         navLinks={[

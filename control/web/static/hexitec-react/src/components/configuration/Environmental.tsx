@@ -47,7 +47,7 @@ export default function Environmental({
                     plaintext
                     readOnly
                     style={floatingLabelStyle}
-                    value={checkNull(lokiData?.HV.readback_bias)}
+                    value={checkNull(lokiData?.HV?.readback_bias)}
                   />
                 </FloatingLabel>
               </Col>
@@ -68,7 +68,7 @@ export default function Environmental({
                     plaintext
                     readOnly
                     style={floatingLabelStyle}
-                    value={checkNull(lokiData?.HV.target_bias)}
+                    value={checkNull(lokiData?.HV?.target_bias)}
                   />
                 </FloatingLabel>
               </Col>
@@ -110,7 +110,7 @@ export default function Environmental({
                     endpoint={proxyEndpoint}
                     fullpath="loki/application/peltier/proportion"
                     variant="outline-secondary"
-                    buttonText={checkNullNoDp(lokiData?.peltier.proportion * 100)}
+                    buttonText={checkNullNoDp((lokiData?.peltier?.proportion ?? 0) * 100)}
                     style={floatingInputStyle}
                   >
                     {peltierSetpoints.map((selection) => (

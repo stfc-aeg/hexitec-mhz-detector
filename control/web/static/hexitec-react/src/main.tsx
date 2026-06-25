@@ -4,12 +4,11 @@ import App from './App.tsx'
 import { OdinErrorContext } from 'odin-react'
 import { SystemMonitorOverlay } from './components/admonitor/MonitorOverlay.tsx'
 
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <OdinErrorContext>
-      <SystemMonitorOverlay />
-      <App/>
+        <SystemMonitorOverlay />
+        <App/>
     </OdinErrorContext>
   </StrictMode>,
 )

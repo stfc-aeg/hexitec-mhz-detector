@@ -13,26 +13,26 @@ export interface MetadataType<T> {
 export interface HistogramTypes extends ParamNode {
   acquisition: {
     count: {
-      complete_time_frames: number;
+      output_time_frames: number;
       detector_frames: number;
       raw_hits: number;
-      udp_frames: number;
+      input_time_frames: number;
     };
-    input_frames: number;
     itfg: {
-      input_frames: number;
-      output_frames: number;
+      remaining_in: number;
+      num_out: number;
       status: string;
     };
+    frames_per_histogram: number;
     mode: string;
-    output_frames: number;
+    num_histograms: number;
     run: boolean;
-    duration: number;
   };
   config: {
     baseline: {
       dither: boolean;
       divide: number;
+      init_baseline: boolean;
       mask: string;
     };
     charge_sharing: {
