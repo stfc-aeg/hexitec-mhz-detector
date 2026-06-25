@@ -14,7 +14,7 @@ interface ResetHistory extends ParamNode {
 type States = 'System Idle' | 'Initialising' | 'Monitoring' | 'Resetting'
             | 'Waiting For Lanes'| 'Waiting For Channels'| 'Reactivating'
             | 'Loki Power Init'| 'Loki COB Init'| 'Loki ASIC Init'
-            | 'Error'
+            | 'Error' | 'Delay ASIC' | 'Delay Reactivation'
 
 
 const isCriticalState = (x: States): boolean => {
@@ -112,9 +112,11 @@ const SystemMonitorOverlay: React.FC<MonitorOverplayProps> = (
             case "Loki Power Init":
                 return ["primary", 25]
             case "Waiting For Channels":
+            case "Delay ASIC":
             case "Loki COB Init":
                 return ["primary", 50]
             case "Reactivating":
+            case "Delay Reactivation":
             case "Loki ASIC Init":
                 return ["primary", 75]
             default:

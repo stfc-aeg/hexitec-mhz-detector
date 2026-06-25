@@ -81,6 +81,9 @@ class Monitor:
         self.timeout = 0
         self.max_timeout = timeout
 
+        self.delay_timer = 0
+        """Timer for delaying when resetting before ASIC and before"""
+
         self.max_retries = max_retries
         self.reset_history = deque(maxlen=event_history)
 
@@ -118,7 +121,8 @@ class Monitor:
         return self.readout_status["aurora"]["channel"]
 
     def is_lane_up(self):
-        return self.readout_status["aurora"]["lane"]
+        return (self.readout_status["cmac"]["cmac_0_lane_up"]
+                and self.readout_status["cmac"]["cmac_1_lane_up"])
 
     def is_loki_power_board(self):
         return self.loki_status["POWER_BOARD_INIT"]
@@ -142,6 +146,9 @@ class Monitor:
 
     def is_max_attempts(self):
         return self.retries > self.max_retries
+    
+    def is_delay_over(self):
+        return self.delay_timer <= 0
 
     # Actions
     def on_enter_idle(self):
@@ -221,11 +228,14 @@ class Monitor:
 
     # Resetting Steps for Readout
     def on_enter_waiting_for_lanes(self):
-        """Entering WaitingForLanes State"""
+        """
+        Entering WaitingForLanes State. Disables LOKI Data Sync, resets
+        specific reset bits via the readout adapter
+        """
         self.timeout = 0  # resetting timeout
         try:
-            iac_set(self.loki, self.loki_state_path, {"SYNC": False})
-            logging.debug("Loki Data Sync OFF")
+            # iac_set(self.loki, self.loki_state_path, {"SYNC": False})
+            # logging.debug("Loki Data Sync OFF")
 
             iac_set(self.readout, "status", {"reset": True})
             logging.debug("Readout resetting")
@@ -235,25 +245,40 @@ class Monitor:
         logging.info("Waiting for Lane to come back")
 
     def on_enter_waiting_for_channels(self):
+        # TODO delay required before starting the ASIC reset. (20s??)
         self.timeout = 0
         try:
-            iac_set(self.loki, self.loki_state_path, {"ASIC_REBOND": True})
-            logging.debug("Loki Rebond command sent")
+            iac_set(self.loki, self.loki_state_path, {"ENABLE_STATE": "ASIC_DONE"})
+            logging.debug("Loki ASIC Init command sent")
             self.readout_status = self.get_readout_status()
         except IACError as err:
             self.error = err
-    
+
         logging.info("Waiting for Channel to come back")
 
     def on_enter_reactivating(self):
+        # TODO additional delay needed before setting reactivation (5s)
         self.timeout = 0
         logging.info("Reactivating Readout after reset")
         try:
             iac_set(self.readout, "status", {"reactivate": True})
-            iac_set(self.loki, self.loki_state_path, {"SYNC": True})
+            # iac_set(self.loki, self.loki_state_path, {"SYNC": True})
 
         except IACError as err:
             self.error = err
+
+    def on_enter_delay_asic(self):
+        """Delay Loki ASIC Init after state transfer"""
+        self.delay_timer = 20
+        logging.info("Pausing before Initalising Loki ASIC")
+
+    def on_enter_delay_reactivate(self):
+        """Small delay after channels come up, before reactivation step"""
+        logging.info("Pausing before Reactivation")
+        self.delay_timer = 5
+
+    def on_delay(self):
+        self.delay_timer -= 1
 
     def on_wait(self):
         """Checking status while waiting for reset step.
@@ -324,6 +349,9 @@ class MonitorControl(StateMachine):
     loki_cob_init = State("Loki COB Init")
     loki_asic_init = State("Loki ASIC Init")
 
+    delay_asic = State("Delay ASIC")
+    delay_reactivate = State("Delay Reactivation")
+
     # Transitions
 
     # All states can fall into error state if an error is raised
@@ -338,10 +366,14 @@ class MonitorControl(StateMachine):
 
     # branch to pick which reset step to begin
     start_reset = (
-        resetting.to(waiting_for_lanes, cond="is_loki_up", unless="is_max_attempts or is_error")
-        | resetting.to(loki_power_init, cond="!is_loki_power_board", unless="is_max_attempts or is_error")
-        | resetting.to(loki_cob_init, cond="!is_loki_cob", unless="is_max_attempts or is_error")
-        | resetting.to(loki_asic_init, cond="!is_loki_asic", unless="is_max_attempts or is_error")
+        resetting.to(waiting_for_lanes,
+                     cond="is_loki_up", unless="is_max_attempts or is_error")
+        | resetting.to(loki_power_init,
+                       cond="!is_loki_power_board", unless="is_max_attempts or is_error")
+        | resetting.to(loki_cob_init,
+                       cond="!is_loki_cob", unless="is_max_attempts or is_error")
+        | resetting.to(loki_asic_init,
+                       cond="!is_loki_asic", unless="is_max_attempts or is_error")
     )
 
     reset = (
@@ -358,15 +390,27 @@ class MonitorControl(StateMachine):
     wait = (
         waiting_for_lanes.to(waiting_for_lanes, internal=True,
                              cond=["!is_timeout", "!is_lane_up"], unless="is_error")
-        | waiting_for_lanes.to(waiting_for_channels,
+        | waiting_for_lanes.to(delay_asic,
                                cond="is_lane_up", unless="is_error")
         | waiting_for_channels.to(waiting_for_channels, internal=True,
                                   cond=["!is_timeout", "!is_chan_up"], unless="is_error")
-        | waiting_for_channels.to(reactivating,
+        | waiting_for_channels.to(delay_reactivate,
                                   cond="is_chan_up", unless="is_error")
         | reactivating.to(reactivating, internal=True,
                           cond=["!is_timeout", "!is_running"], unless="is_error")
         | reactivating.to(monitoring, cond="is_running", unless="is_error")
+    )
+
+    # Delay actions. Reset process needs time between certain states to better guarentee success
+    delay = (
+        delay_asic.to(delay_asic, internal=True,
+                      cond="!is_delay_over", unless="is_error")
+        | delay_asic.to(waiting_for_channels,
+                        cond="is_delay_over", unless="is_error")
+        | delay_reactivate.to(delay_reactivate, internal=True,
+                              cond="!is_delay_over", unless="is_error")
+        | delay_reactivate.to(reactivating,
+                              cond="is_delay_over", unless="is_error")
     )
 
     wait_loki = (
@@ -401,7 +445,7 @@ class StateMonitor:
         self.tree = {
             "state": (lambda: self.machine.current_state.name, None,
                       {"allowed_values": [state.name for state in self.machine.states]}),
-            "timeout": (lambda: self.monitor.timeout, None,
+            "timeout": (self.get_timeout, None,
                         {"min": 0, "max": self.monitor.max_timeout}),
             "num_resets": (lambda: self.monitor.reset_counter, None),
             "reset_history": (lambda: list(self.monitor.reset_history), None),
@@ -445,6 +489,12 @@ class StateMonitor:
 
         except TransitionNotAllowed as err:
             logging.error("Error trying to run State Machine: %s", err)
+
+    def get_timeout(self):
+        if self.machine.current_state in [self.machine.delay_asic, self.machine.delay_reactivate]:
+            return self.monitor.delay_timer
+        else:
+            return self.monitor.timeout
 
     def _inject_error(self):
         self.monitor.error = StateMachineException("Debug Injected Error")
