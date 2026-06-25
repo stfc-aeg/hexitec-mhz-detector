@@ -1,5 +1,5 @@
 import { EndpointButton, EndpointCheckbox, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from 'odin-react';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Col, Container, Form, OverlayTrigger, Row } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import type { AcquisitionTypes } from '../../EndpointTypes';

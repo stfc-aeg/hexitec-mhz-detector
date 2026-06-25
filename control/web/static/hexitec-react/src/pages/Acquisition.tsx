@@ -1,7 +1,7 @@
 import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
 import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
-import type { AcquisitionTypes, MunirTypes } from '../EndpointTypes';
+import type { AcquisitionTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
 import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
 
