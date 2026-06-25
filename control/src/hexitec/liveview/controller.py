@@ -176,7 +176,7 @@ class HistogramLiveViewController(BaseController):
     def toggle_log_scaling(self, enable: bool, processor: HistogramLiveViewProcessor):
         """Toggle log scaling for the value range for a given processor."""
         processor.use_log_scaling = bool(enable)
-        self.update_processor({"use_log_scaling": processor.use_log_scaling})
+        self.update_processor({"use_log_scaling": processor.use_log_scaling}, processor)
 
     def set_colour(self, colour: str, processor: HistogramLiveViewProcessor):
         """Set colormap."""
