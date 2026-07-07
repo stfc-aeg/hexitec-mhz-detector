@@ -1,5 +1,6 @@
-import { Row, Col, Card, Form, Button, FloatingLabel } from 'react-bootstrap';
+import { Row, Col, Card, Form, Button, FloatingLabel, FormControl } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
+import { useState, useEffect } from 'react';
 import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
 import type { ProxyParams } from '../../EndpointTypes';
@@ -8,7 +9,6 @@ interface EnvironmentalProps {
   proxyEndpoint: AdapterEndpoint<ProxyParams>;
 }
 
-const EndpointFormControl = WithEndpoint(Form.Control);
 const EndpointButton = WithEndpoint(Button);
 const EndpointSelect = WithEndpoint(Form.Select);
 
@@ -19,6 +19,21 @@ export default function Environmental({
   const envData = proxyEndpoint.data?.loki?.environment;
 
   const peltierSetpoints = [20, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+
+  // Handling of target bias to enforce strings until LOKI metadata behaves
+  const [hvValue, setHvValue] = useState<string>(lokiData?.HV?.target_bias?.toString() ?? '');
+
+  useEffect(() => {
+    setHvValue(lokiData?.HV?.target_bias?.toString() ?? '');
+  }, [lokiData?.HV?.target_bias]);
+
+  const handleApplyHvBias = () => {
+    const parsed = Number(hvValue);
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+    proxyEndpoint.put<number>({ target_bias: parsed }, 'loki/application/HV');
+  };
 
   return (
     <>
@@ -55,12 +70,21 @@ export default function Environmental({
             <UserAware userLevel="power" as={Row} className='mb-3'>
               <Col>
                 <FloatingLabel label="HV Target Bias">
-                  <EndpointFormControl
-                    endpoint={proxyEndpoint} fullpath="loki/application/HV/target_bias"
+                  <FormControl
                     type="number"
+                    value={hvValue}
+                    onChange={(e) => setHvValue(e.currentTarget.value)}
                     style={floatingInputStyle}
                   />
                 </FloatingLabel>
+                <Button
+                  className="mt-2 w-100"
+                  variant="primary"
+                  onClick={handleApplyHvBias}
+                  disabled={hvValue === '' || Number.isNaN(Number(hvValue))}
+                >
+                  Apply
+                </Button>
               </Col>
               <Col>
                 <FloatingLabel label="Current Target Bias">
