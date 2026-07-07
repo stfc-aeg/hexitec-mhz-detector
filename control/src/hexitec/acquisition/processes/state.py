@@ -12,7 +12,7 @@ class State():
 
     executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    def __init__(self, adapters, munir_subsystem, AcquisitionError):
+    def __init__(self, adapters, munir_subsystem, AcquisitionError, default_filepath, default_filename):
         self.munir_subsystem = munir_subsystem
 
         self.munir = adapters["munir"]
@@ -34,8 +34,8 @@ class State():
         self.acquisition_progress = 0.0
 
         # File settings (as convenience functions for munir)
-        self.file_name = "mhz_acquisition"
-        self.file_path = "/tmp"
+        self.file_name = default_filename
+        self.file_path = default_filepath
         self.file_timestamp = False
 
         self.tree = ParameterTree({

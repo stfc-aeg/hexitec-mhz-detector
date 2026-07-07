@@ -78,13 +78,15 @@ class AcquisitionController(BaseController):
             self.adapters['sequencer'].add_context('readout', self.readout.controller)
 
         # Set a default file name and path
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", self.options.get('default_filepath', '/tmp/'))
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", self.options.get('default_filename', 'mhz_acquisition'))
+        default_filepath = self.options.get('default_filepath', '/tmp/')
+        default_filename = self.options.get('default_filename', 'mhz_acquisition')
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", default_filepath)
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", default_filename)
 
         # Provide adapters to sub-processess
 
         self.configuration = Configuration(self.adapters, self.munir_subsystem, AcquisitionError)
-        self.state = State(self.adapters, self.munir_subsystem, AcquisitionError)
+        self.state = State(self.adapters, self.munir_subsystem, AcquisitionError, default_filepath, default_filename)
 
         self.state._register_configuration(self.configuration)
         self.configuration._register_state(self.state)
