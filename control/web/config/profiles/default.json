@@ -1,0 +1,46 @@
+{
+  "charge_pos_edge"        : true,
+  "charge_sum_enable"      : true,
+  "charge_neg_neighbour"   : false,
+  "charge_pos_adjust"      : false,
+
+  "thres_abs_low_default"  : 1,
+  "thres_abs_high_default" : 1000,
+  "thres_low_neg_default"  : -35,
+  "thres_low_pos_default"  : 35,
+  "thres_main_neg_default" : -35,
+  "thres_main_pos_default" : 25,
+
+  "baseline_dither"        : true,
+  "dark_tracking_enable"   : true,
+
+  "auto_trigger_mode"      : "ONEIN2",
+  "cluster_mode"           : "INDEPENDANT",
+
+  "cluster_hoz"            : false,
+  "cluster_hoz_nl"         : true,
+  "cluster_hoz_nr"         : false,
+  "cluster_vert"           : false,
+  "cluster_vert_na"        : false,
+  "cluster_vert_nb"        : true,
+  "cluster_diag1"          : false,
+  "cluster_diag1nl"        : false,
+  "cluster_diag1nr"        : false,
+  "cluster_diag2"          : false,
+  "cluster_diag2nl"        : false,
+  "cluster_diag2nr"        : false,
+  "cluster_quad"           : false,
+  "cluster_all"            : null,
+  "cluster_lone"           : false,
+  "cluster_l1"             : false,
+  "cluster_l2"             : true,
+  "cluster_l3"             : false,
+  "cluster_l4"             : false,
+
+  "highvoltage_enable"     : 0,
+  "highvoltage_target_bias": -100,
+  "peltier_enable"         : 1,
+  "peltier_setpoint"       : 25,
+  "feedback_capacitance"   : 14,
+  "negative_dynamic_range" : "high"
+}

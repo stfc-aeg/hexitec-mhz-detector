@@ -3,20 +3,29 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
 
+import json
+from pathlib import Path
+from hexitec.acquisition.processes.config_template import template
+
 class Configuration():
     def __init__(self, adapters, munir_subsystem, AcquisitionError):
         self.munir_subsystem = munir_subsystem
 
         self.bin_mode = "histogram_1024"
+
         self.munir = adapters["munir"]
         self.munir_odindata_controller = self.munir.controller.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
         self.histogrammer = adapters["histogram"]
         self.readout = adapters["readout"]
         self.liveview = adapters["liveview"]
+        self.proxy = adapters["proxy"]
 
         self.AcquisitionError = AcquisitionError
 
         self.device_options = ["software", "hardware"]
+
+        # Configuration profile template
+        self.template = template
 
         # Get system to a known state on start
         # iac_get are safe here as this is part of acquisition adapter's initialize
@@ -75,7 +84,7 @@ class Configuration():
                 self.change_bin_mode(munir_num_bins)
 
     def _register_state(self, state):
-        """Get a reference to the state class."""
+        """Get a reference to the state and parent class."""
         self.state = state
 
     def change_bin_mode(self, bin_mode: str):
@@ -250,12 +259,81 @@ class Configuration():
             self.baseline_settings['prev_auto_trig'] = iac_get(self.histogrammer, "config/clustering/auto_trig_mode")
             self.baseline_settings['prev_cluster_mode'] = iac_get(self.histogrammer, "config/clustering/mode")
 
-            iac_set(self.histogrammer, "config/baseline/mask", "fixed")
-            iac_set(self.histogrammer, "config/clustering/mode", "auto")
-            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'autotrig 1in2')
+            iac_set(self.histogrammer, "config/baseline/mask", "FIXED")
+            iac_set(self.histogrammer, "config/clustering/mode", "AUTO")
+            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'ONEIN2')
         else:
             self.baseline_settings['enabled'] = False
 
             iac_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
             iac_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
             iac_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
+
+    def set_profile(self, profile: str):
+        """Set the configuration profile for the system.
+        :param profile: string of the profile name, or 'custom'
+        """
+        self.profile = profile
+
+        logging.debug(f"Setting values from configuration profile: {profile}")
+
+        # Temporary local path handling until this becomes a config option.
+        repo_root = Path(__file__).resolve().parents[4]
+        profile_filename = "default.json" if profile in {"default", "custom"} else f"{profile}.json"
+        profile_path = repo_root / "web" / "config" / "profiles" / profile_filename
+
+        if not profile_path.exists():
+            logging.warning(f"Config profile not found: {profile_path}")
+            self.profile_data = {}
+            return
+
+        with profile_path.open("r", encoding="utf-8") as handle:
+            profile_data = json.load(handle)
+
+        if not isinstance(profile_data, dict):
+            raise self.AcquisitionError(f"Profile file {profile_path} must contain a JSON object.")
+
+        # Temporary function to write out the details based on the template paths
+        def _write_value(key):
+            details = self.template[key]
+            value = details.get('value', None)
+
+            # If the value doesn't exist and isn't a boolean
+            if value is None:
+                return
+
+
+            # Special case: cannot refer to parent adapter,
+            if details['adapter'] == 'acquisition':
+                func = getattr(self, details['path'])
+                func(value)
+                return
+
+            try:
+                # If the provided path contains a tail (i.e. ends with the parameter name),
+                # split it into parent path and parameter name and send as {param: value}.
+                # For proxy, this is necessary to work with iac_set
+                path = details.get('path', '') or ''
+                if '/' in path:
+                    parent_path, tail = path.rsplit('/', 1)
+                    data_payload = {tail: value}
+                    iac_set(adapter=getattr(self, details['adapter']), path=parent_path, data=data_payload)
+                else:
+                    # If there's no tail, use the 
+                    # If there's not a tail, just use the key name instead as a backup
+                    # No explicit tail in path: send under the key name from the template
+                    # If path is empty, use the template key as the parameter name at top-level
+                    parent_path = path
+                    param_name = details.get('path') if details.get('path') else key
+                    data_payload = {param_name: value}
+                    iac_set(adapter=getattr(self, details['adapter']), path=parent_path, data=data_payload)
+            except Exception as e:
+                logging.error(f"Failed to set value in config profile: {e}")
+        
+        for key, value in profile_data.items():
+            self.template[key]['value'] = value
+
+        for key in self.template.keys():
+            _write_value(key)
+            # Reset template for next profile
+            self.template[key]['value'] = None
