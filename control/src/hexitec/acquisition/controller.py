@@ -83,13 +83,15 @@ class AcquisitionController(BaseController):
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", default_filepath)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", default_filename)
 
-        # Provide adapters to sub-processess
+        profile_filepath = self.options.get('profile_directory', 'web/config/profiles')
 
-        self.configuration = Configuration(self.adapters, self.munir_subsystem, AcquisitionError)
+        # Provide adapters to sub-processess
+        self.configuration = Configuration(self.adapters, self.munir_subsystem, profile_filepath, AcquisitionError)
         self.state = State(self.adapters, self.munir_subsystem, AcquisitionError, default_filepath, default_filename)
 
         self.state._register_configuration(configuration=self.configuration)
         self.configuration._register_state(state=self.state)
+
 
         # Connect histogrammer and setup UDP
         iac_set(self.histogrammer, "device/connect", True)

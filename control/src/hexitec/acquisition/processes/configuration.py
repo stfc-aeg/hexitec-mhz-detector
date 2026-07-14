@@ -8,7 +8,7 @@ from pathlib import Path
 from hexitec.acquisition.processes.config_template import template
 
 class Configuration():
-    def __init__(self, adapters, munir_subsystem, AcquisitionError):
+    def __init__(self, adapters, munir_subsystem, profile_filepath, AcquisitionError):
         self.munir_subsystem = munir_subsystem
 
         self.bin_mode = "histogram_1024"
@@ -26,6 +26,10 @@ class Configuration():
 
         # Configuration profile template
         self.template = template
+        self.profile_filepath = profile_filepath
+        self.profile = "default"
+        self.available_profiles = ["banana"]
+        self._update_profiles()
 
         # Get system to a known state on start
         # iac_get are safe here as this is part of acquisition adapter's initialize
@@ -70,7 +74,11 @@ class Configuration():
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
             },
-            'estimated_data_rate': (lambda: self.data_rate, None)
+            'estimated_data_rate': (lambda: self.data_rate, None),
+            'config_profile': {
+                'available': (lambda: self.available_profiles, self._update_profiles),
+                'current': (lambda: self.profile, self.set_profile)
+            }
         })
 
         # Ensure bin count matches odin_data as that is the most complicated to change
@@ -277,10 +285,9 @@ class Configuration():
 
         logging.debug(f"Setting values from configuration profile: {profile}")
 
-        # Temporary local path handling until this becomes a config option.
-        repo_root = Path(__file__).resolve().parents[4]
-        profile_filename = "default.json" if profile in {"default", "custom"} else f"{profile}.json"
-        profile_path = repo_root / "web" / "config" / "profiles" / profile_filename
+        # self.profile_filepath is expected to be a directory path like /path/to/profiles.
+        profile_dir = Path(self.profile_filepath)
+        profile_path = profile_dir / f"{profile}.json"
 
         if not profile_path.exists():
             logging.warning(f"Config profile not found: {profile_path}")
@@ -337,3 +344,17 @@ class Configuration():
             _write_value(key)
             # Reset template for next profile
             self.template[key]['value'] = None
+
+    def _update_profiles(self, val=None):
+        """Read the profiles directory and fetch the names of all .json files within.
+        These names become the available_profiles for selection, as paramtree metadata is static.
+        """
+        profiles_dir = Path(self.profile_filepath)
+
+        if not profiles_dir.exists():
+            self.available_profiles = []
+            return
+
+        self.available_profiles = sorted(
+            path.stem for path in profiles_dir.glob("*.json") if path.is_file()
+        )

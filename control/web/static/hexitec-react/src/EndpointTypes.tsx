@@ -350,7 +350,12 @@ export interface AcquisitionTypes extends ParamNode {
       trigger_mode: string;
     };
     estimated_data_rate: number;
+    config_profile: {
+      available: string[];
+      current: string
+    };
   };
+
   state: {
     acquisition: {
       toggle: boolean;
