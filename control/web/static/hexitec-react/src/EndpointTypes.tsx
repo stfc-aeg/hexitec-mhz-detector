@@ -380,6 +380,7 @@ export interface LokiEnviromentParams extends ParamNode {
   }
 }
 
+
 export interface LokiApplicationData extends ParamNode {
   HV: {
     ENABLE: number;
@@ -392,6 +393,16 @@ export interface LokiApplicationData extends ParamNode {
     count: number;
     temperature: number;
     enable: boolean;
+  }
+  asic_settings: {
+    feedback_capacitance: number;
+    feedback_gain: string;
+    negative_range_kev: number;
+    negative_range_lowhigh: string;
+    negative_range_options: {
+      low: number;
+      high: number;
+    };
   }
 }
 

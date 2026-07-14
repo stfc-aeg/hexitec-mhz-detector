@@ -12,7 +12,10 @@ const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function DetectorControls({ proxyEndpoint }: DetectorControlsProps) {
 
-  // const lokiData = proxyEndpoint.data?.loki?.application;
+  const lokiData = proxyEndpoint.data?.loki?.application?.asic_settings;
+
+  // low: something, high: something
+  const negativeRangeOptions = lokiData?.negative_range_options ?? {};
 
   return (
     <Card className="mt-3">
@@ -43,12 +46,12 @@ export default function DetectorControls({ proxyEndpoint }: DetectorControlsProp
             <FloatingLabel label="Negative Dynamic Range">
               <EndpointSelect
                 endpoint={proxyEndpoint}
-                fullpath="loki/application/asic_settings/negative_range"
+                fullpath="loki/application/asic_settings/negative_range_lowhigh"
                 variant="outline-secondary"
                 style={floatingInputStyle}
               >
-                <option value="-20">-20 keV</option>
-                <option value="-10">-10 keV</option>
+                <option value={"low"}>{negativeRangeOptions.low} (Low)</option>
+                <option value={"high"}>{negativeRangeOptions.high} (High)</option>
               </EndpointSelect>
             </FloatingLabel>
           </Col>

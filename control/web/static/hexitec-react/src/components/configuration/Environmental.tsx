@@ -18,7 +18,7 @@ export default function Environmental({
   const lokiData = proxyEndpoint.data?.loki?.application;
   const envData = proxyEndpoint.data?.loki?.environment;
 
-  const peltierSetpoints = [20, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+  const peltierSetpoints = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
 
   // Handling of target bias to enforce strings until LOKI metadata behaves
   const [hvValue, setHvValue] = useState<string>(lokiData?.HV?.target_bias?.toString() ?? '');
@@ -129,12 +129,12 @@ export default function Environmental({
 
             <UserAware userLevel="power" as={Row} className='mb-3'>
               <Col>
-                <FloatingLabel label="Proportion/Setpoint">
+                <FloatingLabel label="Setpoint">
                   <EndpointSelect
                     endpoint={proxyEndpoint}
-                    fullpath="loki/application/peltier/proportion"
+                    fullpath="loki/application/peltier/temperature"
                     variant="outline-secondary"
-                    buttonText={checkNullNoDp((lokiData?.peltier?.proportion ?? 0) * 100)}
+                    buttonText={checkNullNoDp((lokiData?.peltier?.temperature ?? 0) * 100)}
                     style={floatingInputStyle}
                   >
                     {peltierSetpoints.map((selection) => (
