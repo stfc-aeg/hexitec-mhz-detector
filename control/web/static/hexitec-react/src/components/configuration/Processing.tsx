@@ -27,34 +27,34 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint }: P
 
   // Ordered for grouping: horizontal, vertical, diag1, diag2, quad/all/lone, L1-L4
   const clusterTypeOrder = [
-    'hoz', 'hoz nl', 'hoz nr',
-    'vert', 'vert na', 'vert nb',
-    'diag1', 'diag1nl', 'diag1nr',
-    'diag2', 'diag2nl', 'diag2nr',
-    'quad', 'all', 'lone',
-    'l1', 'l2', 'l3', 'l4'
+    'HOZ', 'HOZ_NL', 'HOZ_NR',
+    'VERT', 'VERT_NA', 'VERT_NB',
+    'DIAG1', 'DIAG1NL', 'DIAG1NR',
+    'DIAG2', 'DIAG2NL', 'DIAG2NR',
+    'QUAD', 'ALL', 'LONE',
+    'L1', 'L2', 'L3', 'L4'
   ];
 
   const clusterTypeLabels: { [key: string]: string } = {
-    'all': 'All',
-    'diag1': 'Diagonal 1',
-    'diag1nl': 'D.1 No Left',
-    'diag1nr': 'D.1 No Right',
-    'diag2': 'Diagonal 2',
-    'diag2nl': 'D.2 No Left',
-    'diag2nr': 'D.2 No Right',
-    'hoz': 'Horizontal',
-    'hoz nl': 'Horiz. No Left',
-    'hoz nr': 'Horiz. No Right',
-    'l1': 'L1',
-    'l2': 'L2',
-    'l3': 'L3',
-    'l4': 'L4',
-    'lone': 'Lone',
-    'quad': 'Quad',
-    'vert': 'Vertical',
-    'vert na': 'Vert. No Above',
-    'vert nb': 'Vert. No Below'
+    'ALL': 'All',
+    'DIAG1': 'Diagonal 1',
+    'DIAG1NL': 'D.1 No Left',
+    'DIAG1NR': 'D.1 No Right',
+    'DIAG2': 'Diagonal 2',
+    'DIAG2NL': 'D.2 No Left',
+    'DIAG2NR': 'D.2 No Right',
+    'HOZ': 'Horizontal',
+    'HOZ_NL': 'Horiz. No Left',
+    'HOZ_NR': 'Horiz. No Right',
+    'L1': 'L1',
+    'L2': 'L2',
+    'L3': 'L3',
+    'L4': 'L4',
+    'LONE': 'Lone',
+    'QUAD': 'Quad',
+    'VERT': 'Vertical',
+    'VERT_NA': 'Vert. No Above',
+    'VERT_NB': 'Vert. No Below'
   };
 
   // need to map histogram bin modes to numbers
