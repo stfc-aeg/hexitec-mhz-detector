@@ -352,7 +352,8 @@ export interface AcquisitionTypes extends ParamNode {
     estimated_data_rate: number;
     config_profile: {
       available: string[];
-      current: string
+      current: string;
+      create_profile: null;
     };
   };
 

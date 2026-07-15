@@ -28,7 +28,7 @@ class Configuration():
         self.template = template
         self.profile_filepath = profile_filepath
         self.profile = "default"
-        self.available_profiles = ["banana"]
+        self.available_profiles = ["default"]
         self._update_profiles()
 
         # Get system to a known state on start
@@ -77,7 +77,8 @@ class Configuration():
             'estimated_data_rate': (lambda: self.data_rate, None),
             'config_profile': {
                 'available': (lambda: self.available_profiles, self._update_profiles),
-                'current': (lambda: self.profile, self.set_profile)
+                'current': (lambda: self.profile, self.set_profile),
+                'create_profile': (lambda: None, self.create_profile)
             }
         })
 
@@ -283,6 +284,9 @@ class Configuration():
         """
         self.profile = profile
 
+        if profile == "custom":
+            return
+
         logging.debug(f"Setting values from configuration profile: {profile}")
 
         # self.profile_filepath is expected to be a directory path like /path/to/profiles.
@@ -358,3 +362,44 @@ class Configuration():
         self.available_profiles = sorted(
             path.stem for path in profiles_dir.glob("*.json") if path.is_file()
         )
+        self.available_profiles.append("custom")
+
+    def create_profile(self, name: str):
+        """Create a profile file with the given name using the current settings."""
+
+        def _read_value(key):
+            details = self.template[key]
+
+            # Special case as with set_profile above
+            # Only one so we must just return the value. In future this will need revision
+            if details['adapter'] == 'acquisition':
+                self.template[key]['value'] = self.baseline_settings['enabled']
+                return
+            
+            try:
+                self.template[key]['value'] = iac_get(adapter=getattr(self, details['adapter']), path=details['path'])
+            except Exception as e:
+                logging.error(f"Failed to read value for config profile: {e}")
+        
+        # Get values and populate file-to-write
+        to_write = {}
+        for key in self.template.keys():
+            _read_value(key)
+            to_write[key] = self.template[key]['value']
+        
+        # Name: cannot be empty, and cannot be 'custom'
+        if not name or name is "custom":
+           # If there is no name or name is 'custom', overwrite it with new_config or custom_config
+           name = name if name else "new_"
+           name = f"{name}_config"
+
+        # Write the values out to JSON then clear the template again
+        filename = f"{name}.json"
+        repo_root = Path(__file__).resolve().parents[4]
+        filepath = repo_root / "web" / "config" / "profiles" / filename
+        with open(filepath, 'w') as file:
+            json.dump(to_write, file, indent=4)
+        
+        # Clear template
+        for key in self.template.keys():
+            self.template[key]['value'] = None

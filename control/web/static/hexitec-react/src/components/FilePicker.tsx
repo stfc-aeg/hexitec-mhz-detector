@@ -14,11 +14,12 @@ interface FilePickerProps {
   defaultLabel?: string;
   loadButton?: boolean;  // Do you need a button to load the file
   loadPath?: string;  // Optional as is the button
+  disabled?: boolean; 
 }
 
 const EndpointSelect = WithEndpoint(Form.Select);
 
-export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, defaultLabel="Select file...", loadButton=true, }: FilePickerProps) {
+export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, defaultLabel="Select file...", loadButton=true, disabled=false}: FilePickerProps) {
   return (
     <InputGroup>
       <EndpointSelect
@@ -26,6 +27,7 @@ export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, def
         fullpath={fullpath}
         variant='outline-secondary'
         value={buttonText}
+        disabled={disabled}
       >
         <option value="" disabled>{defaultLabel}</option>
         {(param_metadata?.allowed_values ?? [])
@@ -44,7 +46,7 @@ export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, def
           fullpath={fullpath}
           value={true}
           variant='primary'
-          disabled={!(buttonText !== "")}
+          disabled={!(buttonText !== "") || disabled}
         >
           Load file
         </EndpointButton>

@@ -7,13 +7,14 @@ import type { ProxyParams } from '../../EndpointTypes';
 
 interface EnvironmentalProps {
   proxyEndpoint: AdapterEndpoint<ProxyParams>;
+  isCustom: boolean;
 }
 
 const EndpointButton = WithEndpoint(Button);
 const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function Environmental({
-  proxyEndpoint,
+  proxyEndpoint, isCustom
 }: EnvironmentalProps) {
   const lokiData = proxyEndpoint.data?.loki?.application;
   const envData = proxyEndpoint.data?.loki?.environment;
@@ -52,6 +53,7 @@ export default function Environmental({
                   endpoint={proxyEndpoint} fullpath="loki/application/HV/ENABLE"
                   variant={lokiData?.HV?.ENABLE ? 'danger' : 'primary'}
                   value={lokiData?.HV?.ENABLE ? 0 : 1}
+                  disabled={!isCustom}
                 >
                   {lokiData?.HV?.ENABLE ? 'Disable HV' : 'Enable HV'}
                 </EndpointButton>
@@ -75,13 +77,14 @@ export default function Environmental({
                     value={hvValue}
                     onChange={(e) => setHvValue(e.currentTarget.value)}
                     style={floatingInputStyle}
+                    disabled={!isCustom}
                   />
                 </FloatingLabel>
                 <Button
                   className="mt-2 w-100"
                   variant="primary"
                   onClick={handleApplyHvBias}
-                  disabled={hvValue === '' || Number.isNaN(Number(hvValue))}
+                  disabled={hvValue === '' || Number.isNaN(Number(hvValue)) || !isCustom}
                 >
                   Apply
                 </Button>
@@ -111,6 +114,7 @@ export default function Environmental({
                   endpoint={proxyEndpoint} fullpath="loki/application/peltier/enable"
                   variant={lokiData?.peltier?.enable ? 'danger' : 'primary'}
                   value={lokiData?.peltier?.enable ? 0 : 1}
+                  disabled={!isCustom}
                 >
                   {lokiData?.peltier?.enable ? 'Disable Peltier' : 'Enable Peltier'}
                 </EndpointButton>
@@ -136,6 +140,7 @@ export default function Environmental({
                     variant="outline-secondary"
                     buttonText={checkNullNoDp((lokiData?.peltier?.temperature ?? 0) * 100)}
                     style={floatingInputStyle}
+                    disabled={!isCustom}
                   >
                     {peltierSetpoints.map((selection) => (
                       <option value={selection} key={selection}>{selection}</option>

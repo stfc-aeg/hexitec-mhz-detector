@@ -6,11 +6,12 @@ import type { ProxyParams } from '../../EndpointTypes';
 
 interface DetectorControlsProps {
   proxyEndpoint: AdapterEndpoint<ProxyParams>;
+  isCustom: boolean;
 }
 
 const EndpointSelect = WithEndpoint(Form.Select);
 
-export default function DetectorControls({ proxyEndpoint }: DetectorControlsProps) {
+export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorControlsProps) {
 
   const lokiData = proxyEndpoint.data?.loki?.application?.asic_settings;
 
@@ -32,6 +33,7 @@ export default function DetectorControls({ proxyEndpoint }: DetectorControlsProp
                 fullpath="loki/application/asic_settings/feedback_capacitance"
                 variant="outline-secondary"
                 style={floatingInputStyle}
+                disabled={!isCustom}
                 >
                   <option value="7">7fF (High)</option>
                   <option value="14">14fF (Medium)</option>
@@ -49,6 +51,7 @@ export default function DetectorControls({ proxyEndpoint }: DetectorControlsProp
                 fullpath="loki/application/asic_settings/negative_range_lowhigh"
                 variant="outline-secondary"
                 style={floatingInputStyle}
+                disabled={!isCustom}
               >
                 <option value={"low"}>{negativeRangeOptions.low} (Low)</option>
                 <option value={"high"}>{negativeRangeOptions.high} (High)</option>

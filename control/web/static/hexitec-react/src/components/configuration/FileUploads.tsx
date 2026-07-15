@@ -5,9 +5,10 @@ import type { AdapterEndpoint } from 'odin-react';
 
 interface FileUploadsProps {
   histogramEndpoint: AdapterEndpoint<HistogramTypes>;
+  isCustom: boolean;
 }
 
-export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
+export default function FileUploads( { histogramEndpoint, isCustom }: FileUploadsProps) {
 
   const histogramMetadata = histogramEndpoint.metadata;
   const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename;
@@ -42,6 +43,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
               param_metadata={badpixthres_metadata}
               loadButton
               loadPath="config/thresholds/bad_pixel/load"
+              disabled={!isCustom}
             />
           </Col>
         </Row>
@@ -55,6 +57,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
               param_metadata={badpixmask_metadata}
               loadButton
               loadPath="config/hist_format/bad_pixel_mask/load"
+              disabled={!isCustom}
             />
           </Col>
         </Row>
@@ -71,6 +74,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
                   param_metadata={l3file_metadata}
                   loadButton
                   loadPath="config/charge_sharing/l3_load"
+                  disabled={!isCustom}
                 />
               </Row>
               <Row className="mb-2">
@@ -82,6 +86,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
                   param_metadata={mcfile_metadata}
                   loadButton
                   loadPath="config/charge_sharing/mc_load"
+                  disabled={!isCustom}
                 />
               </Row>
               <Row className="mb-2">
@@ -93,6 +98,7 @@ export default function FileUploads( { histogramEndpoint }: FileUploadsProps) {
                   param_metadata={posfile_metadata}
                   loadButton
                   loadPath="config/charge_sharing/pos_load"
+                  disabled={!isCustom}
                 />
               </Row>
             </Accordion.Body>
