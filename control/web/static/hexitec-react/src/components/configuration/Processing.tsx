@@ -1,4 +1,4 @@
-import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'react-bootstrap';
+import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion, Alert } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
 import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
 import { floatingInputStyle } from '../../utils.js';
@@ -25,6 +25,11 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
   const acquisitionData = acquisitionEndpoint?.data;
   const acquisitionMetadata = acquisitionEndpoint?.metadata;
   const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
+
+  // If an acquisition is happening, the histogrammer will not let you change settings
+  // The UI should make it obvious this is what is occurring
+  // In future, some handling for in-preview as opposed to in-acquisition, but this will reuqire some consideration
+  const isAcquiring = acquisitionData?.state?.acquisition?.toggle || acquisitionData?.state?.preview?.toggle;
 
   // Ordered for grouping: horizontal, vertical, diag1, diag2, quad/all/lone, L1-L4
   const clusterTypeOrder = [
@@ -75,6 +80,16 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
       <Card.Header><strong>Processing</strong></Card.Header>
       <Card.Body>
         <Row>
+          {isAcquiring ?
+            <Alert
+              variant='warning'
+              dismissible={false}
+              className="mt-2 w-100"
+            >
+              While the histogrammer is acquiring (preview or acquisition), you will not be able to change settings in the histogrammer.
+            </Alert> :
+            <></>
+          }
           <Col>
             <Row>
               <Col>
@@ -85,7 +100,8 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                     fullpath="config/bin_mode"
                     variant="outline-secondary"
                     buttonText={acquisitionData?.config?.bin_mode}
-                    style={floatingInputStyle}>
+                    style={floatingInputStyle}
+                    disabled={isAcquiring}>
                       {(binmode_metadata?.allowed_values ?? ['?']).map(
                         (selection, index) => (
                           <option value={selection} key={index}>{binModeOptions[selection] || selection}</option>
@@ -103,7 +119,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   fullpath="config/charge_sharing/positive_edge"
                   type="switch"
                   label="Positive Edge"
-                  disabled={!isCustom}
+                  disabled={!isCustom || isAcquiring}
                 />
               </Col>
               <Col>
@@ -112,7 +128,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   fullpath="config/charge_sharing/sum_enable"
                   type="switch"
                   label="Sum Enable"
-                  disabled={!isCustom}
+                  disabled={!isCustom || isAcquiring}
                 />
               </Col>
             </Row>
@@ -123,7 +139,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   fullpath="config/charge_sharing/negative_neighbour"
                   type="switch"
                   label="Negative Neighbour"
-                  disabled={!isCustom}
+                  disabled={!isCustom || isAcquiring}
                 />
               </Col>
               <Col>
@@ -132,7 +148,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   fullpath="config/charge_sharing/position_adjust"
                   type="switch"
                   label="Position Adjust"
-                  disabled={!isCustom}
+                  disabled={!isCustom || isAcquiring}
                 />
               </Col>
             </Row>
@@ -149,7 +165,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                       <EndpointSelect
                         endpoint={histogramEndpoint}
                         fullpath="config/clustering/auto_trig_mode"
-                        disabled={!isCustom}
+                        disabled={!isCustom || isAcquiring}
                         >
                           {autoTrigModeOptions?.map((option: string) => (
                             <option value={option} key={option}>{option}</option>
@@ -162,7 +178,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                       <EndpointSelect
                         endpoint={histogramEndpoint}
                         fullpath="config/clustering/mode"
-                        disabled={!isCustom}
+                        disabled={!isCustom || isAcquiring}
                         >
                           {modeOptions?.map((option: string) => (
                             <option value={option} key={option}>{option}</option>
@@ -185,7 +201,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                                   fullpath={`config/clustering/types/${typeKey}`}
                                   type="switch"
                                   label={clusterTypeLabels[typeKey] || typeKey}
-                                  disabled={!isCustom}
+                                  disabled={!isCustom || isAcquiring}
                                 />
                               </Col>
                             ))}
@@ -212,7 +228,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                       fullpath="config/baseline/toggle"
                       label="On"
                       type="switch"
-                      disabled={!isCustom}
+                      disabled={!isCustom || isAcquiring}
                     />
                   </Col>
                 </OverlayTrigger>
@@ -222,7 +238,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                     fullpath="config/baseline/dither"
                     label="Dither"
                     type="switch"
-                    disabled={!isCustom}
+                    disabled={!isCustom || isAcquiring}
                   />
                 </Col>
               </Row>
@@ -239,7 +255,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                     endpoint={histogramEndpoint}
                     fullpath="config/thresholds/main/neg"
                     style={floatingInputStyle}
-                    disabled={!isCustom}
+                    disabled={!isCustom || isAcquiring}
                   />
                 </FloatingLabel>
                 <FloatingLabel label="Positive">
@@ -247,7 +263,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                     endpoint={histogramEndpoint}
                     fullpath="config/thresholds/main/pos"
                     style={floatingInputStyle}
-                    disabled={!isCustom}
+                    disabled={!isCustom || isAcquiring}
                   />
                 </FloatingLabel>
               </InputGroup>
@@ -262,7 +278,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/low/neg"
                           style={floatingInputStyle}
-                          disabled={!isCustom}
+                          disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>
                       <FloatingLabel label="Positive">
@@ -270,7 +286,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/low/pos"
                           style={floatingInputStyle}
-                          disabled={!isCustom}
+                          disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>
                     </InputGroup>
@@ -281,7 +297,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/absolute/low"
                           style={floatingInputStyle}
-                          disabled={!isCustom}
+                          disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>
                       <FloatingLabel label="High">
@@ -289,7 +305,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/absolute/high"
                           style={floatingInputStyle}
-                          disabled={!isCustom}
+                          disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>
                     </InputGroup>
