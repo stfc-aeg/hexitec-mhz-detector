@@ -5,7 +5,7 @@ from hexitec.util.iac import iac_get, iac_set
 
 import json
 from pathlib import Path
-from hexitec.acquisition.processes.config_template import template
+from hexitec.acquisition.processes.config_mapping import mapping
 
 class Configuration():
     def __init__(self, adapters, munir_subsystem, profile_filepath, AcquisitionError):
@@ -24,8 +24,8 @@ class Configuration():
 
         self.device_options = ["software", "hardware"]
 
-        # Configuration profile template
-        self.template = template
+        # Configuration profile mapping
+        self.mapping = mapping
         self.profile_filepath = profile_filepath
         self.profile = "default"
         self.available_profiles = ["default"]
@@ -304,47 +304,32 @@ class Configuration():
         if not isinstance(profile_data, dict):
             raise self.AcquisitionError(f"Profile file {profile_path} must contain a JSON object.")
 
-        # Temporary function to write out the details based on the template paths
-        def _write_value(key):
-            details = self.template[key]
-            value = details.get('value', None)
-
-            # If the value doesn't exist and isn't a boolean
+        # Temporary function to write out the details based on the mapping paths
+        def _write_value(key, value):
+            """Write the profile value to the given path in the mapping dictionary."""
+            # If the value doesn't exist, don't do anything with it
             if value is None:
                 return
+            
+            # Break up path into adapter and the rest
+            full = self.mapping[key]
+            adapter, rest = full.split('/', 1) if '/' in full else (full, '')
+            path, param_name = rest.rsplit('/', 1) if '/' in rest else ('', rest if rest else key)
+            # This gives you adapter, path is optional, and paramname will be key if there is none
 
-            # Special case: cannot refer to parent adapter,
-            if details['adapter'] == 'acquisition':
-                func = getattr(self, details['path'])
+            if adapter == 'acquisition':
+                func = getattr(self, param_name)
                 func(value)
                 return
-
+            
             try:
-                # If the provided path contains a tail (i.e. ends with the parameter name),
-                # split it into parent path and parameter name and send as {param: value}.
-                # For proxy, this is necessary to work with iac_set
-                path = details.get('path', '') or ''
-                if '/' in path:
-                    parent_path, tail = path.rsplit('/', 1)
-                    data_payload = {tail: value}
-                    iac_set(adapter=getattr(self, details['adapter']), path=parent_path, data=data_payload)
-                else:
-                    # No tail in path: the path is at the root of the tree so path is nothing
-                    # No explicit tail in path: send under the key name from the template
-                    # If path is empty, use the template key as the parameter name at top-level
-                    param_name = path if path else key
-                    data_payload = {param_name: value}
-                    iac_set(adapter=getattr(self, details['adapter']), path='', data=data_payload)
+                data = {param_name: value}
+                iac_set(adapter=getattr(self, adapter), path=path, data=data)
             except Exception as e:
-                logging.error(f"Failed to set value in config profile: {e}")
+                logging.error(f"Faield to set value in config profile: {e}")
         
         for key, value in profile_data.items():
-            self.template[key]['value'] = value
-
-        for key in self.template.keys():
-            _write_value(key)
-            # Reset template for next profile
-            self.template[key]['value'] = None
+            _write_value(key, value)
 
     def _update_profiles(self, val=None):
         """Read the profiles directory and fetch the names of all .json files within.
@@ -365,23 +350,24 @@ class Configuration():
         """Create a profile file with the given name using the current settings."""
 
         def _read_value(key):
-            details = self.template[key]
+            # Handle path
+            full = self.mapping[key]
+            adapter, rest = full.split('/', 1) if '/' in full else (full, '')
 
             # Special case as with set_profile above
             # Only one so we must just return the value. In future this will need revision
-            if details['adapter'] == 'acquisition':
+            if adapter == 'acquisition':
                 return self.baseline_settings['enabled']
 
             try:
-                return iac_get(adapter=getattr(self, details['adapter']), path=details['path'])
+                return iac_get(adapter=getattr(self, adapter), path=rest)
             except Exception as e:
                 logging.error(f"Failed to read value for config profile: {e}")
         
         # Get values and populate file-to-write
         to_write = {}
-        for key in self.template.keys():
+        for key in self.mapping.keys():
             to_write[key] = _read_value(key)
-            # to_write[key] = self.template[key]['value']
         
         # Name: cannot be empty, and cannot be 'custom'
         if not name or name is "custom":
@@ -389,7 +375,7 @@ class Configuration():
            name = name if name else "new_"
            name = f"{name}_config"
 
-        # Write the values out to JSON then clear the template again
+        # Write the values out to JSON
         filename = f"{name}.json"
         repo_root = Path(__file__).resolve().parents[4]
         filepath = repo_root / "web" / "config" / "profiles" / filename
