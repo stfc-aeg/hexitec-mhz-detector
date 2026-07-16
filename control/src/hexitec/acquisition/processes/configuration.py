@@ -313,7 +313,6 @@ class Configuration():
             if value is None:
                 return
 
-
             # Special case: cannot refer to parent adapter,
             if details['adapter'] == 'acquisition':
                 func = getattr(self, details['path'])
@@ -330,14 +329,12 @@ class Configuration():
                     data_payload = {tail: value}
                     iac_set(adapter=getattr(self, details['adapter']), path=parent_path, data=data_payload)
                 else:
-                    # If there's no tail, use the 
-                    # If there's not a tail, just use the key name instead as a backup
+                    # No tail in path: the path is at the root of the tree so path is nothing
                     # No explicit tail in path: send under the key name from the template
                     # If path is empty, use the template key as the parameter name at top-level
-                    parent_path = path
-                    param_name = details.get('path') if details.get('path') else key
+                    param_name = path if path else key
                     data_payload = {param_name: value}
-                    iac_set(adapter=getattr(self, details['adapter']), path=parent_path, data=data_payload)
+                    iac_set(adapter=getattr(self, details['adapter']), path='', data=data_payload)
             except Exception as e:
                 logging.error(f"Failed to set value in config profile: {e}")
         
@@ -373,19 +370,18 @@ class Configuration():
             # Special case as with set_profile above
             # Only one so we must just return the value. In future this will need revision
             if details['adapter'] == 'acquisition':
-                self.template[key]['value'] = self.baseline_settings['enabled']
-                return
-            
+                return self.baseline_settings['enabled']
+
             try:
-                self.template[key]['value'] = iac_get(adapter=getattr(self, details['adapter']), path=details['path'])
+                return iac_get(adapter=getattr(self, details['adapter']), path=details['path'])
             except Exception as e:
                 logging.error(f"Failed to read value for config profile: {e}")
         
         # Get values and populate file-to-write
         to_write = {}
         for key in self.template.keys():
-            _read_value(key)
-            to_write[key] = self.template[key]['value']
+            to_write[key] = _read_value(key)
+            # to_write[key] = self.template[key]['value']
         
         # Name: cannot be empty, and cannot be 'custom'
         if not name or name is "custom":
@@ -399,7 +395,3 @@ class Configuration():
         filepath = repo_root / "web" / "config" / "profiles" / filename
         with open(filepath, 'w') as file:
             json.dump(to_write, file, indent=4)
-        
-        # Clear template
-        for key in self.template.keys():
-            self.template[key]['value'] = None
