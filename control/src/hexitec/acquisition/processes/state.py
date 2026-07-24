@@ -216,7 +216,6 @@ class State():
         while self.acquisition_progress_task_enable:
             munir_status = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
             frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
-            frames_received += 1  # n-1 bug in histogrammer
 
             self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
 
