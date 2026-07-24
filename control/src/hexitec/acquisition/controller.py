@@ -4,16 +4,18 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from hexitec.acquisition.processes.configuration import Configuration
 from hexitec.acquisition.processes.state import State
+from hexitec.acquisition.processes.config_mapping import mapping
 
 from typing import TypedDict, cast
-from histogrammer.adapter.adapter import HistogramAdapter, HistogramController
-from hexitec.liveview.adapter import HistogramLiveViewAdapter, HistogramLiveViewController
-from munir.adapter import MunirAdapter, MunirFpController, MunirController
+from histogrammer.adapter.adapter import HistogramAdapter
+from hexitec.liveview.adapter import HistogramLiveViewAdapter
+from munir.adapter import MunirAdapter, MunirFpController
 from odin.adapters.proxy import ProxyAdapter
-from hexitec.adapter import HexitecAdapter, HexitecController
-from readout_processor.adapter import ReadoutProcessorAdapter, ReadoutProcessorController
+from hexitec.adapter import HexitecAdapter
+from readout_processor.adapter import ReadoutProcessorAdapter
+from hexitec.configuration.adapter import ConfigurationAdapter
 
-from hexitec.util.iac import iac_get, iac_set
+from hexitec.util.iac import iac_set
 
 class Adapters(TypedDict):
     histogram: HistogramAdapter
@@ -21,7 +23,8 @@ class Adapters(TypedDict):
     munir: MunirAdapter
     proxy: ProxyAdapter
     hexitec: HexitecAdapter
-    readout: ReadoutProcessorController
+    readout: ReadoutProcessorAdapter
+    config: ConfigurationAdapter
 
 class AcquisitionError(BaseError):
     """Exception raised for errors in the AcquisitionController."""
@@ -38,6 +41,8 @@ class AcquisitionController(BaseController):
         self.bin_mode = options.get('default_bin_mode', 'histogram_1024')
         self.munir_subsystem = options.get('munir_subsystem', 'hexitec_mhz')
 
+        self.config_mapping = mapping
+
     def initialize(self, adapters: Adapters):
         """Initialise the acquisition controller with information about adapters currently loaded
         into the running application.
@@ -46,7 +51,7 @@ class AcquisitionController(BaseController):
         self.adapters = adapters
         
         # Verify all required adapters are present
-        required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec', 'readout']
+        required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec', 'readout', 'config']
         missing = [name for name in required_adapters if name not in adapters]
         if missing:
             missing = ", ".join(missing)
@@ -54,11 +59,14 @@ class AcquisitionController(BaseController):
         
         # Cast and store adapter controllers
         self.histogrammer = cast(HistogramAdapter, adapters['histogram'])
-        self.liveview = cast(HistogramLiveViewController, adapters['liveview'])
+        self.liveview = cast(HistogramLiveViewAdapter, adapters['liveview'])
         self.munir = cast(MunirFpController, adapters['munir'])
         self.proxy = cast(ProxyAdapter, adapters['proxy'])
-        self.hexitec = cast(HexitecController, adapters['hexitec'])
-        self.readout = cast(ReadoutProcessorController, adapters['readout'])
+        self.hexitec = cast(HexitecAdapter, adapters['hexitec'])
+        self.readout = cast(ReadoutProcessorAdapter, adapters['readout'])
+        self.config = cast(ConfigurationAdapter, adapters['config'])
+
+        self.config_controller = self.config.controller
 
         # Verify munir subsystem exists
         if self.munir_subsystem not in self.munir.controller.munir_managers:
@@ -76,6 +84,7 @@ class AcquisitionController(BaseController):
             self.adapters['sequencer'].add_context('munir', self.munir.controller)
             self.adapters['sequencer'].add_context('proxy', self.proxy)
             self.adapters['sequencer'].add_context('readout', self.readout.controller)
+            self.adapters['sequencer'].add_context('config', self.config.controller)
 
         # Set a default file name and path
         default_filepath = self.options.get('default_filepath', '/tmp/')
@@ -83,15 +92,15 @@ class AcquisitionController(BaseController):
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", default_filepath)
         iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", default_filename)
 
-        profile_filepath = self.options.get('profile_directory', 'web/config/profiles')
-
         # Provide adapters to sub-processess
-        self.configuration = Configuration(self.adapters, self.munir_subsystem, profile_filepath, AcquisitionError)
+        self.configuration = Configuration(self.adapters, self.munir_subsystem, AcquisitionError)
         self.state = State(self.adapters, self.munir_subsystem, AcquisitionError, default_filepath, default_filename)
 
         self.state._register_configuration(configuration=self.configuration)
         self.configuration._register_state(state=self.state)
 
+        # Configuration profiles
+        self.config_controller.set_mapping(self.config_mapping)
 
         # Connect histogrammer and setup UDP
         iac_set(self.histogrammer, "device/connect", True)
@@ -110,10 +119,6 @@ class AcquisitionController(BaseController):
             iac_set(self.proxy, "loki/application/asic_settings", {"negative_range_lowhigh": "high"})
         except Exception as e:
             logging.error(f"Set failed: {e}")
-
-        # handle_default_settings
-        initial_profile = self.options.get('initial_profile', 'default')
-        self.configuration.set_profile(initial_profile)
 
         # self._handle_default_settings()
         self._build_tree()

@@ -3,12 +3,8 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
 
-import json
-from pathlib import Path
-from hexitec.acquisition.processes.config_mapping import mapping
-
 class Configuration():
-    def __init__(self, adapters, munir_subsystem, profile_filepath, AcquisitionError):
+    def __init__(self, adapters, munir_subsystem, AcquisitionError):
         self.munir_subsystem = munir_subsystem
 
         self.bin_mode = "histogram_1024"
@@ -23,13 +19,6 @@ class Configuration():
         self.AcquisitionError = AcquisitionError
 
         self.device_options = ["software", "hardware"]
-
-        # Configuration profile mapping
-        self.mapping = mapping
-        self.profile_filepath = profile_filepath
-        self.profile = "default"
-        self.available_profiles = ["default"]
-        self._update_profiles()
 
         # Get system to a known state on start
         # iac_get are safe here as this is part of acquisition adapter's initialize
@@ -74,12 +63,7 @@ class Configuration():
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
             },
-            'estimated_data_rate': (lambda: self.data_rate, None),
-            'config_profile': {
-                'available': (lambda: self.available_profiles, self._update_profiles),
-                'current': (lambda: self.profile, self.set_profile),
-                'create_profile': (lambda: None, self.create_profile)
-            }
+            'estimated_data_rate': (lambda: self.data_rate, None)
         })
 
         # Ensure bin count matches odin_data as that is the most complicated to change
@@ -277,107 +261,3 @@ class Configuration():
             iac_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
             iac_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
             iac_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
-
-    def set_profile(self, profile: str):
-        """Set the configuration profile for the system.
-        :param profile: string of the profile name, or 'custom'
-        """
-        self.profile = profile
-
-        if profile == "custom":
-            return
-
-        logging.debug(f"Setting values from configuration profile: {profile}")
-
-        # self.profile_filepath is expected to be a directory path like /path/to/profiles.
-        profile_dir = Path(self.profile_filepath)
-        profile_path = profile_dir / f"{profile}.json"
-
-        if not profile_path.exists():
-            logging.warning(f"Config profile not found: {profile_path}")
-            self.profile_data = {}
-            return
-
-        with profile_path.open("r", encoding="utf-8") as handle:
-            profile_data = json.load(handle)
-
-        if not isinstance(profile_data, dict):
-            raise self.AcquisitionError(f"Profile file {profile_path} must contain a JSON object.")
-
-        # Temporary function to write out the details based on the mapping paths
-        def _write_value(key, value):
-            """Write the profile value to the given path in the mapping dictionary."""
-            # If the value doesn't exist, don't do anything with it
-            if value is None:
-                return
-            
-            # Break up path into adapter and the rest
-            full = self.mapping[key]
-            adapter, rest = full.split('/', 1) if '/' in full else (full, '')
-            path, param_name = rest.rsplit('/', 1) if '/' in rest else ('', rest if rest else key)
-            # This gives you adapter, path is optional, and paramname will be key if there is none
-
-            if adapter == 'acquisition':
-                func = getattr(self, param_name)
-                func(value)
-                return
-            
-            try:
-                data = {param_name: value}
-                iac_set(adapter=getattr(self, adapter), path=path, data=data)
-            except Exception as e:
-                logging.error(f"Faield to set value in config profile: {e}")
-        
-        for key, value in profile_data.items():
-            _write_value(key, value)
-
-    def _update_profiles(self, val=None):
-        """Read the profiles directory and fetch the names of all .json files within.
-        These names become the available_profiles for selection, as paramtree metadata is static.
-        """
-        profiles_dir = Path(self.profile_filepath)
-
-        if not profiles_dir.exists():
-            self.available_profiles = []
-            return
-
-        self.available_profiles = sorted(
-            path.stem for path in profiles_dir.glob("*.json") if path.is_file()
-        )
-        self.available_profiles.append("custom")
-
-    def create_profile(self, name: str):
-        """Create a profile file with the given name using the current settings."""
-
-        def _read_value(key):
-            # Handle path
-            full = self.mapping[key]
-            adapter, rest = full.split('/', 1) if '/' in full else (full, '')
-
-            # Special case as with set_profile above
-            # Only one so we must just return the value. In future this will need revision
-            if adapter == 'acquisition':
-                return self.baseline_settings['enabled']
-
-            try:
-                return iac_get(adapter=getattr(self, adapter), path=rest)
-            except Exception as e:
-                logging.error(f"Failed to read value for config profile: {e}")
-        
-        # Get values and populate file-to-write
-        to_write = {}
-        for key in self.mapping.keys():
-            to_write[key] = _read_value(key)
-        
-        # Name: cannot be empty, and cannot be 'custom'
-        if not name or name is "custom":
-           # If there is no name or name is 'custom', overwrite it with new_config or custom_config
-           name = name if name else "new_"
-           name = f"{name}_config"
-
-        # Write the values out to JSON
-        filename = f"{name}.json"
-        repo_root = Path(__file__).resolve().parents[4]
-        filepath = repo_root / "web" / "config" / "profiles" / filename
-        with open(filepath, 'w') as file:
-            json.dump(to_write, file, indent=4)

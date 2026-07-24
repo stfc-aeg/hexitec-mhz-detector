@@ -428,3 +428,12 @@ export interface ProxyParams extends ParamNode{
     }
   }
 }
+
+export interface ConfigTypes extends ParamNode {
+  available_profiles: string[];
+  create_profile: null;
+  current_profile: string;
+  edit_current_config: boolean;
+  profiles_filepath: string;
+  set_mapping: null;
+}

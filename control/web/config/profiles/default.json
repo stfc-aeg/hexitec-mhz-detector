@@ -30,7 +30,6 @@
   "cluster_diag2nl"        : false,
   "cluster_diag2nr"        : false,
   "cluster_quad"           : false,
-  "cluster_all"            : null,
   "cluster_lone"           : false,
   "cluster_l1"             : false,
   "cluster_l2"             : true,
