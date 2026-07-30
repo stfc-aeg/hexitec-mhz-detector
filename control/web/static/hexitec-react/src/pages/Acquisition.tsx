@@ -1,6 +1,6 @@
 import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
 import { useState } from 'react';
-import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
+import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton, InputGroup } from 'react-bootstrap';
 import type { AcquisitionTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
 import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
@@ -100,28 +100,50 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             </Row>
             <Row className="mt-3">
               <Col>
-                <FloatingLabel label="Timeframes to write">
-                  <EndpointInput
-                    endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
-                    type="number"
-                    style={floatingInputStyle}
-                  />
-                </FloatingLabel>
-                <FloatingLabel label="Frames per timeframe" className="mt-2">
-                  <EndpointInput
-                    endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_per_timeframe"
-                    type="number"
-                    style={floatingInputStyle}
-                  />
-                </FloatingLabel>
-                <FloatingLabel label="Timeframes per trigger" className="mt-2">
-                  <EndpointInput
-                    endpoint={acquisitionEndpoint} fullpath="config/trigger/timeframes_per_trigger"
-                    type="number"
-                    style={floatingInputStyle}
-                    disabled={triggerModeValue==='software' || !(adTriggerModeValue==='burst mode')}
-                  />
-                </FloatingLabel>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Timeframes to write">
+                      <EndpointInput
+                        endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
+                        type="number"
+                        style={floatingInputStyle}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row className="mt-2">
+                  <Col xs={12} lg={8}>
+                    <FloatingLabel label="Frames per timeframe" className="mt-2">
+                      <EndpointInput
+                        endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_pre_multiplier"
+                        type="number"
+                        style={floatingInputStyle}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col xs="auto" className="d-flex align-items-center">
+                      x10^
+                  </Col>
+                  <Col>
+                    <EndpointInput
+                      endpoint={acquisitionEndpoint} fullpath="config/trigger/frame_multiplier"
+                      type="number"
+                      style={floatingInputStyle}
+                    />
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Timeframes per trigger" className="mt-2">
+                      <EndpointInput
+                        endpoint={acquisitionEndpoint} fullpath="config/trigger/timeframes_per_trigger"
+                        type="number"
+                        style={floatingInputStyle}
+                        disabled={triggerModeValue==='software' || !(adTriggerModeValue==='burst mode')}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
               </Col>
             </Row>
             <Row className="mt-3">

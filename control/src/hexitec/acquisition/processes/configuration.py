@@ -1,7 +1,9 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-import logging
 from hexitec.util.iac import iac_get, iac_set
+
+import logging
+import math
 
 class Configuration():
     def __init__(self, adapters, munir_subsystem, AcquisitionError):
@@ -31,6 +33,15 @@ class Configuration():
         self.number_of_timeframes = int(iac_get(self.histogrammer, "acquisition/num_histograms"))
         self.timeframes_per_trigger = int(iac_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
+        # Get the parts of the frames_per_timeframe
+        exponent = math.floor(math.log10(abs(self.frames_per_timeframe)))
+        coefficient = self.frames_per_timeframe / (10**exponent)
+        coefficient = float(f"{coefficient:.4f}".rstrip("0").rstrip("."))  # 4 d.p, no trailing 0s
+
+        # By default, 10^0 = 1
+        self.frames_pre_mult = coefficient
+        self.frame_mult = exponent
+
         self.data_rate = self.calculate_estimated_data_rate()
 
         # There is no true 'on/off' setting for this, but a set of commands that do about the same
@@ -53,8 +64,13 @@ class Configuration():
                            {'allowed_values': self.device_options}),
                 'trigger_mode': (lambda: self.trigger_mode, self.change_trigger_mode, 
                                  {'allowed_values': ["burst mode", "step scan", "continuous mode"]}),
-                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe,
+                'frames_pre_multiplier': (lambda: self.frames_pre_mult, 
+                                          lambda frames: self.set_mult_frames_per_timeframe(frames, self.frame_mult),
                                          {'min': 1}),
+                'frame_multiplier': (lambda: self.frame_mult,
+                                     lambda mult: self.set_mult_frames_per_timeframe(self.frames_pre_mult, mult),
+                                     {'min': 1, 'max': 10}),
+                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
                 'timeframes_per_trigger': (lambda: self.timeframes_per_trigger, self.set_timeframes_per_trigger,
@@ -158,13 +174,10 @@ class Configuration():
         iac_set(self.readout, "trigger/mode", mode)
 
     def set_frames_per_timeframe(self, frames: int):
-        """Set the number of frames per timeframe/histogram.
-        This value is used in the same way no matter the mode, except in continuous mode where it is not used.
-        :param frames: positive integer representing the number of frames per timeframe
+        """Set the number of frames per timeframe/histogram and recalculate the data rate.
+        Additionally verify the minimum allowed frame count against the bin mode.
+        :param frames: positive integer number of frames.
         """
-        if frames < 1:
-            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
-
         # The min frames per timeframe is based on the bin mode, and at what point 
         # this is less efficient than raw data. This is roughly 350 at 128 bins, 700 at 256, etc.
         match self.bin_mode:
@@ -201,6 +214,21 @@ class Configuration():
         # 1024	        366	                2731
         # 2048	        183	                5461
         # 4096	        92                  10923
+
+    def set_mult_frames_per_timeframe(self, frames: int, mult: int):
+        """Calculate the number of frames per timeframe/histogram using scientific notation format.
+        This value is used in the same way no matter the mode, except in continuous mode where it is not used.
+        :param frames: positive integer representing the number of frames per timeframe pre-multiplier
+        :param mult: positive integer representing the power of 10 to which the frames should be raised
+        """
+        if frames < 1:
+            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
+
+        calculation = int(frames * 10**mult)
+
+        self.set_frames_per_timeframe(calculation)
+        self.frame_mult = int(mult)
+        self.frames_pre_mult = int(frames)
 
     def set_number_of_timeframes(self, timeframes: int):
         """Set the number of timeframes to be acquired.

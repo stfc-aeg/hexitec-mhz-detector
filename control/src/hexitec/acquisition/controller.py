@@ -114,12 +114,6 @@ class AcquisitionController(BaseController):
 
         iac_set(self.histogrammer, "udp/setup", True)
 
-        try:
-            # Proxy expects a JSON body; send a dict so iac_set will encode it
-            iac_set(self.proxy, "loki/application/asic_settings", {"negative_range_lowhigh": "high"})
-        except Exception as e:
-            logging.error(f"Set failed: {e}")
-
         # self._handle_default_settings()
         self._build_tree()
 
