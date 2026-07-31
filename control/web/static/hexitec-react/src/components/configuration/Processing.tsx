@@ -23,8 +23,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
   const modeOptions = histogramMetadata?.config?.clustering?.mode?.allowed_values;
 
   const acquisitionData = acquisitionEndpoint?.data;
-  const acquisitionMetadata = acquisitionEndpoint?.metadata;
-  const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
 
   // If an acquisition is happening, the histogrammer will not let you change settings
   // The UI should make it obvious this is what is occurring
@@ -63,18 +61,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
     'VERT_NB': 'Vert. No Below'
   };
 
-  // need to map histogram bin modes to numbers
-  // labels are in form histogram_X where X is number of bins, but we only want '<number> bins' for dropdown
-  const binModeOptions: { [key: string]: string } = {
-    'histogram_128': '128 bins',
-    'histogram_256': '256 bins',
-    'histogram_512': '512 bins',
-    'histogram_1024': '1024 bins',
-    'histogram_2048': '2048 bins',
-    'histogram_4096': '4096 bins'
-  };
-  
-
   return (
     <Card className="mt-3">
       <Card.Header><strong>Processing</strong></Card.Header>
@@ -91,27 +77,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
             <></>
           }
           <Col>
-            <Row>
-              <Col>
-                <FloatingLabel
-                  label="Bin Mode">
-                  <EndpointSelect
-                    endpoint={acquisitionEndpoint}
-                    fullpath="config/bin_mode"
-                    variant="outline-secondary"
-                    buttonText={acquisitionData?.config?.bin_mode}
-                    style={floatingInputStyle}
-                    disabled={isAcquiring}>
-                      {(binmode_metadata?.allowed_values ?? ['?']).map(
-                        (selection, index) => (
-                          <option value={selection} key={index}>{binModeOptions[selection] || selection}</option>
-                        )
-                      )}
-                  </EndpointSelect>
-                </FloatingLabel>
-              </Col>
-            </Row>
-            <Form.Label className="mt-3"><b>Charge-sharing Options</b></Form.Label>
+            <Form.Label><b>Charge-sharing Options</b></Form.Label>
             <Row>
               <Col>
                 <EndpointCheck

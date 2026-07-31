@@ -1,6 +1,7 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from hexitec.util.iac import iac_get, iac_set
+from tornado.ioloop import IOLoop
 
 import logging
 import math
@@ -17,6 +18,10 @@ class Configuration():
         self.readout = adapters["readout"]
         self.liveview = adapters["liveview"]
         self.proxy = adapters["proxy"]
+
+        self.munir_bin_mode = self.munir.controller.munir_managers[self.munir_subsystem].fp_status[0].get('HexitecMhz', {}).get('mode', '')
+
+        logging.warning(f"get: {iac_get(self.munir, 'subsystems')}")
 
         self.AcquisitionError = AcquisitionError
 
@@ -82,15 +87,7 @@ class Configuration():
             'estimated_data_rate': (lambda: self.data_rate, None)
         })
 
-        # Ensure bin count matches odin_data as that is the most complicated to change
-        munir_num_bins = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
-        munir_num_bins = str(munir_num_bins[0].get("HexitecMhz", {}).get("mode", ""))
-        # Safety: odin data may not be active and we do not want to launch to an error
-        if munir_num_bins:
-            hist_num_bins = "histogram_" + str(iac_get(self.histogrammer, "config/hist_format/num_bins"))
-            liveview_num_bins = "histogram_" + str(iac_get(self.liveview, "histview/mhz/image/num_bins"))
-            if munir_num_bins != hist_num_bins or hist_num_bins != liveview_num_bins:
-                self.change_bin_mode(munir_num_bins)
+        self._retry_sync_bin_mode()
 
     def _register_state(self, state):
         """Get a reference to the state and parent class."""
@@ -289,3 +286,35 @@ class Configuration():
             iac_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
             iac_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
             iac_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
+
+    def _sync_bin_mode(self):
+        munir_num_bins = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
+        mode = str(munir_num_bins[0].get('HexitecMhz', {}).get('mode', ''))
+
+        if not mode:
+            return False
+
+        hist_num_bins = f"histogram_{iac_get(self.histogrammer, 'config/hist_format/num_bins')}"
+        liveview_num_bins = f"histogram_{iac_get(self.liveview, 'histview/mhz/image/num_bins')}"
+
+        if mode != hist_num_bins or hist_num_bins != liveview_num_bins:
+            self.change_bin_mode(mode)
+        return True
+
+    def _retry_sync_bin_mode(self, attempts_left=5):
+        if self._sync_bin_mode():
+            logging.info(f"Initial bin mode synchronised from munir.")
+            return
+
+        if attempts_left <= 1:
+            logging.error(f"Failed to determine Munir mode after 5 attempts.")
+            return
+
+        logging.debug(
+            f"Munir not ready yet, retrying ({attempts_left-1} attempts remaining.)"
+        )
+
+        IOLoop.current().call_later(
+            1.0,
+            lambda: self._retry_sync_bin_mode(attempts_left-1)
+        )

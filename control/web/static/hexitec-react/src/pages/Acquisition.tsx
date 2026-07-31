@@ -1,6 +1,6 @@
-import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
+import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from 'odin-react';
 import { useState } from 'react';
-import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton, InputGroup } from 'react-bootstrap';
+import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
 import type { AcquisitionTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
 import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
@@ -9,7 +9,7 @@ interface AcquisitionProps {
   endpoint_url: string;
 }
 
-// const EndpointSelect = WithEndpoint(Form.Select);
+const EndpointSelect = WithEndpoint(Form.Select);
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
@@ -21,6 +21,9 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const estimatedDataRate = acquisitionData?.config?.estimated_data_rate ?? 0;
   const rateTooHigh = estimatedDataRate > 12.5;
+
+  const acquisitionMetadata = acquisitionEndpoint?.metadata;
+  const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
 
   const isAcquiring = acquisitionEndpoint?.data?.state?.acquisition?.toggle;
   const acquisitionProgress = acquisitionEndpoint?.data?.state?.acquisition?.progress_task?.progress;
@@ -51,6 +54,17 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const est_duration = (((acquisitionData?.config?.trigger?.frames_per_timeframe ?? 0) * (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0)) / 1000000);
 
+  // need to map histogram bin modes to numbers
+  // labels are in form histogram_X where X is number of bins, but we only want '<number> bins' for dropdown
+  const binModeOptions: { [key: string]: string } = {
+    'histogram_128': '128 bins',
+    'histogram_256': '256 bins',
+    'histogram_512': '512 bins',
+    'histogram_1024': '1024 bins',
+    'histogram_2048': '2048 bins',
+    'histogram_4096': '4096 bins'
+  };
+
   return (
     
     <Container>
@@ -59,6 +73,26 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
         <Col md={6} className="mt-3"> 
           <TitleCard title={<strong>Trigger Settings</strong>}>
             <Row>
+              <Col>
+                <FloatingLabel
+                  label="Bin Mode">
+                  <EndpointSelect
+                    endpoint={acquisitionEndpoint}
+                    fullpath="config/bin_mode"
+                    variant="outline-secondary"
+                    buttonText={acquisitionData?.config?.bin_mode}
+                    style={floatingInputStyle}
+                    disabled={isAcquiring}>
+                      {(binmode_metadata?.allowed_values ?? ['?']).map(
+                        (selection, index) => (
+                          <option value={selection} key={index}>{binModeOptions[selection] || selection}</option>
+                        )
+                      )}
+                  </EndpointSelect>
+                </FloatingLabel>
+              </Col>
+            </Row>
+            <Row className="mt-3">
               <ButtonGroup>
                 {triggerModeRadios.map((radio, idx) => (
                   <OverlayTrigger placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
