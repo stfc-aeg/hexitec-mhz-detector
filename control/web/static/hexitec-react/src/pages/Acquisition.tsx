@@ -1,7 +1,7 @@
 import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from 'odin-react';
 import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
-import type { AcquisitionTypes } from '../EndpointTypes';
+import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
 import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
 
@@ -14,6 +14,8 @@ const EndpointSelect = WithEndpoint(Form.Select);
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
+  const readoutEndpoint = useAdapterEndpoint<ReadoutTypes>('readout', endpoint_url, 10000);
+
   const acquisitionData = acquisitionEndpoint?.data;
 
   const [triggerModeValue, setTriggerModeValue] = useState('software');
@@ -24,6 +26,8 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const acquisitionMetadata = acquisitionEndpoint?.metadata;
   const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
+
+  const triggerPolarityOptions = readoutEndpoint.metadata?.trigger?.polarity;
 
   const isAcquiring = acquisitionEndpoint?.data?.state?.acquisition?.toggle;
   const acquisitionProgress = acquisitionEndpoint?.data?.state?.acquisition?.progress_task?.progress;
@@ -175,6 +179,25 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                         style={floatingInputStyle}
                         disabled={triggerModeValue==='software' || !(adTriggerModeValue==='burst mode')}
                       />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Trigger edge polarity" className="mt-2">
+                      <EndpointSelect
+                        endpoint={readoutEndpoint}
+                        fullpath="trigger/polarity"
+                        variant="outline-secondary"
+                        buttonText={readoutEndpoint.data?.trigger?.polarity}
+                        style={floatingInputStyle}
+                        disabled={isAcquiring || triggerModeValue==='software'}>
+                          {(triggerPolarityOptions?.allowed_values ?? ['?']).map(
+                            (selection, index) => (
+                              <option value={selection} key={index}>{selection}</option>
+                            )
+                          )}
+                      </EndpointSelect>
                     </FloatingLabel>
                   </Col>
                 </Row>

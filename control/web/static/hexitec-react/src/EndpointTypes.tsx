@@ -437,3 +437,67 @@ export interface ConfigTypes extends ParamNode {
   profiles_filepath: string;
   set_mapping: null;
 }
+
+
+export interface ReadoutTypes extends ParamNode {
+  control: {
+    close: null;
+    connected: boolean;
+    open: null;
+  };
+  status: {
+    acq_control: {
+      acquire: number;
+      acquisition_abort: number;
+      manual_trig: number;
+    },
+    aurora: {
+      channel: boolean;
+      lane: boolean;
+    };
+    clock_resets: {
+      aurora_reset: number;
+      cmac_0_reset: number;
+      cmac_1_reset: number;
+      cmac_2_reset: number;
+      data_path_reset: number;
+    };
+    cmac: {
+      cmac_0_lane_up: number;
+      cmac_1_lane_up: number;
+    };
+    frame_changing: boolean;
+    frame_number: number;
+    is_running: boolean;
+    reactivate: null;
+    reset: null;
+  };
+  trigger: {
+    acquisition_count: number;
+    debug_trigger: null;
+    enable: boolean;
+    frame_limits: {
+      acquisition: number;
+      frame_in_hist: number;
+      hist_in_trigger: number;
+    };
+    mode: string;
+    polarity: string;
+    reset_time_frame: boolean;
+    timeframe_count: number;
+  };
+  udp: {
+    core_0: {
+      dest_ip: string;
+      dest_mac: string;
+      src_ip: string;
+      src_mac: string;
+    };
+    core_1: {
+      dest_ip: string;
+      dest_mac: string;
+      src_ip: string;
+      src_mac: string;
+    };
+  }
+}
