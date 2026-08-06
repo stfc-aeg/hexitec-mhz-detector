@@ -24,6 +24,12 @@ class ConfigurationController(BaseController):
         self.profile = ""
         self.edit_mode = False
 
+        # Mapping can be stored as a JSON file and read in as configuration instead of being coded
+        # This avoids the mapping being saved as a system artefact if that is undesirable
+        default_mapping = self.options.get('default_map_filepath', '')
+        if default_mapping:
+            self.set_mapping(default_mapping)
+
         self.default_profile = self.options.get('default_profile', 'default')
 
     def _build_tree(self):
