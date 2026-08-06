@@ -21,8 +21,6 @@ class Configuration():
 
         self.munir_bin_mode = self.munir.controller.munir_managers[self.munir_subsystem].fp_status[0].get('HexitecMhz', {}).get('mode', '')
 
-        logging.warning(f"get: {iac_get(self.munir, 'subsystems')}")
-
         self.AcquisitionError = AcquisitionError
 
         self.device_options = ["software", "hardware"]
