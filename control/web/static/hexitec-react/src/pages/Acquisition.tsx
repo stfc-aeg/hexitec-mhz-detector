@@ -21,11 +21,23 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const [triggerModeValue, setTriggerModeValue] = useState('software');
   const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst mode');
 
+  const formatDisplayNumber = (value: unknown) => {
+    if (value === null || value === undefined || value === '') {
+      return '-';
+    }
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue.toLocaleString() : String(value);
+  };
+
+  const formatMultiplierLabel = (value: unknown) => `x${formatDisplayNumber(value)}`;
+
   const estimatedDataRate = acquisitionData?.config?.estimated_data_rate ?? 0;
   const rateTooHigh = estimatedDataRate > 12.5;
 
   const acquisitionMetadata = acquisitionEndpoint?.metadata;
   const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
+  const frameMultiplier_metadata = acquisitionMetadata?.config?.trigger?.frame_multiplier;
 
   const triggerPolarityOptions = readoutEndpoint.metadata?.trigger?.polarity;
 
@@ -150,8 +162,8 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   </Col>
                 </Row>
                 <Row className="mt-2">
-                  <Col xs={12} lg={8}>
-                    <FloatingLabel label="Frames per timeframe" className="mt-2">
+                  <Col xs={6}>
+                    <FloatingLabel label="Frames per timeframe">
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_pre_multiplier"
                         type="number"
@@ -159,15 +171,23 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       />
                     </FloatingLabel>
                   </Col>
-                  <Col xs="auto" className="d-flex align-items-center">
-                      x10^
-                  </Col>
                   <Col>
-                    <EndpointInput
-                      endpoint={acquisitionEndpoint} fullpath="config/trigger/frame_multiplier"
-                      type="number"
-                      style={floatingInputStyle}
-                    />
+                    <FloatingLabel
+                      label="Frame multiplier">
+                      <EndpointSelect
+                        endpoint={acquisitionEndpoint}
+                        fullpath="config/trigger/frame_multiplier"
+                        variant="outline-secondary"
+                        buttonText={formatMultiplierLabel(acquisitionData?.config?.trigger?.frame_multiplier)}
+                        style={floatingInputStyle}
+                        disabled={isAcquiring}>
+                          {(frameMultiplier_metadata?.allowed_values ?? ['?']).map(
+                            (selection, index) => (
+                              <option value={selection} key={index}>{formatMultiplierLabel(selection)}</option>
+                            )
+                          )}
+                      </EndpointSelect>
+                    </FloatingLabel>
                   </Col>
                 </Row>
                 <Row>
@@ -213,7 +233,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Histograms per Acquisition">
                       <Form.Control
                         type="text"
-                        value={acquisitionData?.config?.trigger?.number_of_timeframes.toString()}
+                        value={formatDisplayNumber(acquisitionData?.config?.trigger?.number_of_timeframes)}
                         readOnly
                         style={floatingLabelStyle}
                       />
@@ -250,7 +270,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                         value={
                           triggerModeValue === 'hardware' && adTriggerModeValue === 'continuous'
                             ? '-'
-                            : acquisitionData?.config?.trigger?.frames_per_timeframe
+                            : formatDisplayNumber(acquisitionData?.config?.trigger?.frames_per_timeframe)
                         }
                         readOnly
                         style={floatingLabelStyle}

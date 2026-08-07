@@ -345,6 +345,8 @@ export interface AcquisitionTypes extends ParamNode {
     trigger: {
       device: string;
       frames_per_timeframe: number;
+      frames_pre_multiplier: number;
+      frame_multiplier: string;
       number_of_timeframes: number;
       toggle_acquisition_histogramming: null | boolean;
       trigger_mode: string;

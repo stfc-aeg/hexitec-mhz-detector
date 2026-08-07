@@ -36,14 +36,9 @@ class Configuration():
         self.number_of_timeframes = int(iac_get(self.histogrammer, "acquisition/num_histograms"))
         self.timeframes_per_trigger = int(iac_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
-        # Get the parts of the frames_per_timeframe
-        exponent = math.floor(math.log10(abs(self.frames_per_timeframe)))
-        coefficient = self.frames_per_timeframe / (10**exponent)
-        coefficient = float(f"{coefficient:.4f}".rstrip("0").rstrip("."))  # 4 d.p, no trailing 0s
-
         # By default, 10^0 = 1
-        self.frames_pre_mult = coefficient
-        self.frame_mult = exponent
+        self.frames_pre_mult = self.frames_per_timeframe
+        self.frame_mult = 1
 
         self.data_rate = self.calculate_estimated_data_rate()
 
@@ -72,7 +67,7 @@ class Configuration():
                                          {'min': 1}),
                 'frame_multiplier': (lambda: self.frame_mult,
                                      lambda mult: self.set_mult_frames_per_timeframe(self.frames_pre_mult, mult),
-                                     {'min': 1, 'max': 10}),
+                                     {'allowed_values': [1, 1_000, 1_000_000, 1_000_000_000]}),
                 'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
@@ -219,7 +214,7 @@ class Configuration():
         if frames < 1:
             raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
 
-        calculation = int(frames * 10**mult)
+        calculation = int(frames * mult)
 
         self.set_frames_per_timeframe(calculation)
         self.frame_mult = int(mult)
