@@ -170,11 +170,6 @@ class ConfigurationController(BaseController):
             full = self.mapping[key]
             adapter, rest = full.split('/', 1) if '/' in full else (full, '')
 
-            # Special case as with set_profile above
-            # Only one so we must just return the value. In future this will need revision
-            if adapter == 'acquisition':
-                return self.baseline_settings['enabled']
-
             try:
                 return iac_get(adapter=self.adapters.get(adapter), path=rest)
             except Exception as e:
@@ -185,15 +180,17 @@ class ConfigurationController(BaseController):
         for key in self.mapping.keys():
             to_write[key] = _read_value(key)
         
-        # Name: cannot be empty, and cannot be 'custom'
-        if not name or name == "custom":
-           # If there is no name or name is 'custom', overwrite it with new_config or custom_config
-           name = name if name else "new_"
-           name = f"{name}_config"
+        # Name cannot be empty, if it is, overwrite it with 'custom_config'
+        if not name:
+           name = "custom_config"
 
-        # Write the values out to JSON
+        # Write the values out to JSON using the same configured profile path used for reads
         filename = f"{name}.json"
-        repo_root = Path(__file__).resolve().parents[4]
-        filepath = repo_root / "web" / "config" / "profiles" / filename
-        with open(filepath, 'w') as file:
+        profile_dir = Path(self.profile_filepath)
+        filepath = profile_dir / filename
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        with filepath.open('w', encoding='utf-8') as file:
             json.dump(to_write, file, indent=4)
+
+        self._update_profiles()
