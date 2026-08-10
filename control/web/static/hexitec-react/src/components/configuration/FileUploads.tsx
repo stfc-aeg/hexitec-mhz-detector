@@ -23,14 +23,16 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
       <Card.Body>
         <Row className="mb-3">
           <Col>
-            <Form.Label>Gradients Upload</Form.Label>
-            <Form.Control type="file" accept=".csv" disabled />
-          </Col>
-        </Row>
-        <Row className="mb-3">
-          <Col>
-            <Form.Label>Intercepts Upload</Form.Label>
-            <Form.Control type="file" accept=".csv" disabled />
+            <Form.Label>Global HDF Upload</Form.Label>
+            <FilePicker
+              endpoint={histogramEndpoint}
+              fullpath="config/hdf_filename"
+              buttonText={histogramEndpoint.data?.config?.hdf_filename ?? ""}
+              param_metadata={histogramMetadata?.config?.hdf_filename}
+              loadButton
+              loadPath="config/load_hdf"
+              disabled={!isCustom}
+            />
           </Col>
         </Row>
         <Row className="mb-3">
