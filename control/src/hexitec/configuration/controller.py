@@ -119,6 +119,9 @@ class ConfigurationController(BaseController):
         """Set the configuration profile for the system.
         :param profile: string of profile name
         """
+        if profile not in self.available_profiles:
+            raise ConfigurationError(f"Profile '{profile}' not found in available profiles.")
+
         self.profile = profile
 
         profile_dir = Path(self.profile_filepath)
