@@ -41,5 +41,8 @@
   "peltier_enable"         : 1,
   "peltier_setpoint"       : 25,
   "feedback_capacitance"   : 14,
-  "negative_dynamic_range" : "high"
+  "negative_dynamic_range" : "high",
+
+  "bad_pixel_mask_filename": "badPixel_test.txt",
+  "bad_pixel_mask_load": "badPixel_test.txt"
 }

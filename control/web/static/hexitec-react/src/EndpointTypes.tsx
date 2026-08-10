@@ -47,6 +47,12 @@ export interface HistogramTypes extends ParamNode {
       positive_edge: boolean;
       sum_enable: boolean;
     };
+    hdf_settings: {
+      filename: string;
+      save: null;
+      load: null;
+      available: string[];
+    };
     hdf_filename: string;
     linearity_correction: {
       gain_filename: string;

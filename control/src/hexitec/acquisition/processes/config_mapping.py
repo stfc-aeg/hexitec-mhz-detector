@@ -43,5 +43,23 @@ mapping = {
     'peltier_enable'          : 'proxy/loki/application/peltier/enable',
     'peltier_setpoint'        : 'proxy/loki/application/peltier/temperature',
     'feedback_capacitance'    : 'proxy/loki/application/asic_settings/feedback_capacitance',
-    'negative_dynamic_range'  : 'proxy/loki/application/asic_settings/negative_range_lowhigh'
+    'negative_dynamic_range'  : 'proxy/loki/application/asic_settings/negative_range_lowhigh',
+
+    # File uploads
+    'global_h5_filename'                : 'histogram/config/hdf_settings/filename',
+    'global_h5_load'                    : 'histogram/config/hdf_settings/load',
+    'bad_pixel_mask_filename'           : 'histogram/config/hist_format/bad_pixel_mask/filename',
+    'bad_pixel_mask_load'               : 'histogram/config/hist_format/bad_pixel_mask/load',
+    'bad_pixel_threshold_filename'      : 'histogram/config/thresholds/bad_pixel/filename',
+    'bad_pixel_threshold_load'          : 'histogram/config/thresholds/bad_pixel/load',
+    'charge_sharing_mc_filename'        : 'histogram/config/charge_sharing/mc_filename',
+    'charge_sharing_mc_load'            : 'histogram/config/charge_sharing/mc_load',
+    'charge_sharing_pos_filename'       : 'histogram/config/charge_sharing/pos_filename',
+    'charge_sharing_pos_load'           : 'histogram/config/charge_sharing/pos_load',
+    'charge_sharing_l3_filename'        : 'histogram/config/charge_sharing/l3_filename',
+    'charge_sharing_l3_load'            : 'histogram/config/charge_sharing/l3_load',
+    'linearity_correction_filename'     : 'histogram/config/linearity_correction/lin_filename',
+    'linearity_correction_load'         : 'histogram/config/linearity_correction/lin_load',
+    'linearity_correction_gain_filename': 'histogram/config/linearity_correction/gain_filename',
+    'linearity_correction_gain_load'    : 'histogram/config/linearity_correction/gain_load'
 }

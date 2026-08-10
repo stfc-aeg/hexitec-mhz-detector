@@ -11,6 +11,9 @@ interface FileUploadsProps {
 export default function FileUploads( { histogramEndpoint, isCustom }: FileUploadsProps) {
 
   const histogramMetadata = histogramEndpoint.metadata;
+  const linearity_metadata = histogramMetadata?.config?.linearity_correction?.lin_filename;
+  const linearity_gain_metadata = histogramMetadata?.config?.linearity_correction?.gain_filename;
+
   const badpixmask_metadata = histogramMetadata?.config?.hist_format?.bad_pixel_mask?.filename;
   const badpixthres_metadata = histogramMetadata?.config?.thresholds?.bad_pixel?.filename;
   const l3file_metadata = histogramMetadata?.config?.charge_sharing?.l3_filename;
@@ -26,13 +29,42 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
             <Form.Label>Global HDF Upload</Form.Label>
             <FilePicker
               endpoint={histogramEndpoint}
-              fullpath="config/hdf_filename"
-              buttonText={histogramEndpoint.data?.config?.hdf_filename ?? ""}
-              param_metadata={histogramMetadata?.config?.hdf_filename}
+              fullpath="config/hdf_settings/filename"
+              buttonText={histogramEndpoint.data?.config?.hdf_settings?.filename ?? ""}
+              select_options={histogramEndpoint?.data?.config?.hdf_settings?.available ?? []}
               loadButton
-              loadPath="config/load_hdf"
+              loadPath="config/hdf_settings/load"
               disabled={!isCustom}
             />
+          </Col>
+        </Row>
+        <Row className="mb-3">
+          <Col>
+            <Form.Label>Linearity File Upload</Form.Label>
+            <FilePicker
+              endpoint={histogramEndpoint}
+              fullpath="config/linearity_correction/lin_filename"
+              buttonText={histogramEndpoint.data?.config?.linearity_correction?.lin_filename ?? ""}
+              select_options={linearity_metadata?.allowed_values ?? []}
+              loadButton
+              loadPath="config/linearity_correction/lin_load"
+              disabled={!isCustom}
+            />
+          </Col>
+        </Row>
+        <Row className="mb-3">
+          <Col>
+            <Form.Label>Linearity Gain File Upload</Form.Label>
+            <FilePicker
+              endpoint={histogramEndpoint}
+              fullpath="config/linearity_correction/gain_filename"
+              buttonText={histogramEndpoint.data?.config?.linearity_correction?.gain_filename ?? ""}
+              select_options={linearity_gain_metadata?.allowed_values ?? []}
+              loadButton
+              loadPath="config/linearity_correction/gain_load"
+              disabled={!isCustom}
+            />
+          
           </Col>
         </Row>
         <Row className="mb-3">
@@ -42,7 +74,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
               endpoint={histogramEndpoint}
               fullpath="config/thresholds/bad_pixel/filename"
               buttonText={histogramEndpoint.data?.config?.thresholds?.bad_pixel?.filename ?? ""}
-              param_metadata={badpixthres_metadata}
+              select_options={badpixthres_metadata?.allowed_values ?? []}
               loadButton
               loadPath="config/thresholds/bad_pixel/load"
               disabled={!isCustom}
@@ -56,7 +88,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
               endpoint={histogramEndpoint}
               fullpath="config/hist_format/bad_pixel_mask/filename"
               buttonText={histogramEndpoint.data?.config?.hist_format?.bad_pixel_mask?.filename ?? ""}
-              param_metadata={badpixmask_metadata}
+              select_options={badpixmask_metadata?.allowed_values ?? []}
               loadButton
               loadPath="config/hist_format/bad_pixel_mask/load"
               disabled={!isCustom}
@@ -73,7 +105,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/l3_filename"
                   buttonText={histogramEndpoint.data?.config?.charge_sharing?.l3_filename ?? ""}
-                  param_metadata={l3file_metadata}
+                  select_options={l3file_metadata?.allowed_values ?? []}
                   loadButton
                   loadPath="config/charge_sharing/l3_load"
                   disabled={!isCustom}
@@ -85,7 +117,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/mc_filename"
                   buttonText={histogramEndpoint.data?.config?.charge_sharing?.mc_filename ?? ""}
-                  param_metadata={mcfile_metadata}
+                  select_options={mcfile_metadata?.allowed_values ?? []}
                   loadButton
                   loadPath="config/charge_sharing/mc_load"
                   disabled={!isCustom}
@@ -97,7 +129,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/pos_filename"
                   buttonText={histogramEndpoint.data?.config?.charge_sharing?.pos_filename ?? ""}
-                  param_metadata={posfile_metadata}
+                  select_options={posfile_metadata?.allowed_values ?? []}
                   loadButton
                   loadPath="config/charge_sharing/pos_load"
                   disabled={!isCustom}
