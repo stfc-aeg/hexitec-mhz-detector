@@ -382,6 +382,7 @@ export interface LokiEnviromentParams extends ParamNode {
   temperature: {
     DIODE: number;
     BLOCK: number;
+    DEWPOINT: number;
   }
   humidity: {
     BOARD: number;

@@ -42,73 +42,70 @@ export default function Environmental({
         <Card.Header><strong>Power & Environmental</strong></Card.Header>
         <Card.Body>
           <Row>
-            <Row>
-              <Col>
-                <h5 className="text-center">HV Bias</h5>
-              </Col>
-            </Row>
-            <Row className="mb-2">
-              <Col sm={6}>
-                <EndpointButton className="w-100"
-                  endpoint={proxyEndpoint} fullpath="loki/application/HV/ENABLE"
-                  variant={lokiData?.HV?.ENABLE ? 'danger' : 'primary'}
-                  value={lokiData?.HV?.ENABLE ? 0 : 1}
-                  disabled={!isCustom}
-                >
-                  {lokiData?.HV?.ENABLE ? 'Disable HV' : 'Enable HV'}
-                </EndpointButton>
-              </Col>
-              <Col sm={6}>
-                <FloatingLabel label="HV Reading">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNull(lokiData?.HV?.readback_bias)}
-                  />
-                </FloatingLabel>
-              </Col>
-            </Row>
-            <UserAware userLevel="power" as={Row} className='mb-3'>
-              <Col>
-                <FloatingLabel label="HV Target Bias">
-                  <FormControl
-                    type="number"
-                    value={hvValue}
-                    onChange={(e) => setHvValue(e.currentTarget.value)}
-                    style={floatingInputStyle}
-                    disabled={!isCustom}
-                  />
-                </FloatingLabel>
-                <Button
-                  className="mt-2 w-100"
-                  variant="primary"
-                  onClick={handleApplyHvBias}
-                  disabled={hvValue === '' || Number.isNaN(Number(hvValue)) || !isCustom}
-                >
-                  Apply
-                </Button>
-              </Col>
-              <Col>
-                <FloatingLabel label="Current Target Bias">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNull(lokiData?.HV?.target_bias)}
-                  />
-                </FloatingLabel>
-              </Col>
-            </UserAware>
+            <Col>
+              <h5 className="text-center">HV Bias</h5>
+            </Col>
           </Row>
+          <Row className="mb-2">
+            <Col sm={6}>
+              <EndpointButton className="w-100"
+                endpoint={proxyEndpoint} fullpath="loki/application/HV/ENABLE"
+                variant={lokiData?.HV?.ENABLE ? 'danger' : 'primary'}
+                value={lokiData?.HV?.ENABLE ? 0 : 1}
+                disabled={!isCustom}
+              >
+                {lokiData?.HV?.ENABLE ? 'Disable HV' : 'Enable HV'}
+              </EndpointButton>
+            </Col>
+            <Col sm={6}>
+              <FloatingLabel label="HV Reading">
+                <Form.Control
+                  plaintext
+                  readOnly
+                  style={floatingLabelStyle}
+                  value={checkNull(lokiData?.HV?.readback_bias)}
+                />
+              </FloatingLabel>
+            </Col>
+          </Row>
+          <UserAware userLevel="power" as={Row} className='mb-3'>
+            <Col>
+              <FloatingLabel label="HV Target Bias">
+                <FormControl
+                  type="number"
+                  value={hvValue}
+                  onChange={(e) => setHvValue(e.currentTarget.value)}
+                  style={floatingInputStyle}
+                  disabled={!isCustom}
+                />
+              </FloatingLabel>
+              <Button
+                className="mt-2 w-100"
+                variant="primary"
+                onClick={handleApplyHvBias}
+                disabled={hvValue === '' || Number.isNaN(Number(hvValue)) || !isCustom}
+              >
+                Apply
+              </Button>
+            </Col>
+            <Col>
+              <FloatingLabel label="Current Target Bias">
+                <Form.Control
+                  plaintext
+                  readOnly
+                  style={floatingLabelStyle}
+                  value={checkNull(lokiData?.HV?.target_bias)}
+                />
+              </FloatingLabel>
+            </Col>
+          </UserAware>
 
           <Row>
-            <Row>
-              <Col>
-                <h5 className="mt-3 text-center">Peltier</h5>
-              </Col>
-            </Row>
-            <Row className="mb-3">
+            <Col>
+              <h5 className="mt-3 text-center">Peltier</h5>
+            </Col>
+          </Row>
+          <Row className="mb-3">
               <Col>
                 <EndpointButton
                   endpoint={proxyEndpoint} fullpath="loki/application/peltier/enable"
@@ -159,47 +156,66 @@ export default function Environmental({
                 </FloatingLabel>
               </Col>
             </UserAware>
-          </Row>
 
           <Row>
-            <Row>
-              <Col>
-                <h5 className="mt-3 text-center">Status</h5>
-              </Col>
-            </Row>
-            <Row className="mb-3">
-              <Col sm={4}>
-                <FloatingLabel label="Humidity">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNull(envData?.humidity.BOARD)}
-                  />
-                </FloatingLabel>
-              </Col>
-              <Col sm={4}>
-                <FloatingLabel label="Diode Temp.">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNull(envData?.temperature.DIODE)}
-                  />
-                </FloatingLabel>
-              </Col>
-              <Col sm={4}>
-                <FloatingLabel label="Block Temp.">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNull(envData?.temperature.BLOCK)}
-                  />
-                </FloatingLabel>
-              </Col>
-            </Row>
+            <Col>
+              <h5 className="mt-3 text-center">Status</h5>
+            </Col>
           </Row>
+          <Row className="mb-3">
+              <Col sm={6}>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Humidity">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNull(envData?.humidity.BOARD)}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Dew Point">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNull(envData?.temperature?.DEWPOINT)}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+              </Col>
+              <Col sm={6}>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Diode Temp.">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNull(envData?.temperature.DIODE)}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Block Temp.">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNull(envData?.temperature.BLOCK)}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+              </Col>
+            </Row>
         </Card.Body>
       </Card>
     </>
