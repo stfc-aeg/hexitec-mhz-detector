@@ -29,6 +29,8 @@ class ConfigurationController(BaseController):
         default_mapping = self.options.get('default_map_filepath', '')
         if default_mapping:
             self.set_mapping(default_mapping)
+            # Need to split the path if there is one
+            self.default_mapping_file = Path(default_mapping).stem        
 
         self.default_profile = self.options.get('default_profile', 'default')
 
@@ -164,6 +166,9 @@ class ConfigurationController(BaseController):
         self.available_profiles = sorted(
             path.stem for path in profiles_dir.glob("*.json") if path.is_file()
         )
+        # If the mapping file is in the profiles directory, don't present it as an option
+        if self.default_mapping_file in self.available_profiles:
+            self.available_profiles.remove(self.default_mapping_file)
 
     def create_profile(self, name: str):
         """Create a profile file with the given name using the current settings."""
