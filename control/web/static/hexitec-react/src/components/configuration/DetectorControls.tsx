@@ -27,18 +27,24 @@ export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorCo
           so the options are 7, 14, and 21 with unit femtofarads fF*/}
           <Col>
             <FloatingLabel label="Feedback Gain Stage">
-
-              <EndpointSelect
-                endpoint={proxyEndpoint}
-                fullpath="loki/application/asic_settings/feedback_capacitance"
-                variant="outline-secondary"
-                style={floatingInputStyle}
+              <Form.Select
+                value={lokiData?.feedback_capacitance?.toString() ?? ''}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                  const numericValue = Number(e.currentTarget.value);
+                  if (!Number.isNaN(numericValue)) {
+                    proxyEndpoint.put(
+                      { feedback_capacitance: numericValue },
+                      'loki/application/asic_settings'
+                    );
+                  }
+                }}
                 disabled={!isCustom}
-                >
-                  <option value="7">7fF (High)</option>
-                  <option value="14">14fF (Medium)</option>
-                  <option value="21">21fF (Low)</option>
-              </EndpointSelect>
+                style={floatingInputStyle}
+              >
+                <option value="7">7fF (High)</option>
+                <option value="14">14fF (Medium)</option>
+                <option value="21">21fF (Low)</option>
+              </Form.Select>
             </FloatingLabel>
           </Col>
         </Row>
