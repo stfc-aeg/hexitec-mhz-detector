@@ -6,9 +6,10 @@ import type { AdapterEndpoint } from 'odin-react';
 interface FileUploadsProps {
   histogramEndpoint: AdapterEndpoint<HistogramTypes>;
   isCustom: boolean;
+  isAcquiring: boolean;
 }
 
-export default function FileUploads( { histogramEndpoint, isCustom }: FileUploadsProps) {
+export default function FileUploads( { histogramEndpoint, isCustom, isAcquiring }: FileUploadsProps) {
 
   const histogramMetadata = histogramEndpoint.metadata;
   const linearity_metadata = histogramMetadata?.config?.linearity_correction?.lin_filename;
@@ -34,7 +35,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
               select_options={histogramEndpoint?.data?.config?.hdf_settings?.available ?? []}
               loadButton
               loadPath="config/hdf_settings/load"
-              disabled={!isCustom}
+              disabled={!isCustom || isAcquiring}
             />
           </Col>
         </Row>
@@ -48,7 +49,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
               select_options={linearity_metadata?.allowed_values ?? []}
               loadButton
               loadPath="config/linearity_correction/lin_load"
-              disabled={!isCustom}
+              disabled={!isCustom || isAcquiring}
             />
           </Col>
         </Row>
@@ -62,7 +63,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
               select_options={linearity_gain_metadata?.allowed_values ?? []}
               loadButton
               loadPath="config/linearity_correction/gain_load"
-              disabled={!isCustom}
+              disabled={!isCustom || isAcquiring}
             />
           
           </Col>
@@ -77,7 +78,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
               select_options={badpixthres_metadata?.allowed_values ?? []}
               loadButton
               loadPath="config/thresholds/bad_pixel/load"
-              disabled={!isCustom}
+              disabled={!isCustom || isAcquiring}
             />
           </Col>
         </Row>
@@ -91,7 +92,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
               select_options={badpixmask_metadata?.allowed_values ?? []}
               loadButton
               loadPath="config/hist_format/bad_pixel_mask/load"
-              disabled={!isCustom}
+              disabled={!isCustom || isAcquiring}
             />
           </Col>
         </Row>
@@ -108,7 +109,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
                   select_options={l3file_metadata?.allowed_values ?? []}
                   loadButton
                   loadPath="config/charge_sharing/l3_load"
-                  disabled={!isCustom}
+                  disabled={!isCustom || isAcquiring}
                 />
               </Row>
               <Row className="mb-2">
@@ -120,7 +121,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
                   select_options={mcfile_metadata?.allowed_values ?? []}
                   loadButton
                   loadPath="config/charge_sharing/mc_load"
-                  disabled={!isCustom}
+                  disabled={!isCustom || isAcquiring}
                 />
               </Row>
               <Row className="mb-2">
@@ -132,7 +133,7 @@ export default function FileUploads( { histogramEndpoint, isCustom }: FileUpload
                   select_options={posfile_metadata?.allowed_values ?? []}
                   loadButton
                   loadPath="config/charge_sharing/pos_load"
-                  disabled={!isCustom}
+                  disabled={!isCustom || isAcquiring}
                 />
               </Row>
             </Accordion.Body>

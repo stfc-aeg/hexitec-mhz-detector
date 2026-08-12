@@ -66,16 +66,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
       <Card.Header><strong>Processing</strong></Card.Header>
       <Card.Body>
         <Row>
-          {isAcquiring ?
-            <Alert
-              variant='warning'
-              dismissible={false}
-              className="mt-2 w-100"
-            >
-              While the histogrammer is acquiring (preview or acquisition), you will not be able to change settings in the histogrammer.
-            </Alert> :
-            <></>
-          }
           <Col>
             <Form.Label><b>Charge-sharing Options</b></Form.Label>
             <Row>

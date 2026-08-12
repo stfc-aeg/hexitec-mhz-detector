@@ -6,6 +6,8 @@ import Environmental from '../components/configuration/Environmental';
 import Processing from '../components/configuration/Processing';
 import FileUploads from '../components/configuration/FileUploads';
 import DetectorControls from '../components/configuration/DetectorControls';
+import { OverlayTrigger } from 'react-bootstrap';
+import { tooltips } from '../tooltips';
 import { useState } from 'react';
 
 interface ConfigurationProps {
@@ -25,6 +27,10 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
   const isCustomProfile = configEndpoint.data?.edit_current_config ?? false;
   const [customName, setCustomName] = useState('new_config');
   const invalidCustomName = customName === '' || customName === 'custom';
+
+  const isAcquiring = acquisitionEndpoint.data?.state?.acquisition?.toggle || acquisitionEndpoint.data?.state?.preview?.toggle;
+  const configDisabled = isAcquiring || !isCustomProfile;
+  const disabledTooltip = isAcquiring ? tooltips.acquisition.disabled_acquiring : tooltips.acquisition.disabled_edit;
 
   return (
     <Container>
@@ -93,42 +99,49 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
           </Row>
         </Col>
       </Row>
-      {!isCustomProfile ?
-      <Row>
-        <Alert
-          variant='warning'
-          dismissible={false}
-          className="mt-2 w-100"
-        >
-          To edit system parameters, select the 'edit config' check above.<br></br>
-          The configuration made can then be saved using the name input and button on the right.
-        </Alert>
-      </Row> :
-      <></>
-      }
-      <Row>
-        <Col md={6}>
-          <Environmental
-            proxyEndpoint={proxyEndpoint}
-            isCustom={isCustomProfile}
-          />
-          <FileUploads
-            histogramEndpoint={histogramEndpoint}
-            isCustom={isCustomProfile}
-          />
-        </Col>
-        <Col md={6}>
-          <Processing
-            histogramEndpoint={histogramEndpoint}
-            acquisitionEndpoint={acquisitionEndpoint}
-            isCustom={isCustomProfile}
-          />
-          <DetectorControls
-            proxyEndpoint={proxyEndpoint}
-            isCustom={isCustomProfile}
-          />
-        </Col>
-      </Row>
+      <div style={{ position: 'relative' }}>
+        {configDisabled && (
+          <OverlayTrigger placement="top" overlay={disabledTooltip}>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundColor: 'rgba(255,255,255,0.10)',
+                zIndex: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                pointerEvents: 'auto'
+              }}
+            />
+          </OverlayTrigger>
+        )}
+
+        <Row>
+          <Col md={6}>
+            <Environmental
+              proxyEndpoint={proxyEndpoint}
+              isCustom={isCustomProfile}
+            />
+            <FileUploads
+              histogramEndpoint={histogramEndpoint}
+              isCustom={isCustomProfile}
+              isAcquiring={isAcquiring}
+            />
+          </Col>
+          <Col md={6}>
+            <Processing
+              histogramEndpoint={histogramEndpoint}
+              acquisitionEndpoint={acquisitionEndpoint}
+              isCustom={isCustomProfile}
+            />
+            <DetectorControls
+              proxyEndpoint={proxyEndpoint}
+              isCustom={isCustomProfile}
+            />
+          </Col>
+        </Row>
+      </div>
     </Container>
   );
 }
