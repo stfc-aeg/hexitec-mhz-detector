@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
 import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
-import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../utils.js';
 
 interface AcquisitionProps {
   endpoint_url: string;
@@ -283,7 +283,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Total Storage">
                       <Form.Control
                         type="text"
-                        value={(acquisitionData?.config?.estimated_data_rate ?? 0) * est_duration + ' GB'}
+                        value={checkNull((acquisitionData?.config?.estimated_data_rate ?? 0) * est_duration) + ' GB'}
                         readOnly
                         style={floatingLabelStyle}
                         className={rateTooHigh ? 'border border-danger text-danger bg-danger bg-opacity-10' : ''}

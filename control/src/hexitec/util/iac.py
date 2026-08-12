@@ -10,6 +10,21 @@ AnyAdapter = TypeVar("AnyAdapter", bound=BaseAdapter)
 class IACError(BaseError):
     """Simple exception class to wrap lower-level exceptions."""
 
+    def __str__(self) -> str:
+        if len(self.args) == 1:
+            return str(self.args[0])
+        if len(self.args) > 1:
+            try:
+                return str(self.args[0]) % tuple(self.args[1:])
+            except Exception:
+                return " ".join(str(arg) for arg in self.args)
+        return super().__str__()
+
+def _format_iac_response(response_data: Any) -> Any:
+    if isinstance(response_data, dict) and 'error' in response_data:
+        return response_data['error']
+    return response_data
+
 
 def iac_get(adapter: AnyAdapter, path: str, as_dict: bool = False) -> dict[str, Any] | Any:
     """Generic inter-adapter-communication get method for odin_control adapters.
@@ -33,7 +48,9 @@ def iac_get(adapter: AnyAdapter, path: str, as_dict: bool = False) -> dict[str, 
                        adapter.name, path)
 
     if response.status_code != 200:
-        raise IACError(f"IAC GET failed for adapter {adapter}, path {path}: {response.data}")
+        raise IACError(
+            f"IAC GET failed for adapter {adapter.name}, path {path}: {_format_iac_response(response.data)}"
+        )
     return response.data if as_dict else response.data.get(param, "")
 
 def iac_set(adapter: AnyAdapter, path: str, data: dict[str, Any]):
@@ -54,5 +71,7 @@ def iac_set(adapter: AnyAdapter, path: str, data: dict[str, Any]):
     request = ApiAdapterRequest(data, content_type="application/vnd.odin-native")
     response = adapter.put(path, request)
     if response.status_code != 200:
-        raise IACError(f"IAC SET failed for adapter {adapter}, path {path}: {response.data}")
+        raise IACError(
+            f"IAC SET failed for adapter {adapter.name}, path {path}: {_format_iac_response(response.data)}"
+        )
     return response.data

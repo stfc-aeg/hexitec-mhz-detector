@@ -1,6 +1,6 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from hexitec.util.iac import iac_get, iac_set
+from hexitec.util.iac import IACError, iac_get, iac_set
 from tornado.ioloop import IOLoop
 
 import logging
@@ -36,6 +36,8 @@ class Configuration():
         self.number_of_timeframes = int(iac_get(self.histogrammer, "acquisition/num_histograms"))
         self.timeframes_per_trigger = int(iac_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
+        self.readout_max_frames = 2**32 - 1  # Max value for 32-bit unsigned int
+
         # By default, 10^0 = 1
         self.frames_pre_mult = self.frames_per_timeframe
         self.frame_mult = 1
@@ -64,7 +66,7 @@ class Configuration():
                                  {'allowed_values': ["burst mode", "step scan", "continuous mode"]}),
                 'frames_pre_multiplier': (lambda: self.frames_pre_mult, 
                                           lambda frames: self.set_mult_frames_per_timeframe(frames, self.frame_mult),
-                                         {'min': 1}),
+                                         {'min': 1, 'max': self.readout_max_frames}),
                 'frame_multiplier': (lambda: self.frame_mult,
                                      lambda mult: self.set_mult_frames_per_timeframe(self.frames_pre_mult, mult),
                                      {'allowed_values': [1, 1_000, 1_000_000, 1_000_000_000]}),
@@ -186,14 +188,17 @@ class Configuration():
         if frames < min_frames_per_timeframe:
             raise self.AcquisitionError(f"Frames per timeframe must be at least {min_frames_per_timeframe}.")
 
+        if frames > self.readout_max_frames:
+            raise self.AcquisitionError(f"Frames per timeframe must be less than or equal to {self.readout_max_frames}.")
+
         try:
             # Software, internal timeframe generator
             iac_set(self.histogrammer, "acquisition/frames_per_histogram", frames)
             # Hardware, on trigger received
             iac_set(self.readout, "trigger/frame_limits/frame_in_hist", frames)
             self.frames_per_timeframe = frames
-        except Exception as err:
-            logging.warning(f"Could not set frames per timeframe: {err}")
+        except IACError as err:
+            raise self.AcquisitionError(f"Could not set frames per timeframe: {err}")
 
         self.calculate_estimated_data_rate()
 
@@ -231,8 +236,8 @@ class Configuration():
             # Software, internal timeframe generator. Not used in this way for 
             iac_set(self.histogrammer, "acquisition/num_histograms", timeframes)
             self.number_of_timeframes = timeframes
-        except Exception as err:
-            logging.warning(f"Could not set number of timeframes: {err}")
+        except IACError as err:
+            raise self.AcquisitionError(f"Could not set number of timeframes: {err}")
 
     def set_timeframes_per_trigger(self, timeframes: int):
         """Set the number of timeframes per trigger.
@@ -243,8 +248,8 @@ class Configuration():
             # Hardware
             iac_set(self.readout, "trigger/frame_limits/hist_in_trigger", timeframes)
             self.timeframes_per_trigger = timeframes
-        except Exception as err:
-            logging.warning(f"Could not set timeframes per trigger: {err}")
+        except IACError as err:
+            raise self.AcquisitionError(f"Could not set timeframes per trigger: {err}")
 
     def calculate_estimated_data_rate(self):
         """Calculate the estimated data rate based on the current configuration."""
@@ -254,8 +259,7 @@ class Configuration():
         # hists_per_second is 1M (frames per second) divided by frames per hist
         frames = self.frames_per_timeframe if self.frames_per_timeframe > 0 else 1
         hists_per_second = 1_000_000 / frames
-        data_rate = hists_per_second * (80*80*int(num_bins)*4) / 1_000_000_000
-        self.data_rate = round(data_rate, 4)
+        self.data_rate = hists_per_second * (80*80*int(num_bins)*4) / 1_000_000_000
         return self.data_rate
 
     def toggle_baseline(self, value: bool):
