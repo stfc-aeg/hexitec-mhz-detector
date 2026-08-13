@@ -4,16 +4,18 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from hexitec.acquisition.processes.configuration import Configuration
 from hexitec.acquisition.processes.state import State
+from hexitec.acquisition.processes.config_mapping import mapping
 
 from typing import TypedDict, cast
-from histogrammer.adapter.adapter import HistogramAdapter, HistogramController
-from hexitec.liveview.adapter import HistogramLiveViewAdapter, HistogramLiveViewController
-from munir.adapter import MunirAdapter, MunirFpController, MunirController
+from histogrammer.adapter.adapter import HistogramAdapter
+from hexitec.liveview.adapter import HistogramLiveViewAdapter
+from munir.adapter import MunirAdapter, MunirFpController
 from odin.adapters.proxy import ProxyAdapter
-from hexitec.adapter import HexitecAdapter, HexitecController
-from readout_processor.adapter import ReadoutProcessorAdapter, ReadoutProcessorController
+from hexitec.adapter import HexitecAdapter
+from readout_processor.adapter import ReadoutProcessorAdapter
+from hexitec.configuration.adapter import ConfigurationAdapter
 
-from hexitec.util.iac import iac_get, iac_set
+from hexitec.util.iac import iac_set
 
 class Adapters(TypedDict):
     histogram: HistogramAdapter
@@ -21,7 +23,8 @@ class Adapters(TypedDict):
     munir: MunirAdapter
     proxy: ProxyAdapter
     hexitec: HexitecAdapter
-    readout: ReadoutProcessorController
+    readout: ReadoutProcessorAdapter
+    config: ConfigurationAdapter
 
 class AcquisitionError(BaseError):
     """Exception raised for errors in the AcquisitionController."""
@@ -38,6 +41,8 @@ class AcquisitionController(BaseController):
         self.bin_mode = options.get('default_bin_mode', 'histogram_1024')
         self.munir_subsystem = options.get('munir_subsystem', 'hexitec_mhz')
 
+        self.config_mapping = mapping
+
     def initialize(self, adapters: Adapters):
         """Initialise the acquisition controller with information about adapters currently loaded
         into the running application.
@@ -46,7 +51,7 @@ class AcquisitionController(BaseController):
         self.adapters = adapters
         
         # Verify all required adapters are present
-        required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec', 'readout']
+        required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec', 'readout', 'config']
         missing = [name for name in required_adapters if name not in adapters]
         if missing:
             missing = ", ".join(missing)
@@ -54,11 +59,14 @@ class AcquisitionController(BaseController):
         
         # Cast and store adapter controllers
         self.histogrammer = cast(HistogramAdapter, adapters['histogram'])
-        self.liveview = cast(HistogramLiveViewController, adapters['liveview'])
+        self.liveview = cast(HistogramLiveViewAdapter, adapters['liveview'])
         self.munir = cast(MunirFpController, adapters['munir'])
         self.proxy = cast(ProxyAdapter, adapters['proxy'])
-        self.hexitec = cast(HexitecController, adapters['hexitec'])
-        self.readout = cast(ReadoutProcessorController, adapters['readout'])
+        self.hexitec = cast(HexitecAdapter, adapters['hexitec'])
+        self.readout = cast(ReadoutProcessorAdapter, adapters['readout'])
+        self.config = cast(ConfigurationAdapter, adapters['config'])
+
+        self.config_controller = self.config.controller
 
         # Verify munir subsystem exists
         if self.munir_subsystem not in self.munir.controller.munir_managers:
@@ -76,56 +84,38 @@ class AcquisitionController(BaseController):
             self.adapters['sequencer'].add_context('munir', self.munir.controller)
             self.adapters['sequencer'].add_context('proxy', self.proxy)
             self.adapters['sequencer'].add_context('readout', self.readout.controller)
+            self.adapters['sequencer'].add_context('config', self.config.controller)
 
         # Set a default file name and path
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", self.options.get('default_filepath', '/tmp/'))
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", self.options.get('default_filename', 'mhz_acquisition'))
+        default_filepath = self.options.get('default_filepath', '/tmp/')
+        default_filename = self.options.get('default_filename', 'mhz_acquisition')
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", default_filepath)
+        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", default_filename)
 
         # Provide adapters to sub-processess
-
         self.configuration = Configuration(self.adapters, self.munir_subsystem, AcquisitionError)
-        self.state = State(self.adapters, self.munir_subsystem, AcquisitionError)
+        self.state = State(self.adapters, self.munir_subsystem, AcquisitionError, default_filepath, default_filename)
 
-        self.state._register_configuration(self.configuration)
-        self.configuration._register_state(self.state)
+        self.state._register_configuration(configuration=self.configuration)
+        self.configuration._register_state(state=self.state)
+
+        # Configuration profiles
+        self.config_controller.set_mapping(self.config_mapping)
 
         # Connect histogrammer and setup UDP
         iac_set(self.histogrammer, "device/connect", True)
+        # Currently histogrammer does not respect config, this will be fixed later
+        iac_set(self.histogrammer, "udp/accelerator/rx_ip", self.options.get('accel_rx_ip', '10.0.100.8'))
+        iac_set(self.histogrammer, "udp/accelerator/tx_ip", self.options.get('accel_tx_ip', '10.0.101.109'))
+        iac_set(self.histogrammer, "udp/destination/ip", self.options.get('dest_ip', '10.0.101.8'))
+        iac_set(self.histogrammer, "udp/source/ip", self.options.get('source_ip', '10.0.100.108'))
+        iac_set(self.histogrammer, "udp/source/port", int(self.options.get('source_port', 61648)))
+        iac_set(self.histogrammer, "udp/accelerator/port", int(self.options.get('accel_port', 61649)))
+
         iac_set(self.histogrammer, "udp/setup", True)
 
+        # self._handle_default_settings()
         self._build_tree()
-        self._handle_default_settings()
-
-
-    def _handle_default_settings(self):
-        """Take the default configuration options provided and apply them."""
-        # Baseline
-        iac_set(self.histogrammer, "config/baseline/divide", int(self.options.get('baseline_divide', 256)))
-        iac_set(self.histogrammer, "config/baseline/dither", bool(int(self.options.get('baseline_dither', 0))))
-
-        # Thresholds
-        iac_set(self.histogrammer, "config/thresholds/absolute/high", int(self.options.get('thres_abs_high_default', 1000)))
-        iac_set(self.histogrammer, "config/thresholds/absolute/low", int(self.options.get('thres_abs_low_default', 1)))
-        iac_set(self.histogrammer, "config/thresholds/low/neg", int(self.options.get('thres_low_neg_default', -35)))
-        iac_set(self.histogrammer, "config/thresholds/low/pos", int(self.options.get('thres_low_pos_default', 25)))
-        iac_set(self.histogrammer, "config/thresholds/main/neg", int(self.options.get('thres_main_neg_default', -35)))
-        iac_set(self.histogrammer, "config/thresholds/main/pos", int(self.options.get('thres_main_pos_default', 25)))
-
-        # Charge-sharing
-        iac_set(self.histogrammer, "config/charge_sharing/positive_edge", bool(int(self.options.get('charge_pos_edge', 0))))
-        iac_set(self.histogrammer, "config/charge_sharing/sum_enable", bool(int(self.options.get('charge_sum_enable', 0))))
-        iac_set(self.histogrammer, "config/charge_sharing/negative_neighbour", bool(int(self.options.get('charge_neg_neighbour', 0))))
-        iac_set(self.histogrammer, "config/charge_sharing/position_adjust", bool(int(self.options.get('charge_pos_adjust', 0))))
-        
-        # UDP settings
-        iac_set(self.readout, "udp/core_0/dest_mac", self.options.get('core_0_dest_mac', 'E8:EB:D3:CC:A9:00'))
-        iac_set(self.readout, "udp/core_0/src_mac", self.options.get('core_0_src_mac', '62:00:00:00:01:0A'))
-        iac_set(self.readout, "udp/core_0/dest_ip", self.options.get('core_0_dest_ip', '10.0.100.8'))
-        iac_set(self.readout, "udp/core_0/src_ip", self.options.get('core_0_src_ip', '10.0.100.108'))
-        iac_set(self.readout, "udp/core_1/dest_mac", self.options.get('core_1_dest_mac', 'E8:EB:D3:CC:A9:00'))
-        iac_set(self.readout, "udp/core_1/src_mac", self.options.get('core_1_src_mac', '62:00:00:00:01:0A'))
-        iac_set(self.readout, "udp/core_1/dest_ip", self.options.get('core_1_dest_ip', '10.0.100.8'))
-        iac_set(self.readout, "udp/core_1/src_ip", self.options.get('core_1_src_ip', '10.0.100.108'))
 
     def _build_tree(self):
         """Build the parameter tree for the acquisition controller."""

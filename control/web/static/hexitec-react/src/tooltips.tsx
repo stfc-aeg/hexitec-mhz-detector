@@ -22,6 +22,17 @@ export const tooltips = {
         <strong>Duration.</strong> With hardware triggering, the duration is estimated per-trigger.
       </Tooltip>
     )
+    ,
+    disabled_acquiring: (
+      <Tooltip id="tooltip-acq-disabled">
+        <strong>Acquisition in progress.</strong> Configuration is locked while an acquisition or preview is running.
+      </Tooltip>
+    ),
+    disabled_edit: (
+      <Tooltip id="tooltip-edit-disabled">
+        <strong>Editing disabled.</strong> Enable 'Edit Config' above to make changes to configuration parameters.
+      </Tooltip>
+    )
   },
   processing: {
     chargeSharing: (

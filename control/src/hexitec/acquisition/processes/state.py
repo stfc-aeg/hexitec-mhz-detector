@@ -12,7 +12,7 @@ class State():
 
     executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    def __init__(self, adapters, munir_subsystem, AcquisitionError):
+    def __init__(self, adapters, munir_subsystem, AcquisitionError, default_filepath, default_filename):
         self.munir_subsystem = munir_subsystem
 
         self.munir = adapters["munir"]
@@ -34,8 +34,8 @@ class State():
         self.acquisition_progress = 0.0
 
         # File settings (as convenience functions for munir)
-        self.file_name = "mhz_acquisition"
-        self.file_path = "/tmp"
+        self.file_name = default_filename
+        self.file_path = default_filepath
         self.file_timestamp = False
 
         self.tree = ParameterTree({
@@ -176,7 +176,10 @@ class State():
 
         # Timestamp
         if self.file_timestamp:
-            filename = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name")
+            # Filename is set in munir in set_file_name but local ref is used here
+            # Pulling name from munir can cause timestamp to be added multiple times if the
+            # name is not changed between acquisitions.
+            filename = self.file_name
             stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             filename = filename + "_" + stamp
             # self.file_name = filename
@@ -216,7 +219,6 @@ class State():
         while self.acquisition_progress_task_enable:
             munir_status = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
             frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
-            frames_received += 1  # n-1 bug in histogrammer
 
             self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
 

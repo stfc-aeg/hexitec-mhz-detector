@@ -47,6 +47,12 @@ export interface HistogramTypes extends ParamNode {
       positive_edge: boolean;
       sum_enable: boolean;
     };
+    hdf_settings: {
+      filename: string;
+      save: null;
+      load: null;
+      available: string[];
+    };
     hdf_filename: string;
     linearity_correction: {
       gain_filename: string;
@@ -345,12 +351,21 @@ export interface AcquisitionTypes extends ParamNode {
     trigger: {
       device: string;
       frames_per_timeframe: number;
+      frames_pre_multiplier: number;
+      frame_multiplier: string;
       number_of_timeframes: number;
       toggle_acquisition_histogramming: null | boolean;
       trigger_mode: string;
     };
     estimated_data_rate: number;
+    config_profile: {
+      available: string[];
+      current: string;
+      create_profile: null;
+    };
+    config_edit_mode: boolean;
   };
+
   state: {
     acquisition: {
       toggle: boolean;
@@ -374,11 +389,13 @@ export interface LokiEnviromentParams extends ParamNode {
   temperature: {
     DIODE: number;
     BLOCK: number;
+    DEWPOINT: number;
   }
   humidity: {
     BOARD: number;
   }
 }
+
 
 export interface LokiApplicationData extends ParamNode {
   HV: {
@@ -392,6 +409,16 @@ export interface LokiApplicationData extends ParamNode {
     count: number;
     temperature: number;
     enable: boolean;
+  }
+  asic_settings: {
+    feedback_capacitance: number;
+    feedback_gain: string;
+    negative_range_kev: number;
+    negative_range_lowhigh: string;
+    negative_range_options: {
+      low: number;
+      high: number;
+    };
   }
 }
 
@@ -409,5 +436,77 @@ export interface ProxyParams extends ParamNode{
       error: string;
       last_update: string;
     }
+  }
+}
+
+export interface ConfigTypes extends ParamNode {
+  available_profiles: string[];
+  create_profile: null;
+  current_profile: string;
+  profiles_filepath: string;
+  set_mapping: null;
+}
+
+
+export interface ReadoutTypes extends ParamNode {
+  control: {
+    close: null;
+    connected: boolean;
+    open: null;
+  };
+  status: {
+    acq_control: {
+      acquire: number;
+      acquisition_abort: number;
+      manual_trig: number;
+    },
+    aurora: {
+      channel: boolean;
+      lane: boolean;
+    };
+    clock_resets: {
+      aurora_reset: number;
+      cmac_0_reset: number;
+      cmac_1_reset: number;
+      cmac_2_reset: number;
+      data_path_reset: number;
+    };
+    cmac: {
+      cmac_0_lane_up: number;
+      cmac_1_lane_up: number;
+    };
+    frame_changing: boolean;
+    frame_number: number;
+    is_running: boolean;
+    reactivate: null;
+    reset: null;
+  };
+  trigger: {
+    acquisition_count: number;
+    debug_trigger: null;
+    enable: boolean;
+    frame_limits: {
+      acquisition: number;
+      frame_in_hist: number;
+      hist_in_trigger: number;
+    };
+    mode: string;
+    polarity: string;
+    reset_time_frame: boolean;
+    timeframe_count: number;
+  };
+  udp: {
+    core_0: {
+      dest_ip: string;
+      dest_mac: string;
+      src_ip: string;
+      src_mac: string;
+    };
+    core_1: {
+      dest_ip: string;
+      dest_mac: string;
+      src_ip: string;
+      src_mac: string;
+    };
   }
 }

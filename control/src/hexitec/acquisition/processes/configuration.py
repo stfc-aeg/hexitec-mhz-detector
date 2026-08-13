@@ -1,18 +1,25 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from hexitec.util.iac import IACError, iac_get, iac_set
+from tornado.ioloop import IOLoop
+
 import logging
-from hexitec.util.iac import iac_get, iac_set
+import math
 
 class Configuration():
     def __init__(self, adapters, munir_subsystem, AcquisitionError):
         self.munir_subsystem = munir_subsystem
 
         self.bin_mode = "histogram_1024"
+
         self.munir = adapters["munir"]
         self.munir_odindata_controller = self.munir.controller.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
         self.histogrammer = adapters["histogram"]
         self.readout = adapters["readout"]
         self.liveview = adapters["liveview"]
+        self.proxy = adapters["proxy"]
+
+        self.munir_bin_mode = self.munir.controller.munir_managers[self.munir_subsystem].fp_status[0].get('HexitecMhz', {}).get('mode', '')
 
         self.AcquisitionError = AcquisitionError
 
@@ -29,6 +36,12 @@ class Configuration():
         self.number_of_timeframes = int(iac_get(self.histogrammer, "acquisition/num_histograms"))
         self.timeframes_per_trigger = int(iac_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
+        self.readout_max_frames = 2**32 - 1  # Max value for 32-bit unsigned int
+
+        # By default, 10^0 = 1
+        self.frames_pre_mult = self.frames_per_timeframe
+        self.frame_mult = 1
+
         self.data_rate = self.calculate_estimated_data_rate()
 
         # There is no true 'on/off' setting for this, but a set of commands that do about the same
@@ -41,6 +54,9 @@ class Configuration():
 
         self.running_histogrammer = False
 
+        # For the Configuration page - a flag to disable UI components if not in 'edit mode'
+        self.edit_mode = False
+
         self.tree = ParameterTree({
             'bin_mode': (lambda: self.bin_mode, self.change_bin_mode, 
                          {'allowed_values':
@@ -51,8 +67,13 @@ class Configuration():
                            {'allowed_values': self.device_options}),
                 'trigger_mode': (lambda: self.trigger_mode, self.change_trigger_mode, 
                                  {'allowed_values': ["burst mode", "step scan", "continuous mode"]}),
-                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe,
-                                         {'min': 1}),
+                'frames_pre_multiplier': (lambda: self.frames_pre_mult, 
+                                          lambda frames: self.set_mult_frames_per_timeframe(frames, self.frame_mult),
+                                         {'min': 1, 'max': self.readout_max_frames}),
+                'frame_multiplier': (lambda: self.frame_mult,
+                                     lambda mult: self.set_mult_frames_per_timeframe(self.frames_pre_mult, mult),
+                                     {'allowed_values': [1, 1_000, 1_000_000, 1_000_000_000]}),
+                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
                 'timeframes_per_trigger': (lambda: self.timeframes_per_trigger, self.set_timeframes_per_trigger,
@@ -61,22 +82,21 @@ class Configuration():
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
             },
-            'estimated_data_rate': (lambda: self.data_rate, None)
+            'estimated_data_rate': (lambda: self.data_rate, None),
+            'config_edit_mode': (lambda: self.edit_mode, self.toggle_editing,
+                          {'description': 'Flag to signal state of if UI components should be editable'}
+            )
         })
 
-        # Ensure bin count matches odin_data as that is the most complicated to change
-        munir_num_bins = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
-        munir_num_bins = str(munir_num_bins[0].get("HexitecMhz", {}).get("mode", ""))
-        # Safety: odin data may not be active and we do not want to launch to an error
-        if munir_num_bins:
-            hist_num_bins = "histogram_" + str(iac_get(self.histogrammer, "config/hist_format/num_bins"))
-            liveview_num_bins = "histogram_" + str(iac_get(self.liveview, "histview/mhz/image/num_bins"))
-            if munir_num_bins != hist_num_bins or hist_num_bins != liveview_num_bins:
-                self.change_bin_mode(munir_num_bins)
+        self._retry_sync_bin_mode()
 
     def _register_state(self, state):
-        """Get a reference to the state class."""
+        """Get a reference to the state and parent class."""
         self.state = state
+
+    def toggle_editing(self, toggle: bool):
+        """Enable or disable the edit_mode flag."""
+        self.edit_mode = bool(toggle)
 
     def change_bin_mode(self, bin_mode: str):
         """Change the number of bins used by the sensor.
@@ -156,13 +176,10 @@ class Configuration():
         iac_set(self.readout, "trigger/mode", mode)
 
     def set_frames_per_timeframe(self, frames: int):
-        """Set the number of frames per timeframe/histogram.
-        This value is used in the same way no matter the mode, except in continuous mode where it is not used.
-        :param frames: positive integer representing the number of frames per timeframe
+        """Set the number of frames per timeframe/histogram and recalculate the data rate.
+        Additionally verify the minimum allowed frame count against the bin mode.
+        :param frames: positive integer number of frames.
         """
-        if frames < 1:
-            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
-
         # The min frames per timeframe is based on the bin mode, and at what point 
         # this is less efficient than raw data. This is roughly 350 at 128 bins, 700 at 256, etc.
         match self.bin_mode:
@@ -181,14 +198,17 @@ class Configuration():
         if frames < min_frames_per_timeframe:
             raise self.AcquisitionError(f"Frames per timeframe must be at least {min_frames_per_timeframe}.")
 
+        if frames > self.readout_max_frames:
+            raise self.AcquisitionError(f"Frames per timeframe must be less than or equal to {self.readout_max_frames}.")
+
         try:
             # Software, internal timeframe generator
             iac_set(self.histogrammer, "acquisition/frames_per_histogram", frames)
             # Hardware, on trigger received
             iac_set(self.readout, "trigger/frame_limits/frame_in_hist", frames)
             self.frames_per_timeframe = frames
-        except Exception as err:
-            logging.warning(f"Could not set frames per timeframe: {err}")
+        except IACError as err:
+            raise self.AcquisitionError(f"Could not set frames per timeframe: {err}")
 
         self.calculate_estimated_data_rate()
 
@@ -199,6 +219,21 @@ class Configuration():
         # 1024	        366	                2731
         # 2048	        183	                5461
         # 4096	        92                  10923
+
+    def set_mult_frames_per_timeframe(self, frames: int, mult: int):
+        """Calculate the number of frames per timeframe/histogram using scientific notation format.
+        This value is used in the same way no matter the mode, except in continuous mode where it is not used.
+        :param frames: positive integer representing the number of frames per timeframe pre-multiplier
+        :param mult: positive integer representing the power of 10 to which the frames should be raised
+        """
+        if frames < 1:
+            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
+
+        calculation = int(frames * mult)
+
+        self.set_frames_per_timeframe(calculation)
+        self.frame_mult = int(mult)
+        self.frames_pre_mult = int(frames)
 
     def set_number_of_timeframes(self, timeframes: int):
         """Set the number of timeframes to be acquired.
@@ -211,8 +246,8 @@ class Configuration():
             # Software, internal timeframe generator. Not used in this way for 
             iac_set(self.histogrammer, "acquisition/num_histograms", timeframes)
             self.number_of_timeframes = timeframes
-        except Exception as err:
-            logging.warning(f"Could not set number of timeframes: {err}")
+        except IACError as err:
+            raise self.AcquisitionError(f"Could not set number of timeframes: {err}")
 
     def set_timeframes_per_trigger(self, timeframes: int):
         """Set the number of timeframes per trigger.
@@ -223,8 +258,8 @@ class Configuration():
             # Hardware
             iac_set(self.readout, "trigger/frame_limits/hist_in_trigger", timeframes)
             self.timeframes_per_trigger = timeframes
-        except Exception as err:
-            logging.warning(f"Could not set timeframes per trigger: {err}")
+        except IACError as err:
+            raise self.AcquisitionError(f"Could not set timeframes per trigger: {err}")
 
     def calculate_estimated_data_rate(self):
         """Calculate the estimated data rate based on the current configuration."""
@@ -234,8 +269,7 @@ class Configuration():
         # hists_per_second is 1M (frames per second) divided by frames per hist
         frames = self.frames_per_timeframe if self.frames_per_timeframe > 0 else 1
         hists_per_second = 1_000_000 / frames
-        data_rate = hists_per_second * (80*80*int(num_bins)*4) / 1_000_000_000
-        self.data_rate = round(data_rate, 4)
+        self.data_rate = hists_per_second * (80*80*int(num_bins)*4) / 1_000_000_000
         return self.data_rate
 
     def toggle_baseline(self, value: bool):
@@ -250,12 +284,44 @@ class Configuration():
             self.baseline_settings['prev_auto_trig'] = iac_get(self.histogrammer, "config/clustering/auto_trig_mode")
             self.baseline_settings['prev_cluster_mode'] = iac_get(self.histogrammer, "config/clustering/mode")
 
-            iac_set(self.histogrammer, "config/baseline/mask", "fixed")
-            iac_set(self.histogrammer, "config/clustering/mode", "auto")
-            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'autotrig 1in2')
+            iac_set(self.histogrammer, "config/baseline/mask", "FIXED")
+            iac_set(self.histogrammer, "config/clustering/mode", "AUTO")
+            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'ONEIN2')
         else:
             self.baseline_settings['enabled'] = False
 
             iac_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
             iac_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
             iac_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
+
+    def _sync_bin_mode(self):
+        munir_num_bins = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
+        mode = str(munir_num_bins[0].get('HexitecMhz', {}).get('mode', ''))
+
+        if not mode:
+            return False
+
+        hist_num_bins = f"histogram_{iac_get(self.histogrammer, 'config/hist_format/num_bins')}"
+        liveview_num_bins = f"histogram_{iac_get(self.liveview, 'histview/mhz/image/num_bins')}"
+
+        if mode != hist_num_bins or hist_num_bins != liveview_num_bins:
+            self.change_bin_mode(mode)
+        return True
+
+    def _retry_sync_bin_mode(self, attempts_left=5):
+        if self._sync_bin_mode():
+            logging.info(f"Initial bin mode synchronised from munir.")
+            return
+
+        if attempts_left <= 1:
+            logging.error(f"Failed to determine Munir mode after 5 attempts.")
+            return
+
+        logging.debug(
+            f"Munir not ready yet, retrying ({attempts_left-1} attempts remaining.)"
+        )
+
+        IOLoop.current().call_later(
+            1.0,
+            lambda: self._retry_sync_bin_mode(attempts_left-1)
+        )

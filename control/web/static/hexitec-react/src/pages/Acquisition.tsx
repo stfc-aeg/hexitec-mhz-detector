@@ -1,26 +1,45 @@
-import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint } from 'odin-react';
+import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from 'odin-react';
 import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
-import type { AcquisitionTypes } from '../EndpointTypes';
+import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
-import { floatingInputStyle, floatingLabelStyle } from '../utils.js';
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../utils.js';
 
 interface AcquisitionProps {
   endpoint_url: string;
 }
 
-// const EndpointSelect = WithEndpoint(Form.Select);
+const EndpointSelect = WithEndpoint(Form.Select);
 
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
+  const readoutEndpoint = useAdapterEndpoint<ReadoutTypes>('readout', endpoint_url, 10000);
+
   const acquisitionData = acquisitionEndpoint?.data;
 
   const [triggerModeValue, setTriggerModeValue] = useState('software');
   const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst mode');
 
+  const formatDisplayNumber = (value: unknown) => {
+    if (value === null || value === undefined || value === '') {
+      return '-';
+    }
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue.toLocaleString() : String(value);
+  };
+
+  const formatMultiplierLabel = (value: unknown) => `x${formatDisplayNumber(value)}`;
+
   const estimatedDataRate = acquisitionData?.config?.estimated_data_rate ?? 0;
   const rateTooHigh = estimatedDataRate > 12.5;
+
+  const acquisitionMetadata = acquisitionEndpoint?.metadata;
+  const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
+  const frameMultiplier_metadata = acquisitionMetadata?.config?.trigger?.frame_multiplier;
+
+  const triggerPolarityOptions = readoutEndpoint.metadata?.trigger?.polarity;
 
   const isAcquiring = acquisitionEndpoint?.data?.state?.acquisition?.toggle;
   const acquisitionProgress = acquisitionEndpoint?.data?.state?.acquisition?.progress_task?.progress;
@@ -51,6 +70,17 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const est_duration = (((acquisitionData?.config?.trigger?.frames_per_timeframe ?? 0) * (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0)) / 1000000);
 
+  // need to map histogram bin modes to numbers
+  // labels are in form histogram_X where X is number of bins, but we only want '<number> bins' for dropdown
+  const binModeOptions: { [key: string]: string } = {
+    'histogram_128': '128 bins',
+    'histogram_256': '256 bins',
+    'histogram_512': '512 bins',
+    'histogram_1024': '1024 bins',
+    'histogram_2048': '2048 bins',
+    'histogram_4096': '4096 bins'
+  };
+
   return (
     
     <Container>
@@ -59,6 +89,26 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
         <Col md={6} className="mt-3"> 
           <TitleCard title={<strong>Trigger Settings</strong>}>
             <Row>
+              <Col>
+                <FloatingLabel
+                  label="Bin Mode">
+                  <EndpointSelect
+                    endpoint={acquisitionEndpoint}
+                    fullpath="config/bin_mode"
+                    variant="outline-secondary"
+                    buttonText={acquisitionData?.config?.bin_mode}
+                    style={floatingInputStyle}
+                    disabled={isAcquiring}>
+                      {(binmode_metadata?.allowed_values ?? ['?']).map(
+                        (selection, index) => (
+                          <option value={selection} key={index}>{binModeOptions[selection] || selection}</option>
+                        )
+                      )}
+                  </EndpointSelect>
+                </FloatingLabel>
+              </Col>
+            </Row>
+            <Row className="mt-3">
               <ButtonGroup>
                 {triggerModeRadios.map((radio, idx) => (
                   <OverlayTrigger placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
@@ -100,28 +150,77 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             </Row>
             <Row className="mt-3">
               <Col>
-                <FloatingLabel label="Timeframes to write">
-                  <EndpointInput
-                    endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
-                    type="number"
-                    style={floatingInputStyle}
-                  />
-                </FloatingLabel>
-                <FloatingLabel label="Frames per timeframe" className="mt-2">
-                  <EndpointInput
-                    endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_per_timeframe"
-                    type="number"
-                    style={floatingInputStyle}
-                  />
-                </FloatingLabel>
-                <FloatingLabel label="Timeframes per trigger" className="mt-2">
-                  <EndpointInput
-                    endpoint={acquisitionEndpoint} fullpath="config/trigger/timeframes_per_trigger"
-                    type="number"
-                    style={floatingInputStyle}
-                    disabled={triggerModeValue==='software' || !(adTriggerModeValue==='burst mode')}
-                  />
-                </FloatingLabel>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Timeframes to write">
+                      <EndpointInput
+                        endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
+                        type="number"
+                        style={floatingInputStyle}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row className="mt-2">
+                  <Col xs={6}>
+                    <FloatingLabel label="Frames per timeframe">
+                      <EndpointInput
+                        endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_pre_multiplier"
+                        type="number"
+                        style={floatingInputStyle}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel
+                      label="Frame multiplier">
+                      <EndpointSelect
+                        endpoint={acquisitionEndpoint}
+                        fullpath="config/trigger/frame_multiplier"
+                        variant="outline-secondary"
+                        buttonText={formatMultiplierLabel(acquisitionData?.config?.trigger?.frame_multiplier)}
+                        style={floatingInputStyle}
+                        disabled={isAcquiring}>
+                          {(frameMultiplier_metadata?.allowed_values ?? ['?']).map(
+                            (selection, index) => (
+                              <option value={selection} key={index}>{formatMultiplierLabel(selection)}</option>
+                            )
+                          )}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Timeframes per trigger" className="mt-2">
+                      <EndpointInput
+                        endpoint={acquisitionEndpoint} fullpath="config/trigger/timeframes_per_trigger"
+                        type="number"
+                        style={floatingInputStyle}
+                        disabled={triggerModeValue==='software' || !(adTriggerModeValue==='burst mode')}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Trigger edge polarity" className="mt-2">
+                      <EndpointSelect
+                        endpoint={readoutEndpoint}
+                        fullpath="trigger/polarity"
+                        variant="outline-secondary"
+                        buttonText={readoutEndpoint.data?.trigger?.polarity}
+                        style={floatingInputStyle}
+                        disabled={isAcquiring || triggerModeValue==='software'}>
+                          {(triggerPolarityOptions?.allowed_values ?? ['?']).map(
+                            (selection, index) => (
+                              <option value={selection} key={index}>{selection}</option>
+                            )
+                          )}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                </Row>
               </Col>
             </Row>
             <Row className="mt-3">
@@ -134,7 +233,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Histograms per Acquisition">
                       <Form.Control
                         type="text"
-                        value={acquisitionData?.config?.trigger?.number_of_timeframes.toString()}
+                        value={formatDisplayNumber(acquisitionData?.config?.trigger?.number_of_timeframes)}
                         readOnly
                         style={floatingLabelStyle}
                       />
@@ -171,7 +270,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                         value={
                           triggerModeValue === 'hardware' && adTriggerModeValue === 'continuous'
                             ? '-'
-                            : acquisitionData?.config?.trigger?.frames_per_timeframe
+                            : formatDisplayNumber(acquisitionData?.config?.trigger?.frames_per_timeframe)
                         }
                         readOnly
                         style={floatingLabelStyle}
@@ -184,7 +283,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Total Storage">
                       <Form.Control
                         type="text"
-                        value={(acquisitionData?.config?.estimated_data_rate ?? 0) * est_duration + ' GB'}
+                        value={checkNull((acquisitionData?.config?.estimated_data_rate ?? 0) * est_duration) + ' GB'}
                         readOnly
                         style={floatingLabelStyle}
                         className={rateTooHigh ? 'border border-danger text-danger bg-danger bg-opacity-10' : ''}
@@ -197,10 +296,10 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
           </TitleCard>
         </Col>
 
-        {/* Acquisition Status */}
+        {/* Acquisition Management */}
         <Col md={6}>
           <Card className="mt-3">
-            <Card.Header><strong>Acquisition Status</strong></Card.Header>
+            <Card.Header><strong>Acquisition</strong></Card.Header>
             <Card.Body>
               {/* File Name */}
               <Row>
@@ -218,7 +317,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 <Col>
                   <EndpointCheckbox
                     endpoint={acquisitionEndpoint} fullpath="state/acquisition/add_timestamp"
-                    label="Add timestamp to file"
+                    label="Add timestamp to file name"
                   />
                 </Col>
               </Row>

@@ -1,6 +1,5 @@
 import { WithEndpoint, EndpointButton } from 'odin-react';
 import type { AdapterEndpoint } from 'odin-react';
-import type { MetadataType } from '../EndpointTypes';
 import { Form, InputGroup } from 'react-bootstrap';
 
 // Convenience component for picking a file to send to an endpoint
@@ -10,25 +9,29 @@ interface FilePickerProps {
   endpoint: AdapterEndpoint;
   fullpath: string;
   buttonText: string;  // e.g. endpoint.data?.path_a.path_b.param
-  param_metadata?: MetadataType<string>;
+  select_options?: string[];
   defaultLabel?: string;
   loadButton?: boolean;  // Do you need a button to load the file
   loadPath?: string;  // Optional as is the button
+  disabled?: boolean; 
 }
 
 const EndpointSelect = WithEndpoint(Form.Select);
 
-export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, defaultLabel="Select file...", loadButton=true, }: FilePickerProps) {
+export function FilePicker({ endpoint, fullpath, buttonText, select_options, defaultLabel="Select file...", loadButton=true, loadPath, disabled=false}: FilePickerProps) {
+  const options = Array.isArray(select_options) ? select_options : [];
+
   return (
     <InputGroup>
       <EndpointSelect
         endpoint={endpoint}
         fullpath={fullpath}
         variant='outline-secondary'
-        value={buttonText}
+        defaultValue=""
+        disabled={disabled}
       >
         <option value="" disabled>{defaultLabel}</option>
-        {(param_metadata?.allowed_values ?? [])
+        {options
           .filter((selection): selection is string => Boolean(selection))  // Removes non-truthy options like "" or null
           .map(
           (selection) => (
@@ -41,10 +44,10 @@ export function FilePicker({ endpoint, fullpath, buttonText, param_metadata, def
       { loadButton ?
         <EndpointButton
           endpoint={endpoint}
-          fullpath={fullpath}
-          value={true}
+          fullpath={loadPath ?? fullpath}
+          value={buttonText}
           variant='primary'
-          disabled={!(buttonText !== "")}
+          disabled={buttonText === "" || disabled}
         >
           Load file
         </EndpointButton>

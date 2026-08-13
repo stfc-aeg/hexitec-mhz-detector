@@ -6,13 +6,17 @@ import type { ProxyParams } from '../../EndpointTypes';
 
 interface DetectorControlsProps {
   proxyEndpoint: AdapterEndpoint<ProxyParams>;
+  isCustom: boolean;
 }
 
 const EndpointSelect = WithEndpoint(Form.Select);
 
-export default function DetectorControls({ proxyEndpoint }: DetectorControlsProps) {
+export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorControlsProps) {
 
-  // const lokiData = proxyEndpoint.data?.loki?.application;
+  const lokiData = proxyEndpoint.data?.loki?.application?.asic_settings;
+
+  // low: something, high: something
+  const negativeRangeOptions = lokiData?.negative_range_options ?? {};
 
   return (
     <Card className="mt-3">
@@ -23,17 +27,24 @@ export default function DetectorControls({ proxyEndpoint }: DetectorControlsProp
           so the options are 7, 14, and 21 with unit femtofarads fF*/}
           <Col>
             <FloatingLabel label="Feedback Gain Stage">
-
-              <EndpointSelect
-                endpoint={proxyEndpoint}
-                fullpath="loki/application/asic_settings/feedback_capacitance"
-                variant="outline-secondary"
+              <Form.Select
+                value={lokiData?.feedback_capacitance?.toString() ?? ''}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                  const numericValue = Number(e.currentTarget.value);
+                  if (!Number.isNaN(numericValue)) {
+                    proxyEndpoint.put(
+                      { feedback_capacitance: numericValue },
+                      'loki/application/asic_settings'
+                    );
+                  }
+                }}
+                disabled={!isCustom}
                 style={floatingInputStyle}
-                >
-                  <option value="7">7fF (High)</option>
-                  <option value="14">14fF (Medium)</option>
-                  <option value="21">21fF (Low)</option>
-              </EndpointSelect>
+              >
+                <option value="7">7fF (High)</option>
+                <option value="14">14fF (Medium)</option>
+                <option value="21">21fF (Low)</option>
+              </Form.Select>
             </FloatingLabel>
           </Col>
         </Row>
@@ -43,12 +54,13 @@ export default function DetectorControls({ proxyEndpoint }: DetectorControlsProp
             <FloatingLabel label="Negative Dynamic Range">
               <EndpointSelect
                 endpoint={proxyEndpoint}
-                fullpath="loki/application/asic_settings/negative_range"
+                fullpath="loki/application/asic_settings/negative_range_lowhigh"
                 variant="outline-secondary"
                 style={floatingInputStyle}
+                disabled={!isCustom}
               >
-                <option value="-20">-20 keV</option>
-                <option value="-10">-10 keV</option>
+                <option value={"low"}>{negativeRangeOptions.low} (Low)</option>
+                <option value={"high"}>{negativeRangeOptions.high} (High)</option>
               </EndpointSelect>
             </FloatingLabel>
           </Col>
