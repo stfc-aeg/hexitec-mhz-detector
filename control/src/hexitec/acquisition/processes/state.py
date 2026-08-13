@@ -176,7 +176,10 @@ class State():
 
         # Timestamp
         if self.file_timestamp:
-            filename = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name")
+            # Filename is set in munir in set_file_name but local ref is used here
+            # Pulling name from munir can cause timestamp to be added multiple times if the
+            # name is not changed between acquisitions.
+            filename = self.file_name
             stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             filename = filename + "_" + stamp
             # self.file_name = filename
