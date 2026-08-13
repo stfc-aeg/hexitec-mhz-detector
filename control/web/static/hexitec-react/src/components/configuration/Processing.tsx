@@ -1,4 +1,4 @@
-import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion, Alert } from 'react-bootstrap';
+import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
 import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
 import { floatingInputStyle } from '../../utils.js';
