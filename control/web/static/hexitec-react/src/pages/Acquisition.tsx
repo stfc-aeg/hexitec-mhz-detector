@@ -296,10 +296,10 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
           </TitleCard>
         </Col>
 
-        {/* Acquisition Status */}
+        {/* Acquisition Management */}
         <Col md={6}>
           <Card className="mt-3">
-            <Card.Header><strong>Acquisition Status</strong></Card.Header>
+            <Card.Header><strong>Acquisition</strong></Card.Header>
             <Card.Body>
               {/* File Name */}
               <Row>
@@ -317,7 +317,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 <Col>
                   <EndpointCheckbox
                     endpoint={acquisitionEndpoint} fullpath="state/acquisition/add_timestamp"
-                    label="Add timestamp to file"
+                    label="Add timestamp to file name"
                   />
                 </Col>
               </Row>

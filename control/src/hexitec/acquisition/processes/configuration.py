@@ -54,6 +54,9 @@ class Configuration():
 
         self.running_histogrammer = False
 
+        # For the Configuration page - a flag to disable UI components if not in 'edit mode'
+        self.edit_mode = False
+
         self.tree = ParameterTree({
             'bin_mode': (lambda: self.bin_mode, self.change_bin_mode, 
                          {'allowed_values':
@@ -79,7 +82,10 @@ class Configuration():
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
             },
-            'estimated_data_rate': (lambda: self.data_rate, None)
+            'estimated_data_rate': (lambda: self.data_rate, None),
+            'config_edit_mode': (lambda: self.edit_mode, self.toggle_editing,
+                          {'description': 'Flag to signal state of if UI components should be editable'}
+            )
         })
 
         self._retry_sync_bin_mode()
@@ -87,6 +93,10 @@ class Configuration():
     def _register_state(self, state):
         """Get a reference to the state and parent class."""
         self.state = state
+
+    def toggle_editing(self, toggle: bool):
+        """Enable or disable the edit_mode flag."""
+        self.edit_mode = bool(toggle)
 
     def change_bin_mode(self, bin_mode: str):
         """Change the number of bins used by the sensor.

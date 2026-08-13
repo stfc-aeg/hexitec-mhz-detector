@@ -363,6 +363,7 @@ export interface AcquisitionTypes extends ParamNode {
       current: string;
       create_profile: null;
     };
+    config_edit_mode: boolean;
   };
 
   state: {
@@ -442,7 +443,6 @@ export interface ConfigTypes extends ParamNode {
   available_profiles: string[];
   create_profile: null;
   current_profile: string;
-  edit_current_config: boolean;
   profiles_filepath: string;
   set_mapping: null;
 }

@@ -22,7 +22,6 @@ class ConfigurationController(BaseController):
         self.profile_filepath = self.options.get('profile_filepath', 'web/config/profiles')
         self.available_profiles = []
         self.profile = ""
-        self.edit_mode = False
 
         # Mapping can be stored as a JSON file and read in as configuration instead of being coded
         # This avoids the mapping being saved as a system artefact if that is undesirable
@@ -30,9 +29,11 @@ class ConfigurationController(BaseController):
         if default_mapping:
             self.set_mapping(default_mapping)
             # Need to split the path if there is one
-            self.default_mapping_file = Path(default_mapping).stem        
+            self.default_mapping_file = Path(default_mapping).stem
+        else:
+            self.default_mapping_file = None  
 
-        self.default_profile = self.options.get('default_profile', 'default')
+        self.default_profile = self.options.get('default_profile', '')
 
     def _build_tree(self):
         """Build the parameter tree for the class."""
@@ -41,7 +42,6 @@ class ConfigurationController(BaseController):
             'current_profile': (lambda: self.profile, self.set_profile),
             'create_profile': (lambda: None, self.create_profile),
             'profiles_filepath': (lambda: self.profile_filepath, self.set_profile_filepath),
-            'edit_current_config': (lambda: self.edit_mode, self.toggle_editing),
             'set_mapping': (lambda: None, self.set_mapping)
         }
 
@@ -57,7 +57,8 @@ class ConfigurationController(BaseController):
         self._build_tree()
 
         # Set the profile to the default profile
-        self.set_profile(self.default_profile)
+        if self.default_profile:
+            self.set_profile(self.default_profile)
 
     def cleanup(self):
         """Clean up controller resources."""
@@ -98,10 +99,6 @@ class ConfigurationController(BaseController):
             raise ConfigurationError(f"File {path} must contain a JSON object.")
 
         return data
-
-    def toggle_editing(self, toggle: bool):
-        """Enable or disable the edit_mode flag."""
-        self.edit_mode = bool(toggle)
 
     def set_profile_filepath(self, filepath: str):
         """Set the filepath to read profiles from, and update the available profiles."""
@@ -167,7 +164,7 @@ class ConfigurationController(BaseController):
             path.stem for path in profiles_dir.glob("*.json") if path.is_file()
         )
         # If the mapping file is in the profiles directory, don't present it as an option
-        if self.default_mapping_file in self.available_profiles:
+        if self.default_mapping_file and (self.default_mapping_file in self.available_profiles):
             self.available_profiles.remove(self.default_mapping_file)
 
     def create_profile(self, name: str):
