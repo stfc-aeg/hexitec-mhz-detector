@@ -1,5 +1,5 @@
 """A class to manage the state of the acquisition process, such as previewing, acquisition, and similar functions."""
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import iac_get, iac_set
 import time

@@ -1,6 +1,7 @@
 import logging
-from hexitec.base.base_controller import BaseController, BaseError
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+
+from odin_control.adapters.base_controller import BaseController, BaseError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from pathlib import Path
 import json

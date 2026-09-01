@@ -1,12 +1,13 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.base_controller import BaseController, BaseError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
-from .base.base_controller import BaseController, BaseError
 from .mhz_monitor.state_machine import StateMonitor
 from .util.iac import IACError, iac_set
 
+import json
 
 class HexitecError(BaseError):
     """Simple exception class to wrap lower-level exceptions."""
@@ -26,7 +27,7 @@ class HexitecController(BaseController):
             self.adapters = adapters
             logging.debug(f"Adapters initialized: {list(adapters.keys())}")
             # open xdma device
-            iac_set(adapters["readout"], "control", {'open': 'true'})
+            iac_set(adapters["readout"], "control/connected", {'value': True})
         except IACError as e:
             logging.error(f"{e}")
 

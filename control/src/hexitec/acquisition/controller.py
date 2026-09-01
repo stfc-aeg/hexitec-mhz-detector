@@ -1,6 +1,8 @@
 import logging
-from hexitec.base.base_controller import BaseController, BaseError
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+
+from odin_control.adapters.base_controller import BaseController, BaseError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.proxy import ProxyAdapter
 
 from hexitec.acquisition.processes.configuration import Configuration
 from hexitec.acquisition.processes.state import State
@@ -10,7 +12,6 @@ from typing import TypedDict, cast
 from histogrammer.adapter.adapter import HistogramAdapter
 from hexitec.liveview.adapter import HistogramLiveViewAdapter
 from munir.adapter import MunirAdapter, MunirFpController
-from odin.adapters.proxy import ProxyAdapter
 from hexitec.adapter import HexitecAdapter
 from readout_processor.adapter import ReadoutProcessorAdapter
 from hexitec.configuration.adapter import ConfigurationAdapter

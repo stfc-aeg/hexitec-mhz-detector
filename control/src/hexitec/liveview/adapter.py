@@ -1,10 +1,9 @@
 import logging
-from hexitec.base.base_adapter import BaseAdapter
-from odin.adapters.adapter import ApiAdapterResponse, wants_metadata
+from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, wants_metadata
 from hexitec.liveview.controller import HistogramLiveViewController, HistogramLiveViewError
 
 
-class HistogramLiveViewAdapter(BaseAdapter):
+class HistogramLiveViewAdapter(ApiAdapter):
     """
     Adapter for the Histogram Live Data visualization system.
 

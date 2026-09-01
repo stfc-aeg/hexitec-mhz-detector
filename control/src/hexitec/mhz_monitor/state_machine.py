@@ -4,8 +4,8 @@ from datetime import datetime
 from typing import TypedDict
 
 from hexitec.util.iac import IACError, iac_get, iac_set
-from odin.adapters.adapter import ApiAdapter
-from odin.adapters.proxy import ProxyAdapter
+from odin_control.adapters.adapter import ApiAdapter
+from odin_control.adapters.proxy import ProxyAdapter
 from readout_processor.adapter import ReadoutProcessorAdapter
 from statemachine import Event, State, StateMachine
 from statemachine.exceptions import TransitionNotAllowed
@@ -236,8 +236,7 @@ class Monitor:
         try:
             # iac_set(self.loki, self.loki_state_path, {"SYNC": False})
             # logging.debug("Loki Data Sync OFF")
-
-            iac_set(self.readout, "status", {"reset": True})
+            iac_set(self.readout, "status/reset", True)
             logging.debug("Readout resetting")
             self.readout_status = self.get_readout_status()
         except IACError as err:

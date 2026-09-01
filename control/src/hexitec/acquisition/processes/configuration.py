@@ -1,5 +1,5 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from hexitec.util.iac import IACError, iac_get, iac_set
 from tornado.ioloop import IOLoop
 

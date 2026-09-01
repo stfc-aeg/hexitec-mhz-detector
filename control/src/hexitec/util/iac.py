@@ -1,11 +1,13 @@
 import logging
 
-from odin.adapters.adapter import ApiAdapterRequest
-from hexitec.base.base_adapter import BaseAdapter, BaseError
+from odin_control.adapters.adapter import ApiAdapter, ApiAdapterRequest
+from odin_control.adapters.base_controller import BaseController, BaseError
 
 from typing import Any, TypeVar
 
-AnyAdapter = TypeVar("AnyAdapter", bound=BaseAdapter)
+import json
+
+AnyAdapter = TypeVar("AnyAdapter", bound=ApiAdapter)
 
 class IACError(BaseError):
     """Simple exception class to wrap lower-level exceptions."""
@@ -26,7 +28,7 @@ def _format_iac_response(response_data: Any) -> Any:
     return response_data
 
 
-def iac_get(adapter: AnyAdapter, path: str, as_dict: bool = False) -> dict[str, Any] | Any:
+def iac_get(adapter: AnyAdapter, path: str) -> dict[str, Any] | Any:
     """Generic inter-adapter-communication get method for odin_control adapters.
 
     This method handles sending an HTTP style GET request to another adapter using the
@@ -34,13 +36,10 @@ def iac_get(adapter: AnyAdapter, path: str, as_dict: bool = False) -> dict[str, 
 
     :param ApiAdapter adapter: Adapter object to target
     :param str path: Parameter tree path to target, must also include the parameter itself
-    :param bool as_dict: Used to tell the function to return the response as a dict
-    :return: Value of the parameter requested, or {param:value}
+    :return: Value of the requested parameter or the section of tree requested.
     :rtype: dict[str, Any] | Any
     """
-    
     try:
-        param = path.split('/')[-1]
         request = ApiAdapterRequest(None, accept="application/json")
         response = adapter.get(path, request)
     except Exception:
@@ -51,7 +50,16 @@ def iac_get(adapter: AnyAdapter, path: str, as_dict: bool = False) -> dict[str, 
         raise IACError(
             f"IAC GET failed for adapter {adapter.name}, path {path}: {_format_iac_response(response.data)}"
         )
-    return response.data if as_dict else response.data.get(param, "")
+    response_data = response.data
+    if not isinstance(response_data, dict):
+        raise IACError(
+            f"IAC GET returned an invalid response for adapter {adapter.name}, path {path}: "
+            f"{response_data}"
+        )
+    # Convert the dictionaries keys to a set. If there is exactly one, 'value', return it
+    if set(response_data) == {"value"}:
+        return response_data["value"]
+    return response_data
 
 def iac_set(adapter: AnyAdapter, path: str, data: dict[str, Any]):
     """Generic inter-adapter-communication set method for odin_control adapters.
