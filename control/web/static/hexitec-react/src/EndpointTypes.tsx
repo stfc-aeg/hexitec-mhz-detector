@@ -1,4 +1,4 @@
-import type { ParamNode } from 'odin-react';
+import type { ParamNode } from '@dssg/odin-react';
 
 export interface MetadataType<T> {
   value: T;

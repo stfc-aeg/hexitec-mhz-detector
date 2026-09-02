@@ -1,4 +1,4 @@
-import { useAdapterEndpoint } from 'odin-react';
+import { useAdapterEndpoint } from '@dssg/odin-react';
 import { OdinSequencer } from 'odin-sequencer-react-ui';
 
 interface SequencerProps {

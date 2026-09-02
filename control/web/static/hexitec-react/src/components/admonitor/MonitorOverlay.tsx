@@ -1,4 +1,4 @@
-import { EndpointButton, OdinTable, OdinTableRow, useAdapterEndpoint, type ParamNode } from 'odin-react';
+import { EndpointButton, OdinTable, OdinTableRow, useAdapterEndpoint, type ParamNode } from '@dssg/odin-react';
 import { Alert, Badge, Modal, ProgressBar } from "react-bootstrap";
 
 import type { ComponentProps } from "react";

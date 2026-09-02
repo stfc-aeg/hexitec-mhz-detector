@@ -1,4 +1,4 @@
-import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from 'odin-react';
+import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from '@dssg/odin-react';
 import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
 import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';

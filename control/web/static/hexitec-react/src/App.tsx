@@ -1,5 +1,5 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { OdinApp, useAdapterEndpoint } from 'odin-react';
+import { OdinApp, useAdapterEndpoint } from '@dssg/odin-react';
 import Acquisition from './pages/Acquisition';
 import { HistogramLiveView } from './components/liveview/HistogramLiveView';
 

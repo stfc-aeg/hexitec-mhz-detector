@@ -1,7 +1,7 @@
 import { Row, Col, Card, Form, Button, FloatingLabel, FormControl } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
 import { useState, useEffect } from 'react';
-import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
+import { WithEndpoint, type AdapterEndpoint } from '@dssg/odin-react';
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
 import type { ProxyParams } from '../../EndpointTypes';
 

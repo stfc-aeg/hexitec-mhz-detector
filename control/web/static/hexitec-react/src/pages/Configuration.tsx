@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Container, Row, Col, Form, FloatingLabel, OverlayTrigger } from 'react-bootstrap';
-import { useAdapterEndpoint, WithEndpoint, EndpointButton, TitleCard } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, EndpointButton, TitleCard } from '@dssg/odin-react';
 import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../EndpointTypes';
 import { floatingInputStyle } from '../utils.js';
 import { tooltips } from '../tooltips';
