@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Container, Row, Col, Form, FloatingLabel, OverlayTrigger } from 'react-bootstrap';
-import { useAdapterEndpoint, WithEndpoint, EndpointButton, TitleCard } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, EndpointButton, TitleCard } from '@dssg/odin-react';;
 import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../EndpointTypes';
 import { floatingInputStyle } from '../utils.js';
 import { tooltips } from '../tooltips';
@@ -27,7 +27,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
   const [customName, setCustomName] = useState('new_config');
   const invalidCustomName = customName === '';
 
-  const isAcquiring = acquisitionEndpoint.data?.state?.acquisition?.toggle || acquisitionEndpoint.data?.state?.preview?.toggle;
+  const isAcquiring = (acquisitionEndpoint.data?.state?.acquisition?.toggle || acquisitionEndpoint.data?.state?.preview?.toggle) ?? false;
   const configDisabled = isAcquiring || !isCustomProfile;
   const disabledTooltip = isAcquiring ? tooltips.acquisition.disabled_acquiring : tooltips.acquisition.disabled_edit;
 

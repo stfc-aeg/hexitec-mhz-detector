@@ -1,4 +1,4 @@
-import type { ParamNode } from 'odin-react';
+import type { ParamNode } from '@dssg/odin-react';;
 
 export interface MetadataType<T> {
   value: T;
@@ -68,24 +68,24 @@ export interface HistogramTypes extends ParamNode {
       auto_trig_mode: string;
       mode: string;
       types: {
-        diag1: boolean;
-        diag1nl: boolean;
-        diag1nr: boolean;
-        diag2: boolean;
-        diag2nl: boolean;
-        diag2nr: boolean;
-        hoz: boolean;
-        "hoz nl": boolean;
-        "hoz nr": boolean;
-        l1: boolean;
-        l2: boolean;
-        l3: boolean;
-        l4: boolean;
-        lone: boolean;
-        quad: boolean;
-        vert: boolean;
-        "vert na": boolean;
-        "vert nb": boolean;
+        DIAG1: boolean;
+        DIAG1NL: boolean;
+        DIAG1NR: boolean;
+        DIAG2: boolean;
+        DIAG2NL: boolean;
+        DIAG2NR: boolean;
+        HOZ: boolean;
+        HOZ_NL: boolean;
+        HOZ_NR: boolean;
+        L1: boolean;
+        L2: boolean;
+        L3: boolean;
+        L4: boolean;
+        LONE: boolean;
+        QUAD: boolean;
+        VERT: boolean;
+        VERT_NA: boolean;
+        VERT_NB: boolean;
       };
     };
     hist_format: {
@@ -98,9 +98,18 @@ export interface HistogramTypes extends ParamNode {
       run_mode: string;
     };
     thresholds: {
-      absolute: number[];
-      low: number[];
-      main: number[];
+      absolute: {
+        high: number;
+        low: number;
+      };
+      low: {
+        neg: number;
+        pos: number;
+      }
+      main: {
+        neg: number;
+        pos: number;
+      };
       bad_pixel: {
         filename: string;
         load: null;
@@ -133,7 +142,7 @@ export interface HistogramTypes extends ParamNode {
 
 // Munir Endpoint Types
 
-export interface MunirTypes extends ParamNode {
+export interface MunirTypes {
   execute: {
     hexitec_mhz: boolean;
   };
@@ -161,7 +170,7 @@ export interface MunirTypes extends ParamNode {
   }
 };
 
-export interface HexitecMhzStatus extends ParamNode {
+export interface HexitecMhzStatus {
   FrameWrapperCore_0: {
     core_usage: number;
     frames_processed: number;
@@ -296,7 +305,7 @@ export interface HexitecMhzStatus extends ParamNode {
   };
 }
 
-export interface FrameProcStatus extends ParamNode {
+export interface FrameProcStatus {
   HexitecMhz: HexitecMhzStatus;
   Liveview: {
     timing: {
@@ -342,32 +351,29 @@ export interface FrameProcStatus extends ParamNode {
   };
 }
 
-export interface AcquisitionTypes extends ParamNode {
+export interface AcquisitionTypes extends ParamNode{
   config: {
     baseline: {
       toggle: boolean;
     };
     bin_mode: string;
+    estimated_data_rate: number;
+    config_edit_mode: boolean;
     trigger: {
       device: string;
       frames_per_timeframe: number;
       frames_pre_multiplier: number;
       frame_multiplier: string;
       number_of_timeframes: number;
-      toggle_acquisition_histogramming: null | boolean;
+      timeframes_per_trigger: number;
       trigger_mode: string;
     };
-    estimated_data_rate: number;
-    config_profile: {
-      available: string[];
-      current: string;
-      create_profile: null;
-    };
-    config_edit_mode: boolean;
   };
-
   state: {
     acquisition: {
+      add_timestamp: boolean;
+      file_name: string;
+      file_path: string;
       toggle: boolean;
       progress_task: {
         interval: number;
@@ -382,9 +388,10 @@ export interface AcquisitionTypes extends ParamNode {
 }
 
 
+
 // Proxy endpoint types
 
-export interface LokiEnviromentParams extends ParamNode {
+export type LokiEnvironmentParams = {
   // This is not all the values but just the ones used here.
   temperature: {
     DIODE: number;
@@ -394,10 +401,9 @@ export interface LokiEnviromentParams extends ParamNode {
   humidity: {
     BOARD: number;
   }
-}
+};
 
-
-export interface LokiApplicationData extends ParamNode {
+export type LokiApplicationData = {
   HV: {
     ENABLE: number;
     readback_bias: number;
@@ -420,14 +426,14 @@ export interface LokiApplicationData extends ParamNode {
       high: number;
     };
   }
-}
+};
 
-export interface LokiCarrierParams extends ParamNode{
-  environment: LokiEnviromentParams;
+export type LokiCarrierParams = {
+  environment: LokiEnvironmentParams;
   application: LokiApplicationData;
-}
+};
 
-export interface ProxyParams extends ParamNode{
+export interface ProxyParams {
   loki: LokiCarrierParams
   status: {
     loki: {
@@ -439,7 +445,7 @@ export interface ProxyParams extends ParamNode{
   }
 }
 
-export interface ConfigTypes extends ParamNode {
+export interface ConfigTypes {
   available_profiles: string[];
   create_profile: null;
   current_profile: string;
@@ -448,7 +454,7 @@ export interface ConfigTypes extends ParamNode {
 }
 
 
-export interface ReadoutTypes extends ParamNode {
+export interface ReadoutTypes {
   control: {
     close: null;
     connected: boolean;

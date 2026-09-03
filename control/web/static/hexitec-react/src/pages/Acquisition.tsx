@@ -1,4 +1,4 @@
-import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from 'odin-react';
+import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from '@dssg/odin-react';;
 import { useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
 import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';
@@ -41,8 +41,8 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const triggerPolarityOptions = readoutEndpoint.metadata?.trigger?.polarity;
 
-  const isAcquiring = acquisitionEndpoint?.data?.state?.acquisition?.toggle;
-  const acquisitionProgress = acquisitionEndpoint?.data?.state?.acquisition?.progress_task?.progress;
+  const isAcquiring = acquisitionData?.state?.acquisition?.toggle;
+  const acquisitionProgress = acquisitionData?.state?.acquisition?.progress_task?.progress;
   const acquisitionProgressLabel = acquisitionProgress?.toString() + '%'
 
   const acquisitionButtonDisabled = rateTooHigh && !isAcquiring;
@@ -187,7 +187,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                             )
                           )}
                       </EndpointSelect>
-                    </FloatingLabel>
+                     </FloatingLabel>
                   </Col>
                 </Row>
                 <Row>
@@ -350,11 +350,11 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     endpoint={acquisitionEndpoint}
                     fullpath="state/acquisition/toggle"
                     variant={acquisitionButtonVariant}
-                    value={acquisitionEndpoint?.data?.state?.acquisition?.toggle ? false : true}
+                    value={acquisitionData?.state?.acquisition?.toggle ? false : true}
                     className="w-100"
                     disabled={acquisitionButtonDisabled}
                   >
-                    {acquisitionEndpoint?.data?.state?.acquisition?.toggle ? 'Stop acquisition' : 'Start acquisition'}
+                    {acquisitionData?.state?.acquisition?.toggle ? 'Stop acquisition' : 'Start acquisition'}
                   </EndpointButton>
                   {rateTooHigh && (
                     <div className="text-danger mt-2">

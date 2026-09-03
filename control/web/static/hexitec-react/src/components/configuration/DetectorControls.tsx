@@ -1,6 +1,6 @@
 import { Row, Col, Card, Form, Button, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint, type AdapterEndpoint } from 'odin-react';
+import { WithEndpoint, type AdapterEndpoint } from '@dssg/odin-react';;
 import { floatingInputStyle } from '../../utils';
 import type { ProxyParams } from '../../EndpointTypes';
 
@@ -16,7 +16,7 @@ export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorCo
   const lokiData = proxyEndpoint.data?.loki?.application?.asic_settings;
 
   // low: something, high: something
-  const negativeRangeOptions = lokiData?.negative_range_options ?? {};
+  const negativeRangeOptions = lokiData?.negative_range_options;
 
   return (
     <Card className="mt-3">
@@ -59,8 +59,8 @@ export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorCo
                 style={floatingInputStyle}
                 disabled={!isCustom}
               >
-                <option value={"low"}>{negativeRangeOptions.low} (Low)</option>
-                <option value={"high"}>{negativeRangeOptions.high} (High)</option>
+                <option value={"low"}>{negativeRangeOptions?.low} (Low)</option>
+                <option value={"high"}>{negativeRangeOptions?.high} (High)</option>
               </EndpointSelect>
             </FloatingLabel>
           </Col>
