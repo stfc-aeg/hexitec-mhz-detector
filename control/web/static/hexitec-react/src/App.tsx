@@ -8,6 +8,7 @@ import type { HexitecParamTree } from './components/admonitor/MonitorOverlay';
 import Configuration from './pages/Configuration';
 
 import Sequencer from './pages/Sequencer';
+import LokiExtra from './pages/LokiExtra';
 
 function App() {
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
@@ -22,13 +23,15 @@ function App() {
           'Configuration',  
           'Acquisition', 
           'Live View',
-          'Sequencer'
+          'Sequencer',
+          'LOKI Extras'
         ]}
       >
         <Configuration endpoint_url={endpoint_url} />
         <Acquisition endpoint_url={endpoint_url} />
         <HistogramLiveView endpoint_url={endpoint_url} name="mhz"/>
         <Sequencer endpoint_url={endpoint_url} />
+        <LokiExtra endpoint_url={endpoint_url} />
       </OdinApp>
     </UserLevelContext>
   );

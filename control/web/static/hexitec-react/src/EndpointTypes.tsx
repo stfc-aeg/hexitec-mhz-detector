@@ -404,6 +404,7 @@ export type LokiEnvironmentParams = {
 };
 
 export type LokiApplicationData = {
+  vcal?: number;
   HV: {
     ENABLE: number;
     readback_bias: number;
@@ -424,6 +425,22 @@ export type LokiApplicationData = {
     negative_range_options: {
       low: number;
       high: number;
+    };
+    segment_readout: {
+      SEGMENT_DATA: number[][];
+      REQUEST: boolean;
+      SEGMENT_SELECT: number;
+    };
+    calibration_pattern: {
+      ENABLE: number;
+      MODE: string;
+      DIRECT_MAP: number[][];
+      MODES: {
+        PRESET: {
+          AVAIL: string[];
+          SELECT: string;
+        };
+      };
     };
   }
 };
