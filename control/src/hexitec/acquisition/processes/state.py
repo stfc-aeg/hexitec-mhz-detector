@@ -1,7 +1,7 @@
 """A class to manage the state of the acquisition process, such as previewing, acquisition, and similar functions."""
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
-from hexitec.util.iac import iac_get, iac_set
+from hexitec.util.iac import icc_get, icc_set
 import time
 from datetime import datetime
 
@@ -15,11 +15,11 @@ class State():
     def __init__(self, adapters, munir_subsystem, AcquisitionError, default_filepath, default_filename):
         self.munir_subsystem = munir_subsystem
 
-        self.munir = adapters["munir"]
-        self.munir_odindata_controller = self.munir.controller.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
-        self.histogrammer = adapters["histogram"]
-        self.readout = adapters["readout"]
-        self.liveview = adapters["liveview"]
+        self.munir = adapters["munir"].controller
+        self.munir_odindata_controller = self.munir.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
+        self.histogrammer = adapters["histogram"].controller
+        self.readout = adapters["readout"].controller
+        self.liveview = adapters["liveview"].controller
 
         self.AcquisitionError = AcquisitionError
 
@@ -59,14 +59,14 @@ class State():
         """Set the name of the file to be saved through munir arguments.
         :param filename: string representing the name of the file
         """
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
         self.file_name = filename
 
     def set_file_path(self, filepath: str):
         """Set the path that the file is to be saved to through munir arguments.
         :param filepath: string representing the filepath
         """
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", filepath)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", filepath)
         self.file_path = filepath
 
     def toggle_file_timestamp(self, enable: bool):
@@ -98,25 +98,25 @@ class State():
 
     def _start_preview(self):
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
-        iac_set(self.munir, f'subsystems/{self.munir_subsystem}/args/num_frames', 0)
+        icc_set(self.munir, f'subsystems/{self.munir_subsystem}/args/num_frames', 0)
         self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, 0)
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
-        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.preview_frames_per_hist)
+        icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.preview_frames_per_hist)
 
-        iac_set(self.histogrammer, "acquisition/mode", "software")
-        iac_set(self.histogrammer, "acquisition/num_histograms", 20_000_000)
-        iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
-        iac_set(self.histogrammer, "acquisition/run", True)
+        icc_set(self.histogrammer, "acquisition/mode", "software")
+        icc_set(self.histogrammer, "acquisition/num_histograms", 20_000_000)
+        icc_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
+        icc_set(self.histogrammer, "acquisition/run", True)
 
     def _stop_preview(self):
         """Stops the preview mode, returning the system to an idle state."""
-        iac_set(self.histogrammer, "acquisition/run", False)
+        icc_set(self.histogrammer, "acquisition/run", False)
         # Reset settings
-        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
-        iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.configuration.frames_per_timeframe)
-        iac_set(self.histogrammer, "acquisition/num_histograms", self.configuration.number_of_timeframes)
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}", {"stop_execute": True})
+        icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
+        icc_set(self.histogrammer, "acquisition/frames_per_histogram", self.configuration.frames_per_timeframe)
+        icc_set(self.histogrammer, "acquisition/num_histograms", self.configuration.number_of_timeframes)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}", {"stop_execute": True})
 
     def set_preview_frames_per_hist(self, frames):
         """Set the number of frames per histogram for preview mode.
@@ -124,7 +124,7 @@ class State():
         value is used."""
         self.preview_frames_per_hist = int(frames)
         if self.is_previewing:
-            iac_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
+            icc_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
 
     def toggle_acquisition(self, value):
         """Start or stop an acquisition.
@@ -158,19 +158,19 @@ class State():
 
         # Check modes are compatible
         try:
-            num_bins = iac_get(self.histogrammer, "config/hist_format/num_bins")
+            num_bins = icc_get(self.histogrammer, "config/hist_format/num_bins")
             num_bins = "histogram_" + str(num_bins)
-            munir_mode = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
+            munir_mode = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
             munir_mode = str(munir_mode[0].get("HexitecMhz", {}).get("mode", ""))
             logging.warning(f"Checking modes before acquisition: histogrammer num_bins={num_bins}, munir mode={munir_mode}")
-            # munir_mode = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status/HexitecMhz/mode")
+            # munir_mode = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status/HexitecMhz/mode")
         except Exception as error:
             logging.error(f"Error checking modes before acquisition: {error}")
             raise self.AcquisitionError(f"Error checking modes before acquisition: {error}")
         if num_bins != munir_mode:
             logging.warning(f"Histogrammer num_bins {num_bins} does not match munir mode {munir_mode}. Changing bin modes to match histogrammer.")
             self.configuration.change_bin_mode(num_bins)
-            while iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status/HexitecMhz/mode") != num_bins:
+            while icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status/HexitecMhz/mode") != num_bins:
                 logging.warning(f"Waiting for odin data to reconfigure to new bin mode...")
                 time.sleep(0.5)
 
@@ -183,17 +183,17 @@ class State():
             stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             filename = filename + "_" + stamp
             # self.file_name = filename
-            iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
+            icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", filename)
 
         # For liveview occupancy
-        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.configuration.frames_per_timeframe)
+        icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.configuration.frames_per_timeframe)
 
         # Configure how data should be sent
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
 
         # Start listening for data
-        iac_set(self.munir, "execute", {self.munir_subsystem: True})
-        iac_set(self.histogrammer, "acquisition/run", True)
+        icc_set(self.munir, "execute", {self.munir_subsystem: True})
+        icc_set(self.histogrammer, "acquisition/run", True)
 
         # This task runs in the thread execution pool
         self.acquisition_progress_task_enable = True
@@ -204,12 +204,12 @@ class State():
         self.is_acquiring = False
 
         # Back to software for the purpose of previewing
-        iac_set(self.readout, "trigger/enable", False)
+        icc_set(self.readout, "trigger/enable", False)
 
-        iac_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
+        icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
 
-        iac_set(self.histogrammer, "acquisition/run", False)
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/stop_execute", False)
+        icc_set(self.histogrammer, "acquisition/run", False)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/stop_execute", False)
 
         if self.was_previewing:
             self.toggle_preview(True)
@@ -217,7 +217,7 @@ class State():
     @run_on_executor
     def acquisition_progress_task(self):
         while self.acquisition_progress_task_enable:
-            munir_status = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
+            munir_status = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
             frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
 
             self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)

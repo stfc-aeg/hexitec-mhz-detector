@@ -1,5 +1,6 @@
 import logging
 
+from hexitec.liveview.controller import HistogramLiveViewController
 from odin_control.adapters.base_controller import BaseController, BaseError
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin_control.adapters.proxy import ProxyAdapter
@@ -8,24 +9,24 @@ from hexitec.acquisition.processes.configuration import Configuration
 from hexitec.acquisition.processes.state import State
 from hexitec.acquisition.processes.config_mapping import mapping
 
-from typing import TypedDict, cast
-from histogrammer.adapter.adapter import HistogramAdapter
-from hexitec.liveview.adapter import HistogramLiveViewAdapter
-from munir.adapter import MunirAdapter, MunirFpController
-from hexitec.adapter import HexitecAdapter
-from readout_processor.adapter import ReadoutProcessorAdapter
-from hexitec.configuration.adapter import ConfigurationAdapter
+from typing import TypedDict
+from histogrammer.adapter.adapter import  HistogramController
+from hexitec.liveview.adapter import HistogramLiveViewController
+from munir.adapter import MunirFpController
+from hexitec.controller import HexitecController
+from readout_processor.adapter import ReadoutProcessorController
+from hexitec.configuration.adapter import ConfigurationController
 
-from hexitec.util.iac import iac_set
+from hexitec.util.iac import icc_set
 
 class Adapters(TypedDict):
-    histogram: HistogramAdapter
-    liveview: HistogramLiveViewAdapter
-    munir: MunirAdapter
+    histogram: HistogramController
+    liveview: HistogramLiveViewController
+    munir: MunirFpController
     proxy: ProxyAdapter
-    hexitec: HexitecAdapter
-    readout: ReadoutProcessorAdapter
-    config: ConfigurationAdapter
+    hexitec: HexitecController
+    readout: ReadoutProcessorController
+    config: ConfigurationController
 
 class AcquisitionError(BaseError):
     """Exception raised for errors in the AcquisitionController."""
@@ -49,74 +50,73 @@ class AcquisitionController(BaseController):
         into the running application.
         :param adapters: dictionary of adapter instances keyed by name
         """
-        self.adapters = adapters
-        
-        # Verify all required adapters are present
-        required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec', 'readout', 'config']
-        missing = [name for name in required_adapters if name not in adapters]
-        if missing:
-            missing = ", ".join(missing)
-            raise AcquisitionError(f"Missing required adapters: {missing}")
-        
-        # Cast and store adapter controllers
-        self.histogrammer = cast(HistogramAdapter, adapters['histogram'])
-        self.liveview = cast(HistogramLiveViewAdapter, adapters['liveview'])
-        self.munir = cast(MunirFpController, adapters['munir'])
-        self.proxy = cast(ProxyAdapter, adapters['proxy'])
-        self.hexitec = cast(HexitecAdapter, adapters['hexitec'])
-        self.readout = cast(ReadoutProcessorAdapter, adapters['readout'])
-        self.config = cast(ConfigurationAdapter, adapters['config'])
+        try:
+            # Verify all required adapters are present
+            required_adapters = ['histogram', 'liveview', 'munir', 'proxy', 'hexitec', 'readout', 'config']
+            missing = [name for name in required_adapters if name not in adapters]
+            if missing:
+                missing = ", ".join(missing)
+                raise AcquisitionError(f"Missing required adapters: {missing}")
 
-        self.config_controller = self.config.controller
+            # Adapter controllers references
+            self.histogrammer = adapters['histogram'].controller
+            self.liveview = adapters['liveview'].controller
+            self.munir = adapters['munir'].controller
+            self.proxy = adapters['proxy']
+            self.hexitec = adapters['hexitec'].controller
+            self.readout = adapters['readout'].controller
+            self.config = adapters['config'].controller
 
-        # Verify munir subsystem exists
-        if self.munir_subsystem not in self.munir.controller.munir_managers:
-            raise AcquisitionError(
-                f"Could not find munir subsystem '{self.munir_subsystem}' in available managers: "
-                f"{list(self.munir.controller.munir_managers.keys())}"
-            )
-        
-        if 'sequencer' in self.adapters:
-            logging.debug("Acquisition controller registering contexts with sequencer")
-            self.adapters['sequencer'].add_context('acquisition', self)
-            self.adapters['sequencer'].add_context('monitor', self.hexitec.controller)
-            self.adapters['sequencer'].add_context('liveview', self.liveview.controller)
-            self.adapters['sequencer'].add_context('histogram', self.histogrammer.controller)
-            self.adapters['sequencer'].add_context('munir', self.munir.controller)
-            self.adapters['sequencer'].add_context('proxy', self.proxy)
-            self.adapters['sequencer'].add_context('readout', self.readout.controller)
-            self.adapters['sequencer'].add_context('config', self.config.controller)
+            # Verify munir subsystem exists
+            if self.munir_subsystem not in self.munir.munir_managers:
+                raise AcquisitionError(
+                    f"Could not find munir subsystem '{self.munir_subsystem}' in available managers: "
+                    f"{list(self.munir.munir_managers.keys())}"
+                )
+            
+            if 'sequencer' in adapters:
+                logging.debug("Acquisition controller registering contexts with sequencer")
+                adapters['sequencer'].add_context('acquisition', self)
+                adapters['sequencer'].add_context('monitor', self.hexitec)
+                adapters['sequencer'].add_context('liveview', self.liveview)
+                adapters['sequencer'].add_context('histogram', self.histogrammer)
+                adapters['sequencer'].add_context('munir', self.munir)
+                adapters['sequencer'].add_context('proxy', self.proxy)
+                adapters['sequencer'].add_context('readout', self.readout)
+                adapters['sequencer'].add_context('config', self.config)
 
-        # Set a default file name and path
-        default_filepath = self.options.get('default_filepath', '/tmp/')
-        default_filename = self.options.get('default_filename', 'mhz_acquisition')
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", default_filepath)
-        iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", default_filename)
+            # Set a default file name and path
+            default_filepath = self.options.get('default_filepath', '/tmp/')
+            default_filename = self.options.get('default_filename', 'mhz_acquisition')
+            icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_path", default_filepath)
+            icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/file_name", default_filename)
 
-        # Provide adapters to sub-processess
-        self.configuration = Configuration(self.adapters, self.munir_subsystem, AcquisitionError)
-        self.state = State(self.adapters, self.munir_subsystem, AcquisitionError, default_filepath, default_filename)
+            # Provide adapters to sub-processess
+            self.configuration = Configuration(adapters, self.munir_subsystem, AcquisitionError)
+            self.state = State(adapters, self.munir_subsystem, AcquisitionError, default_filepath, default_filename)
 
-        self.state._register_configuration(configuration=self.configuration)
-        self.configuration._register_state(state=self.state)
+            self.state._register_configuration(configuration=self.configuration)
+            self.configuration._register_state(state=self.state)
 
-        # Configuration profiles
-        self.config_controller.set_mapping(self.config_mapping)
+            # Configuration profiles
+            self.config.set_mapping(self.config_mapping)
 
-        # Connect histogrammer and setup UDP
-        iac_set(self.histogrammer, "device/connect", True)
-        # Currently histogrammer does not respect config, this will be fixed later
-        iac_set(self.histogrammer, "udp/accelerator/rx_ip", self.options.get('accel_rx_ip', '10.0.100.8'))
-        iac_set(self.histogrammer, "udp/accelerator/tx_ip", self.options.get('accel_tx_ip', '10.0.101.109'))
-        iac_set(self.histogrammer, "udp/destination/ip", self.options.get('dest_ip', '10.0.101.8'))
-        iac_set(self.histogrammer, "udp/source/ip", self.options.get('source_ip', '10.0.100.108'))
-        iac_set(self.histogrammer, "udp/source/port", int(self.options.get('source_port', 61648)))
-        iac_set(self.histogrammer, "udp/accelerator/port", int(self.options.get('accel_port', 61649)))
+            # Connect histogrammer and setup UDP
+            icc_set(self.histogrammer, "device/connect", True)
+            # Currently histogrammer does not respect config, this will be fixed later
+            icc_set(self.histogrammer, "udp/accelerator/rx_ip", self.options.get('accel_rx_ip', '10.0.100.8'))
+            icc_set(self.histogrammer, "udp/accelerator/tx_ip", self.options.get('accel_tx_ip', '10.0.101.109'))
+            icc_set(self.histogrammer, "udp/destination/ip", self.options.get('dest_ip', '10.0.101.8'))
+            icc_set(self.histogrammer, "udp/source/ip", self.options.get('source_ip', '10.0.100.108'))
+            icc_set(self.histogrammer, "udp/source/port", int(self.options.get('source_port', 61648)))
+            icc_set(self.histogrammer, "udp/accelerator/port", int(self.options.get('accel_port', 61649)))
 
-        iac_set(self.histogrammer, "udp/setup", True)
+            icc_set(self.histogrammer, "udp/setup", True)
 
-        # self._handle_default_settings()
-        self._build_tree()
+            # self._handle_default_settings()
+            self._build_tree()
+        except Exception as e:
+            logging.error(f"Error initializing AcquisitionController: {e}")
 
     def _build_tree(self):
         """Build the parameter tree for the acquisition controller."""

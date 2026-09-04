@@ -1,40 +1,38 @@
 """A class to manage the configuration of the acquisition process, such as num_bins and similar functions."""
-from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from hexitec.util.iac import IACError, iac_get, iac_set
+from odin_control.adapters.parameter_tree import ParameterTree
+from hexitec.util.iac import ICCError, icc_get, icc_set
 from tornado.ioloop import IOLoop
 
 import logging
-import math
-
 class Configuration():
     def __init__(self, adapters, munir_subsystem, AcquisitionError):
         self.munir_subsystem = munir_subsystem
 
         self.bin_mode = "histogram_1024"
 
-        self.munir = adapters["munir"]
-        self.munir_odindata_controller = self.munir.controller.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
-        self.histogrammer = adapters["histogram"]
-        self.readout = adapters["readout"]
-        self.liveview = adapters["liveview"]
+        self.munir = adapters["munir"].controller
+        self.munir_odindata_controller = self.munir.munir_managers[self.munir_subsystem].odin_data_instances[0]  # Only anticipate one odin data instance for now
+        self.histogrammer = adapters["histogram"].controller
+        self.readout = adapters["readout"].controller
+        self.liveview = adapters["liveview"].controller
         self.proxy = adapters["proxy"]
 
-        self.munir_bin_mode = self.munir.controller.munir_managers[self.munir_subsystem].fp_status[0].get('HexitecMhz', {}).get('mode', '')
+        self.munir_bin_mode = self.munir.munir_managers[self.munir_subsystem].fp_status[0].get('HexitecMhz', {}).get('mode', '')
 
         self.AcquisitionError = AcquisitionError
 
         self.device_options = ["software", "hardware"]
 
         # Get system to a known state on start
-        # iac_get are safe here as this is part of acquisition adapter's initialize
-        using_hardware = iac_get(self.readout, "trigger/enable")
+        # icc_get are safe here as this is part of acquisition adapter's initialize
+        using_hardware = icc_get(self.readout, "trigger/enable")
         self.device = "hardware" if using_hardware else "software"
 
-        self.trigger_mode = iac_get(self.readout, "trigger/mode")
+        self.trigger_mode = icc_get(self.readout, "trigger/mode")
 
-        self.frames_per_timeframe = int(iac_get(self.histogrammer, "acquisition/frames_per_histogram"))
-        self.number_of_timeframes = int(iac_get(self.histogrammer, "acquisition/num_histograms"))
-        self.timeframes_per_trigger = int(iac_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
+        self.frames_per_timeframe = int(icc_get(self.histogrammer, "acquisition/frames_per_histogram"))
+        self.number_of_timeframes = int(icc_get(self.histogrammer, "acquisition/num_histograms"))
+        self.timeframes_per_trigger = int(icc_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
         self.readout_max_frames = 2**32 - 1  # Max value for 32-bit unsigned int
 
@@ -120,13 +118,13 @@ class Configuration():
         # Stop odin-data
         if self.munir.controller.execute_flags[self.munir_subsystem]:
             was_executing = True
-            iac_set(self.munir, f'execute/{self.munir_subsystem}', False)
+            icc_set(self.munir, f'execute/{self.munir_subsystem}', False)
 
         # Disable histogrammer
-        iac_set(self.histogrammer, "acquisition/run", False)
+        icc_set(self.histogrammer, "acquisition/run", False)
 
         # Change via histogrammer
-        iac_set(self.histogrammer, "config/hist_format/num_bins", hist_value)
+        icc_set(self.histogrammer, "config/hist_format/num_bins", hist_value)
 
         # Change in odin data
         cfg = {
@@ -147,12 +145,12 @@ class Configuration():
         response = self.munir_odindata_controller.set_config(cfg)
 
         # Change in liveview
-        iac_set(self.liveview, "histview/mhz/image/num_bins", depth)
+        icc_set(self.liveview, "histview/mhz/image/num_bins", depth)
 
         # Restart liveview if it was running
         if was_executing:
-            iac_set(self.histogrammer, "acquisition/run", True)
-            iac_set(self.munir, f'execute/{self.munir_subsystem}', True)
+            icc_set(self.histogrammer, "acquisition/run", True)
+            icc_set(self.munir, f'execute/{self.munir_subsystem}', True)
 
         self.calculate_estimated_data_rate()
 
@@ -163,8 +161,8 @@ class Configuration():
         device = device.lower()
         if device in self.device_options:
             trigger_enable = False if device=="software" else True
-            iac_set(self.readout, "trigger/enable", trigger_enable)
-            iac_set(self.histogrammer, "acquisition/mode", device)
+            icc_set(self.readout, "trigger/enable", trigger_enable)
+            icc_set(self.histogrammer, "acquisition/mode", device)
 
         self.device = device
 
@@ -173,7 +171,7 @@ class Configuration():
         :param mode: string representing the trigger mode, either 'burst mode', 'step scan', or 'continuous mode'
         """
         self.trigger_mode = mode
-        iac_set(self.readout, "trigger/mode", mode)
+        icc_set(self.readout, "trigger/mode", mode)
 
     def set_frames_per_timeframe(self, frames: int):
         """Set the number of frames per timeframe/histogram and recalculate the data rate.
@@ -203,11 +201,11 @@ class Configuration():
 
         try:
             # Software, internal timeframe generator
-            iac_set(self.histogrammer, "acquisition/frames_per_histogram", frames)
+            icc_set(self.histogrammer, "acquisition/frames_per_histogram", frames)
             # Hardware, on trigger received
-            iac_set(self.readout, "trigger/frame_limits/frame_in_hist", frames)
+            icc_set(self.readout, "trigger/frame_limits/frame_in_hist", frames)
             self.frames_per_timeframe = frames
-        except IACError as err:
+        except ICCError as err:
             raise self.AcquisitionError(f"Could not set frames per timeframe: {err}")
 
         self.calculate_estimated_data_rate()
@@ -242,11 +240,11 @@ class Configuration():
         """
         try:
             # Frame target for acquisition
-            iac_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", timeframes)
+            icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", timeframes)
             # Software, internal timeframe generator. Not used in this way for 
-            iac_set(self.histogrammer, "acquisition/num_histograms", timeframes)
+            icc_set(self.histogrammer, "acquisition/num_histograms", timeframes)
             self.number_of_timeframes = timeframes
-        except IACError as err:
+        except ICCError as err:
             raise self.AcquisitionError(f"Could not set number of timeframes: {err}")
 
     def set_timeframes_per_trigger(self, timeframes: int):
@@ -256,9 +254,9 @@ class Configuration():
         """
         try:
             # Hardware
-            iac_set(self.readout, "trigger/frame_limits/hist_in_trigger", timeframes)
+            icc_set(self.readout, "trigger/frame_limits/hist_in_trigger", timeframes)
             self.timeframes_per_trigger = timeframes
-        except IACError as err:
+        except ICCError as err:
             raise self.AcquisitionError(f"Could not set timeframes per trigger: {err}")
 
     def calculate_estimated_data_rate(self):
@@ -280,29 +278,29 @@ class Configuration():
         """
         if value:
             self.baseline_settings['enabled'] = True
-            self.baseline_settings['prev_mask'] = iac_get(self.histogrammer, "config/baseline/mask")
-            self.baseline_settings['prev_auto_trig'] = iac_get(self.histogrammer, "config/clustering/auto_trig_mode")
-            self.baseline_settings['prev_cluster_mode'] = iac_get(self.histogrammer, "config/clustering/mode")
+            self.baseline_settings['prev_mask'] = icc_get(self.histogrammer, "config/baseline/mask")
+            self.baseline_settings['prev_auto_trig'] = icc_get(self.histogrammer, "config/clustering/auto_trig_mode")
+            self.baseline_settings['prev_cluster_mode'] = icc_get(self.histogrammer, "config/clustering/mode")
 
-            iac_set(self.histogrammer, "config/baseline/mask", "FIXED")
-            iac_set(self.histogrammer, "config/clustering/mode", "AUTO")
-            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", 'ONEIN2')
+            icc_set(self.histogrammer, "config/baseline/mask", "FIXED")
+            icc_set(self.histogrammer, "config/clustering/mode", "AUTO")
+            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", 'ONEIN2')
         else:
             self.baseline_settings['enabled'] = False
 
-            iac_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
-            iac_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
-            iac_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
+            icc_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
+            icc_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
+            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
 
     def _sync_bin_mode(self):
-        munir_num_bins = iac_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
+        munir_num_bins = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
         mode = str(munir_num_bins[0].get('HexitecMhz', {}).get('mode', ''))
 
         if not mode:
             return False
 
-        hist_num_bins = f"histogram_{iac_get(self.histogrammer, 'config/hist_format/num_bins')}"
-        liveview_num_bins = f"histogram_{iac_get(self.liveview, 'histview/mhz/image/num_bins')}"
+        hist_num_bins = f"histogram_{icc_get(self.histogrammer, 'config/hist_format/num_bins')}"
+        liveview_num_bins = f"histogram_{icc_get(self.liveview, 'histview/mhz/image/num_bins')}"
 
         if mode != hist_num_bins or hist_num_bins != liveview_num_bins:
             self.change_bin_mode(mode)
