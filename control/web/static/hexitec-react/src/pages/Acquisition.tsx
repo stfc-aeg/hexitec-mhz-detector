@@ -11,6 +11,15 @@ interface AcquisitionProps {
 
 const EndpointSelect = WithEndpoint(Form.Select);
 
+const minimumFramesPerTimeframe: { [key: string]: number } = {
+  histogram_128: 350,
+  histogram_256: 700,
+  histogram_512: 1400,
+  histogram_1024: 2800,
+  histogram_2048: 5600,
+  histogram_4096: 11200
+};
+
 function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const acquisitionEndpoint = useAdapterEndpoint<AcquisitionTypes>('acquisition', endpoint_url, 1000);
@@ -34,6 +43,11 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const estimatedDataRate = acquisitionData?.config?.estimated_data_rate ?? 0;
   const rateTooHigh = estimatedDataRate > 12.5;
+  const framesPerTimeframe = acquisitionData?.config?.trigger?.frames_per_timeframe;
+  const minimumFrames = minimumFramesPerTimeframe[acquisitionData?.config?.bin_mode ?? ''];
+  const framesPerTimeframeTooLow = typeof framesPerTimeframe === 'number'
+    && minimumFrames !== undefined
+    && framesPerTimeframe < minimumFrames;
 
   const acquisitionMetadata = acquisitionEndpoint?.metadata;
   const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
@@ -163,13 +177,23 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 </Row>
                 <Row className="mt-2">
                   <Col xs={6}>
-                    <FloatingLabel label="Frames per timeframe">
-                      <EndpointInput
-                        endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_pre_multiplier"
-                        type="number"
-                        style={floatingInputStyle}
-                      />
-                    </FloatingLabel>
+                    
+                    
+                    <OverlayTrigger
+                      placement="top" overlay={tooltips.acquisition.low_frames_per_timeframe}
+                      trigger={framesPerTimeframeTooLow ? undefined : []}
+                    >
+                      <FloatingLabel label="Frames per timeframe">
+                        <EndpointInput
+                          endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_pre_multiplier"
+                          type="number"
+                          style={{
+                            ...floatingInputStyle,
+                            ...(framesPerTimeframeTooLow ? { border: '2px solid #ffc107' } : {})
+                          }}
+                        />
+                      </FloatingLabel>
+                    </OverlayTrigger>
                   </Col>
                   <Col>
                     <FloatingLabel
@@ -358,7 +382,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   </EndpointButton>
                   {rateTooHigh && (
                     <div className="text-danger mt-2">
-                      Estimated data rate exceeds network capacity (12.5 GB/s). Increase frames per timeframe or reduce the bin count via bin mode on the Configuration page.
+                      Estimated data rate ({acquisitionData?.config?.estimated_data_rate} GB/s) exceeds network capacity (12.5 GB/s). Increase frames per timeframe or reduce the bin count (bin mode).
                     </div>
                   )}
                 </Col>

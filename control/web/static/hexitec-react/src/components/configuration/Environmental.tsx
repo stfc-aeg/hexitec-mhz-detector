@@ -1,7 +1,6 @@
-import { Row, Col, Card, Form, Button, FloatingLabel, FormControl } from 'react-bootstrap';
+import { Row, Col, Card, Form, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { useState, useEffect } from 'react';
-import { WithEndpoint, type AdapterEndpoint } from '@dssg/odin-react';;
+import { WithEndpoint, type AdapterEndpoint, EndpointButton, EndpointInput } from '@dssg/odin-react';;
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
 import type { ProxyParams } from '../../EndpointTypes';
 
@@ -10,7 +9,6 @@ interface EnvironmentalProps {
   isCustom: boolean;
 }
 
-const EndpointButton = WithEndpoint(Button);
 const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function Environmental({
@@ -20,21 +18,6 @@ export default function Environmental({
   const envData = proxyEndpoint.data?.loki?.environment;
 
   const peltierSetpoints = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
-
-  // Handling of target bias to enforce strings until LOKI metadata behaves
-  const [hvValue, setHvValue] = useState<string>(lokiData?.HV?.target_bias?.toString() ?? '');
-
-  useEffect(() => {
-    setHvValue(lokiData?.HV?.target_bias?.toString() ?? '');
-  }, [lokiData?.HV?.target_bias]);
-
-  const handleApplyHvBias = () => {
-    const parsed = Number(hvValue);
-    if (Number.isNaN(parsed)) {
-      return;
-    }
-    proxyEndpoint.put({ target_bias: parsed }, 'loki/application/HV');
-  };
 
   return (
     <>
@@ -51,7 +34,7 @@ export default function Environmental({
               <EndpointButton className="w-100"
                 endpoint={proxyEndpoint} fullpath="loki/application/HV/ENABLE"
                 variant={lokiData?.HV?.ENABLE ? 'danger' : 'primary'}
-                value={lokiData?.HV?.ENABLE ? 0 : 1}
+                value={!(lokiData?.HV?.ENABLE)}
                 disabled={!isCustom}
               >
                 {lokiData?.HV?.ENABLE ? 'Disable HV' : 'Enable HV'}
@@ -71,22 +54,12 @@ export default function Environmental({
           <UserAware userLevel="power" as={Row} className='mb-3'>
             <Col>
               <FloatingLabel label="HV Target Bias">
-                <FormControl
-                  type="number"
-                  value={hvValue}
-                  onChange={(e) => setHvValue(e.currentTarget.value)}
-                  style={floatingInputStyle}
+                <EndpointInput
+                  endpoint={proxyEndpoint}
+                  fullpath="loki/application/HV/target_bias"
                   disabled={!isCustom}
                 />
               </FloatingLabel>
-              <Button
-                className="mt-2 w-100"
-                variant="primary"
-                onClick={handleApplyHvBias}
-                disabled={hvValue === '' || Number.isNaN(Number(hvValue)) || !isCustom}
-              >
-                Apply
-              </Button>
             </Col>
             <Col>
               <FloatingLabel label="Current Target Bias">
@@ -110,7 +83,7 @@ export default function Environmental({
                 <EndpointButton
                   endpoint={proxyEndpoint} fullpath="loki/application/peltier/enable"
                   variant={lokiData?.peltier?.enable ? 'danger' : 'primary'}
-                  value={lokiData?.peltier?.enable ? 0 : 1}
+                  value={lokiData?.peltier?.enable ? false : true}
                   disabled={!isCustom}
                 >
                   {lokiData?.peltier?.enable ? 'Disable Peltier' : 'Enable Peltier'}

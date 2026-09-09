@@ -3,6 +3,8 @@ from odin_control.adapters.parameter_tree import ParameterTree
 from hexitec.util.iac import ICCError, icc_get, icc_set
 from tornado.ioloop import IOLoop
 
+import typing
+
 import logging
 class Configuration():
     def __init__(self, adapters, munir_subsystem, AcquisitionError):
@@ -116,7 +118,7 @@ class Configuration():
                 hist_value='1024'
 
         # Stop odin-data
-        if self.munir.controller.execute_flags[self.munir_subsystem]:
+        if self.munir.execute_flags[self.munir_subsystem]:
             was_executing = True
             icc_set(self.munir, f'execute/{self.munir_subsystem}', False)
 
@@ -178,24 +180,6 @@ class Configuration():
         Additionally verify the minimum allowed frame count against the bin mode.
         :param frames: positive integer number of frames.
         """
-        # The min frames per timeframe is based on the bin mode, and at what point 
-        # this is less efficient than raw data. This is roughly 350 at 128 bins, 700 at 256, etc.
-        match self.bin_mode:
-            case 'histogram_128':
-                min_frames_per_timeframe = 350
-            case 'histogram_256':
-                min_frames_per_timeframe = 700
-            case 'histogram_512':
-                 min_frames_per_timeframe = 1400
-            case 'histogram_1024':
-                min_frames_per_timeframe = 2800
-            case 'histogram_2048':
-                min_frames_per_timeframe = 5600
-            case 'histogram_4096':
-                min_frames_per_timeframe = 11200
-        if frames < min_frames_per_timeframe:
-            raise self.AcquisitionError(f"Frames per timeframe must be at least {min_frames_per_timeframe}.")
-
         if frames > self.readout_max_frames:
             raise self.AcquisitionError(f"Frames per timeframe must be less than or equal to {self.readout_max_frames}.")
 

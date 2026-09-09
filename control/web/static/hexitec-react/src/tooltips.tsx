@@ -21,8 +21,12 @@ export const tooltips = {
       <Tooltip id="tooltip-duration">
         <strong>Duration.</strong> With hardware triggering, the duration is estimated per-trigger.
       </Tooltip>
-    )
-    ,
+    ),
+    low_frames_per_timeframe: (
+      <Tooltip id="tooltip-low-frames-per-timeframe">
+        <strong>Fast Histograms.</strong> A very low number of frames per timeframe may be less efficient than raw data.
+      </Tooltip>
+    ),
     disabled_acquiring: (
       <Tooltip id="tooltip-acq-disabled">
         <strong>Acquisition in progress.</strong> Configuration is locked while an acquisition or preview is running.
