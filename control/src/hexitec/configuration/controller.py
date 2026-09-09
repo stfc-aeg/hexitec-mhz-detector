@@ -154,10 +154,8 @@ class ConfigurationController(BaseController):
                 data = {param_name: value}
                 # Special case for proxy which does not use controller
                 if adapter == 'proxy':
-                    logging.debug(f"setting value for proxy. path: {path}, data: {data}")
                     iac_set(adapter=self.adapters.get(adapter), path=path, data=data)
                 else:
-                    logging.debug(f"Setting value for adapter '{adapter}', path '{path}', data: {data}")
                     icc_set(controller=self.adapters.get(adapter), path=path, data=data)
             except Exception as e:
                 logging.error(f"Failed to set value in config profile: {e}")
