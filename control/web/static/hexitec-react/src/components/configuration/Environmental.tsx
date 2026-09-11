@@ -17,7 +17,7 @@ export default function Environmental({
   const lokiData = proxyEndpoint.data?.loki?.application;
   const envData = proxyEndpoint.data?.loki?.environment;
 
-  const peltierSetpoints = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+  const peltierModes = proxyEndpoint?.data?.loki?.application?.peltier?.modes_available ?? [];
 
   return (
     <>
@@ -103,20 +103,34 @@ export default function Environmental({
 
             <UserAware userLevel="power" as={Row} className='mb-3'>
               <Col>
-                <FloatingLabel label="Setpoint">
-                  <EndpointSelect
-                    endpoint={proxyEndpoint}
-                    fullpath="loki/application/peltier/temperature"
-                    variant="outline-secondary"
-                    buttonText={checkNullNoDp((lokiData?.peltier?.temperature ?? 0) * 100)}
-                    style={floatingInputStyle}
-                    disabled={!isCustom}
-                  >
-                    {peltierSetpoints.map((selection) => (
-                      <option value={selection} key={selection}>{selection}</option>
-                    ))}
-                  </EndpointSelect>
-                </FloatingLabel>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Peltier Mode">
+                      <EndpointSelect
+                        endpoint={proxyEndpoint}
+                        fullpath="loki/application/peltier/mode"
+                        variant="outline-secondary"
+                        style={floatingInputStyle}
+                        disabled={!isCustom}
+                      >
+                        {peltierModes.map((selection) => (
+                          <option value={selection} key={selection}>{selection}</option>
+                        ))}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel label="Setpoint">
+                      <EndpointInput
+                        endpoint={proxyEndpoint}
+                        fullpath="loki/application/peltier/temperature"
+                        style={floatingInputStyle}
+                        disabled={!isCustom}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+
               </Col>
               <Col>
                 <FloatingLabel label="Temperature">

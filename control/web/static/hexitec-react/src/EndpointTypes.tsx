@@ -416,6 +416,8 @@ export type LokiApplicationData = {
     count: number;
     temperature: number;
     enable: boolean;
+    mode: string;
+    modes_available: string[];
   }
   asic_settings: {
     feedback_capacitance: number;
