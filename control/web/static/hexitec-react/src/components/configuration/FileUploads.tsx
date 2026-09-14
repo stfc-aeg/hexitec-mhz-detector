@@ -53,7 +53,7 @@ export default function FileUploads( { histogramEndpoint, isCustom, isAcquiring 
             <EndpointButton
               endpoint={histogramEndpoint}
               fullpath="config/hdf_settings/save"
-              disabled={!isCustom || isAcquiring}
+              disabled={!isCustom || isAcquiring || histogramEndpoint?.data?.config?.hdf_settings?.filename === ""}
             >
               Save settings to named HDF
             </EndpointButton>
