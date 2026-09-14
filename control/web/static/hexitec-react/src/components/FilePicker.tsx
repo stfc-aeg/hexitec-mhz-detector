@@ -1,5 +1,5 @@
-import { WithEndpoint, EndpointButton } from 'odin-react';
-import type { AdapterEndpoint } from 'odin-react';
+import { WithEndpoint, EndpointButton } from '@dssg/odin-react';;
+import type { AdapterEndpoint } from '@dssg/odin-react';;
 import { Form, InputGroup } from 'react-bootstrap';
 
 // Convenience component for picking a file to send to an endpoint

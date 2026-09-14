@@ -36,9 +36,9 @@
   "cluster_l3"             : false,
   "cluster_l4"             : false,
 
-  "highvoltage_enable"     : 0,
+  "highvoltage_enable"     : false,
   "highvoltage_target_bias": -100,
-  "peltier_enable"         : 1,
+  "peltier_enable"         : true,
   "peltier_setpoint"       : 25,
   "feedback_capacitance"   : 14,
   "negative_dynamic_range" : "high",

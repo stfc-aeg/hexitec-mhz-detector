@@ -1,10 +1,11 @@
 import logging
-from hexitec.base.base_controller import BaseController, BaseError
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+
+from odin_control.adapters.base_controller import BaseController, BaseError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from pathlib import Path
 import json
-from hexitec.util.iac import iac_set, iac_get
+from hexitec.util.iac import iac_set, iac_get, icc_set, icc_get
 
 class ConfigurationError(BaseError):
     """Exception raised for errors in the ConfigurationController."""
@@ -52,13 +53,21 @@ class ConfigurationController(BaseController):
         This function also updates the available profiles and builds the ParameterTree.
         :param adapters: dictionary of adapter instances keyed by name
         """
-        self.adapters = adapters
-        self._update_profiles()
-        self._build_tree()
+        try:
+            # Get controller for each adapter, except proxy which does not use one
+            self.adapters = {}
+            for name, adapter in adapters.items():
+                self.adapters[name] = adapter.controller if name != 'proxy' else adapter
+            self._update_profiles()
+            self._build_tree()
 
-        # Set the profile to the default profile
-        if self.default_profile:
-            self.set_profile(self.default_profile)
+            # Set the profile to the default profile
+            if self.default_profile:
+                self.set_profile(self.default_profile)
+            
+        except Exception as e:
+            logging.error(f"Error initializing ConfigurationController: {e}")
+            raise ConfigurationError(f"Error initializing ConfigurationController: {e}")
 
     def cleanup(self):
         """Clean up controller resources."""
@@ -132,7 +141,7 @@ class ConfigurationController(BaseController):
         def _write_value(key, value):
             """Write the profile value to the given path in the mapping dictionary."""
             # If the value doesn't exist, don't do anything with it
-            if value is None:
+            if value is None or value is "":
                 return
             
             # Break up path into adapter and the rest
@@ -143,7 +152,11 @@ class ConfigurationController(BaseController):
             
             try:
                 data = {param_name: value}
-                iac_set(adapter=self.adapters.get(adapter), path=path, data=data)
+                # Special case for proxy which does not use controller
+                if adapter == 'proxy':
+                    iac_set(adapter=self.adapters.get(adapter), path=path, data=data)
+                else:
+                    icc_set(controller=self.adapters.get(adapter), path=path, data=data)
             except Exception as e:
                 logging.error(f"Failed to set value in config profile: {e}")
         
@@ -176,7 +189,10 @@ class ConfigurationController(BaseController):
             adapter, rest = full.split('/', 1) if '/' in full else (full, '')
 
             try:
-                return iac_get(adapter=self.adapters.get(adapter), path=rest)
+                if adapter == 'proxy':
+                    return iac_get(adapter=self.adapters.get(adapter), path=rest)
+                else:
+                    return icc_get(controller=self.adapters.get(adapter), path=rest)
             except Exception as e:
                 logging.error(f"Failed to read value for config profile: {e}")
         

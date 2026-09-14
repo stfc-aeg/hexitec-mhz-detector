@@ -3,9 +3,9 @@ from collections import deque
 from datetime import datetime
 from typing import TypedDict
 
-from hexitec.util.iac import IACError, iac_get, iac_set
-from odin.adapters.adapter import ApiAdapter
-from odin.adapters.proxy import ProxyAdapter
+from hexitec.util.iac import IACError, iac_get, iac_set, ICCError, icc_get, icc_set
+from odin_control.adapters.adapter import ApiAdapter
+from odin_control.adapters.proxy import ProxyAdapter
 from readout_processor.adapter import ReadoutProcessorAdapter
 from statemachine import Event, State, StateMachine
 from statemachine.exceptions import TransitionNotAllowed
@@ -88,7 +88,7 @@ class Monitor:
         self.reset_history = deque(maxlen=event_history)
 
         self.loki: ProxyAdapter = adapters["proxy"]
-        self.readout: ReadoutProcessorAdapter = adapters["readout"]
+        self.readout: ReadoutProcessorAdapter = adapters["readout"].controller
 
         self.readout_status: ReadoutStatus = None
         self.loki_status: LokiStatus = None
@@ -99,7 +99,7 @@ class Monitor:
 
     # Adapter Communication Methods, for getting system status
     def get_readout_status(self) -> ReadoutStatus:
-        return iac_get(self.readout, "status")
+        return icc_get(self.readout, "status")
 
     def get_loki_status(self) -> LokiStatus:
         stat: LokiStatus = iac_get(self.loki, self.loki_state_path)
@@ -236,8 +236,7 @@ class Monitor:
         try:
             # iac_set(self.loki, self.loki_state_path, {"SYNC": False})
             # logging.debug("Loki Data Sync OFF")
-
-            iac_set(self.readout, "status", {"reset": True})
+            icc_set(self.readout, "status/reset", True)
             logging.debug("Readout resetting")
             self.readout_status = self.get_readout_status()
         except IACError as err:
@@ -261,7 +260,7 @@ class Monitor:
         self.timeout = 0
         logging.info("Reactivating Readout after reset")
         try:
-            iac_set(self.readout, "status", {"reactivate": True})
+            icc_set(self.readout, "status", {"reactivate": True})
             # iac_set(self.loki, self.loki_state_path, {"SYNC": True})
 
         except IACError as err:

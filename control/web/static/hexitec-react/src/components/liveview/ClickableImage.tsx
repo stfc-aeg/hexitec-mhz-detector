@@ -1,4 +1,4 @@
-import type { AdapterEndpoint } from 'odin-react';
+import type { AdapterEndpoint } from '@dssg/odin-react';;
 import { useState, useEffect, useCallback } from 'react';
 
 type Point = [number, number];
@@ -49,7 +49,7 @@ export function ClickableImage(props: ClickableImageProps) {
         console.error("IMAGE GET FAILED: ", error);
         changeImgData("");
       })
-  }, [endpoint.updateFlag]);
+  }, [endpoint]);
 
   useEffect(() => {
     const timer_id = setInterval(refreshImage, 950);

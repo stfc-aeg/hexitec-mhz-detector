@@ -1,9 +1,8 @@
 import logging
-from hexitec.base.base_adapter import BaseAdapter
-from odin.adapters.adapter import ApiAdapterResponse, wants_metadata
+from odin_control.adapters.adapter import ApiAdapter
 from hexitec.acquisition.controller import AcquisitionController, AcquisitionError
 
-class AcquisitionAdapter(BaseAdapter):
+class AcquisitionAdapter(ApiAdapter):
     """Adapter for the acquisition process.
     This adapter interfaces between the other processes so as to orchestrate acquisitions.
     """

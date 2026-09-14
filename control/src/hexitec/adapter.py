@@ -1,8 +1,8 @@
-from .base.base_adapter import BaseAdapter
+from odin_control.adapters.adapter import ApiAdapter
 from .controller import HexitecController, HexitecError
 
 
-class HexitecAdapter(BaseAdapter):
+class HexitecAdapter(ApiAdapter):
     """HEXITEC Adapter class inheriting base adapter functionality."""
 
     controller_cls = HexitecController

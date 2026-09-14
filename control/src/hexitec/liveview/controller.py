@@ -1,8 +1,8 @@
 import logging
 from functools import partial
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.base_controller import BaseController, BaseError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
-from hexitec.base.base_controller import BaseController
 from .processor import HistogramLiveViewProcessor
 
 class HistogramLiveViewError(Exception):
@@ -17,7 +17,7 @@ class HistogramLiveViewController(BaseController):
         
         Args:
             options: Dictionary of configuration options
-        """       
+        """
         logging.debug("Initializing HistogramLiveViewController")
 
         # Get endpoints from config

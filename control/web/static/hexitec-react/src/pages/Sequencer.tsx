@@ -1,5 +1,4 @@
-import { useAdapterEndpoint } from 'odin-react';
-import { OdinSequencer } from 'odin-sequencer-react-ui';
+import { OdinSequencer } from 'odin-sequencer-ui';
 
 interface SequencerProps {
     endpoint_url: string;
@@ -7,10 +6,9 @@ interface SequencerProps {
 
 
 function Sequencer({ endpoint_url}: SequencerProps) {
-    const sequencerEndpoint = useAdapterEndpoint('sequencer', endpoint_url, 1000);
 
     return (
-      <OdinSequencer endpoint={sequencerEndpoint}/>
+      <OdinSequencer endpoint_name={'sequencer'} endpoint_url={endpoint_url} poll_interval={1000}/>
     )
 }
 

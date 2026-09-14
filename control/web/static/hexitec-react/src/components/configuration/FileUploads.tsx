@@ -1,7 +1,7 @@
-import { Row, Col, Card, Form, Accordion } from 'react-bootstrap';
+import { Row, Col, Card, Form, Accordion, FloatingLabel } from 'react-bootstrap';
 import { FilePicker } from '../FilePicker';
 import type { HistogramTypes } from '../../EndpointTypes';
-import type { AdapterEndpoint } from 'odin-react';
+import { EndpointButton, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';;
 
 interface FileUploadsProps {
   histogramEndpoint: AdapterEndpoint<HistogramTypes>;
@@ -37,6 +37,26 @@ export default function FileUploads( { histogramEndpoint, isCustom, isAcquiring 
               loadPath="config/hdf_settings/load"
               disabled={!isCustom || isAcquiring}
             />
+          </Col>
+        </Row>
+        <Row className="mb-3">
+          <Col>
+            <FloatingLabel label="Global HDF Filename (to save)">
+              <EndpointInput
+                endpoint={histogramEndpoint}
+                fullpath="config/hdf_settings/filename"
+                disabled={!isCustom || isAcquiring}
+              />
+            </FloatingLabel>
+          </Col>
+          <Col>
+            <EndpointButton
+              endpoint={histogramEndpoint}
+              fullpath="config/hdf_settings/save"
+              disabled={!isCustom || isAcquiring || histogramEndpoint?.data?.config?.hdf_settings?.filename === ""}
+            >
+              Save settings to named HDF
+            </EndpointButton>
           </Col>
         </Row>
         <Row className="mb-3">
