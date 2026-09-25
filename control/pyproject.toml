@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Hexitec-MHz-Top-Level-Control"
+name = "Hexitec-MHz-Control"
 description = "odin-control based system for managing aqusitions and DAQ system state for the Hexitec-MHz Detector system"
 dynamic = ["version"]
 requires-python = ">=3.10.0"
@@ -13,16 +13,16 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-   "munir @ git+https://github.com/stfc-aeg/munir.git#egg=munir@odin-control-2",
+   "munir @ git+https://github.com/stfc-aeg/munir.git@odin-control-2",
    "requests",
    "python-statemachine==2.6.0",
    "mhz-readout @ git+ssh://git@github.com/stfc-aeg/MHz-Readout-Processor@v2.0.0",
    "histogrammer @ git+ssh://git@github.com/stfc-aeg/odin-histogrammer.git@v2.0.1",
-   "odin-sequencer @ git+ssh://git@github.com/stfc-aeg/odin-sequencer.git@0.4.0",
+   "odin-sequencer @ git+ssh://git@github.com/stfc-aeg/odin-sequencer.git@0.4.1",
    "opencv-python>=4.12.0.88",
    "matplotlib>=3.10.8",
    "blosc>=1.11.3",
-   "odin-control>=2.0.0"
+   "odin-control>=2.1.0"
 ]
 
 readme = "README.md"

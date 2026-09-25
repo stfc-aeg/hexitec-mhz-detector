@@ -1,7 +1,7 @@
 {
   "name": "hexitec-react",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,7 @@
   "dependencies": {
     "@dssg/odin-react": "^2.3.2",
     "bootstrap": "^5.3.7",
-    "odin-sequencer-ui": "github:stfc-aeg/odin-sequencer-ui#0.4.0",
+    "odin-sequencer-ui": "github:stfc-aeg/odin-sequencer-ui#0.4.1",
     "plotly": "^1.0.6",
     "plotly.js": "^3.7.0",
     "react": "^19.1.0",
