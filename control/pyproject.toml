@@ -13,12 +13,12 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-   "munir @ git+https://github.com/stfc-aeg/munir.git@odin-control-2",
+   "munir @ git+https://github.com/stfc-aeg/munir@0.1.0",
    "requests",
    "python-statemachine==2.6.0",
-   "mhz-readout @ git+ssh://git@github.com/stfc-aeg/MHz-Readout-Processor@v2.0.0",
-   "histogrammer @ git+ssh://git@github.com/stfc-aeg/odin-histogrammer.git@v2.0.1",
-   "odin-sequencer @ git+ssh://git@github.com/stfc-aeg/odin-sequencer.git@0.4.1",
+   "mhz-readout @ git+https://github.com/stfc-aeg/MHz-Readout-Processor@v2.0.0",
+   "histogrammer @ git+https://github.com/stfc-aeg/odin-histogrammer@v2.0.1",
+   "odin-sequencer @ git+https://github.com/stfc-aeg/odin-sequencer@0.4.1",
    "opencv-python>=4.12.0.88",
    "matplotlib>=3.10.8",
    "blosc>=1.11.3",
