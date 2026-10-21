@@ -36,6 +36,10 @@ class Configuration():
         self.number_of_timeframes = int(icc_get(self.histogrammer, "acquisition/num_histograms"))
         self.timeframes_per_trigger = int(icc_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
+        self.enable_multiple_files = False
+        self.number_of_files = 1
+        self.timeframes_per_file = self.number_of_timeframes
+
         self.readout_max_frames = 2**32 - 1  # Max value for 32-bit unsigned int
 
         # By default, 10^0 = 1
@@ -77,7 +81,11 @@ class Configuration():
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
                 'timeframes_per_trigger': (lambda: self.timeframes_per_trigger, self.set_timeframes_per_trigger,
-                                           {'min': 1})
+                                           {'min': 1}),
+                'multiple_files': {
+                    'enable': (lambda: self.enable_multiple_files, self.toggle_multiple_files),
+                    'number_of_files': (lambda: self.number_of_files, self.set_number_of_files)
+                }
             },
             'baseline': {
                 'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
@@ -218,8 +226,9 @@ class Configuration():
         self.frames_pre_mult = int(frames)
 
     def set_number_of_timeframes(self, timeframes: int):
-        """Set the number of timeframes to be acquired.
+        """Set the number of timeframes to be acquired per file.
         Not all the values set will be used each time, depending on hardware/software mode.
+        Normally there is one file, but multiple-file acquisitions
         :param timeframes: integer representing timeframes to be captured duing acquisition
         """
         try:
@@ -242,6 +251,24 @@ class Configuration():
             self.timeframes_per_trigger = timeframes
         except ICCError as err:
             raise self.AcquisitionError(f"Could not set timeframes per trigger: {err}")
+
+                # 'multiple_files': {
+                #     'enable': (lambda: self.enable_multiple_files, self.toggle_multiple_files),
+                #     'number_of_files': (lambda: self.number_of_files, self.set_number_of_files)
+
+    def toggle_multiple_files(self, enable):
+        """Set if multiple files are to be used during the acquisition."""
+        enable = bool(enable)
+        # Number of files is 1 if multiple-file-acquisition is disabled
+        if not enable:
+            self.set_number_of_files(1)
+        self.enable_multiple_files = enable
+
+    def set_number_of_files(self, number):
+        """Set the number of files for a multiple_file acquisition."""
+        if not self.enable_multiple_files:
+            raise self.AcquisitionError("Number of files should be set only when multiple-file acquisition is enabled.")
+        self.number_of_files = int(number)
 
     def calculate_estimated_data_rate(self):
         """Calculate the estimated data rate based on the current configuration."""

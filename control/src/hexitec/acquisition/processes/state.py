@@ -148,6 +148,8 @@ class State():
                 )
             return
 
+        frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
+
         self.is_acquiring = True
         self.acquisition_progress = 0
 
@@ -189,7 +191,7 @@ class State():
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.configuration.frames_per_timeframe)
 
         # Configure how data should be sent
-        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", frame_target)
 
         # Start listening for data
         icc_set(self.munir, "execute", {self.munir_subsystem: True})

@@ -30,6 +30,8 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const [triggerModeValue, setTriggerModeValue] = useState('software');
   const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst mode');
 
+  const hists_per_acquisition = (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0) * (acquisitionData?.config?.trigger?.multiple_files?.number_of_files ?? 0)
+
   const formatDisplayNumber = (value: unknown) => {
     if (value === null || value === undefined || value === '') {
       return '-';
@@ -66,8 +68,9 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
     { name: 'Software', value: 'software' }
   ];
   const adTriggerModeRadios = [
-    { name: 'Burst',  value: 'burst mode' },
-    { name: 'Step scan', value: 'step scan' }
+    { name: 'Burst',  value: 'burst mode', tooltip: tooltips.acquisition.burst_mode },
+    { name: 'Step scan', value: 'step scan', tooltip: tooltips.acquisition.step_scan },
+    { name: 'Continuous', value: 'continuous mode', tooltip: tooltips.acquisition.continuous_mode }
   ];
   // your manual use of endpoint.put rather than the WithEndpoint components makes me sad :()
   const handleTriggerModeChange = (value: string) => {
@@ -127,7 +130,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 {triggerModeRadios.map((radio, idx) => (
                   <OverlayTrigger placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
                     <ToggleButton
-                      key={idx}
+                      key={`triggerRadios-${idx}`}
                       className='equal-width-buttongroup'
                       id={`radio-${idx}`}
                       type="radio"
@@ -146,19 +149,22 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             <Row>
               <ButtonGroup className="mt-3">
                 {adTriggerModeRadios.map((radio, idx) => (
-                  <ToggleButton
-                    key={idx}
-                    className='equal-width-buttongroup'
-                    id={`ad-trigger-radio-${idx}`}
-                    type="radio"
-                    variant='outline-secondary'
-                    name="adTriggerModeRadio"
-                    value={radio.value}
-                    checked={adTriggerModeValue === radio.value}
-                    onChange={(e) => handleAdTriggerModeChange(e.currentTarget.value)}
-                  >
-                    {radio.name}
-                  </ToggleButton>
+                  <OverlayTrigger placement="top" overlay={radio.tooltip}>
+                    <ToggleButton
+                      key={`adTriggerRadios-${idx}`}
+                      className='equal-width-buttongroup'
+                      id={`ad-trigger-radio-${idx}`}
+                      type="radio"
+                      variant='outline-secondary'
+                      name="adTriggerModeRadio"
+                      value={radio.value}
+                      checked={adTriggerModeValue === radio.value}
+                      onChange={(e) => handleAdTriggerModeChange(e.currentTarget.value)}
+                      disabled={triggerModeValue==='software'}
+                    >
+                      {radio.name}
+                    </ToggleButton>
+                  </OverlayTrigger>
                 ))}
               </ButtonGroup>
             </Row>
@@ -166,19 +172,43 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
               <Col>
                 <Row>
                   <Col>
-                    <FloatingLabel label="Timeframes to write">
+                    <EndpointCheckbox
+                      endpoint={acquisitionEndpoint}
+                      fullpath={"config/trigger/freerun"}
+                      label="Endless Acquisition"
+                    />
+                  </Col>
+                  <Col>
+                    <EndpointCheckbox
+                      endpoint={acquisitionEndpoint}
+                      fullpath={"config/trigger/multiple_files/enable"}
+                      label="Multiple-file Acquisition"
+                    />
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label={acquisitionEndpoint?.data?.config?.trigger?.multiple_files?.enable ? "Timeframes per file" : "Timeframes to write"}>
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
-                        type="number"
                         style={floatingInputStyle}
+                        disabled={triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode'}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel label="Number of files">
+                      <EndpointInput
+                        endpoint={acquisitionEndpoint}
+                        fullpath="config/trigger/multiple_files/number_of_files"
+                        style={floatingInputStyle}
+                        disabled={!(acquisitionEndpoint?.data?.config?.trigger?.multiple_files?.enable)}
                       />
                     </FloatingLabel>
                   </Col>
                 </Row>
                 <Row className="mt-2">
                   <Col xs={6}>
-                    
-                    
                     <OverlayTrigger
                       placement="top" overlay={tooltips.acquisition.low_frames_per_timeframe}
                       trigger={framesPerTimeframeTooLow ? undefined : []}
@@ -191,6 +221,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                             ...floatingInputStyle,
                             ...(framesPerTimeframeTooLow ? { border: '2px solid #ffc107' } : {})
                           }}
+                          disabled={triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode'}
                         />
                       </FloatingLabel>
                     </OverlayTrigger>
@@ -204,7 +235,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                         variant="outline-secondary"
                         buttonText={formatMultiplierLabel(acquisitionData?.config?.trigger?.frame_multiplier)}
                         style={floatingInputStyle}
-                        disabled={isAcquiring}>
+                        disabled={isAcquiring || (triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode')}>
                           {(frameMultiplier_metadata?.allowed_values ?? ['?']).map(
                             (selection, index) => (
                               <option value={selection} key={index}>{formatMultiplierLabel(selection)}</option>
@@ -257,7 +288,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label="Histograms per Acquisition">
                       <Form.Control
                         type="text"
-                        value={formatDisplayNumber(acquisitionData?.config?.trigger?.number_of_timeframes)}
+                        value={formatDisplayNumber(hists_per_acquisition)}
                         readOnly
                         style={floatingLabelStyle}
                       />
@@ -337,7 +368,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   </FloatingLabel>
                 </Col>
               </Row>
-              <Row classname="mt-2">
+              <Row className="mt-2">
                 <Col>
                   <EndpointCheckbox
                     endpoint={acquisitionEndpoint} fullpath="state/acquisition/add_timestamp"
