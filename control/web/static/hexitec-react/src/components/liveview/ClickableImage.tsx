@@ -1,4 +1,4 @@
-import type { AdapterEndpoint } from '@dssg/odin-react';;
+import type { AdapterEndpoint, ParamNode } from '@dssg/odin-react';;
 import { useState, useEffect, useCallback } from 'react';
 
 type Point = [number, number];
@@ -10,12 +10,12 @@ interface ClickableImageProps {
   imgPath: string;
   coordsPath?: string;
   coordsParam?: string;
-  onSelection?: (coords: [[number, number], [number, number]] | null) => void;
+  onSelection?: (coords: [[number, number], [number, number]] | null) => ParamNode | undefined;
   maximiseAxis?: 'x' | 'y' | null;
   rectOutlineColour?: string;
   rectRgbaProperties?: string;
   rectDisappears?: boolean;
-  region?: Region2D | Region1D | null;
+  region?: Region2D | Region1D | [] | null;
 }
 
 export function ClickableImage(props: ClickableImageProps) {
@@ -66,7 +66,7 @@ export function ClickableImage(props: ClickableImageProps) {
   useEffect(() => {
     if (isInteracting) return;
 
-    if (!region) {
+    if (!region || region.length === 0) {
       setPoints([]);
       return;
     }
@@ -175,10 +175,11 @@ export function ClickableImage(props: ClickableImageProps) {
           endpoint.put(sendVal, coordsPath);
         }
       } else {
-        onSelection(null);
+        const sendVal = onSelection(null);
+        if (sendVal && coordsPath) endpoint.put(sendVal, coordsPath);
       }
     }
-  }, [startPoint, endPoint, points]);
+  }, [startPoint, endPoint, points, endpoint, coordsParam, coordsPath, onSelection]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
     if (e.button !== 0) return;
@@ -227,7 +228,8 @@ export function ClickableImage(props: ClickableImageProps) {
       }      
     }
     else {
-      onSelection(coords);
+      const sendVal = onSelection(coords);
+      if (sendVal && coordsPath) endpoint.put(sendVal, coordsPath);
     }
     
     setStartPoint(null);
@@ -237,7 +239,7 @@ export function ClickableImage(props: ClickableImageProps) {
       setPoints([]);
     }
     
-  }, [startPoint, endPoint, calculateRectangle]);
+  }, [startPoint, endPoint, calculateRectangle, endpoint, coordsParam, coordsPath, onSelection, rectDisappears]);
 
   return (
     <div style={{

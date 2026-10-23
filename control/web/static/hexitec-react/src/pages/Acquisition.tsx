@@ -1,6 +1,6 @@
-import { EndpointButton, EndpointCheckbox, EndpointInput, TitleCard, useAdapterEndpoint, WithEndpoint } from '@dssg/odin-react';;
+import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, useAdapterEndpoint } from '@dssg/odin-react';;
 import { useState } from 'react';
-import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row, ToggleButton } from 'react-bootstrap';
+import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row } from 'react-bootstrap';
 import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
 import { checkNull, floatingInputStyle, floatingLabelStyle } from '../utils.js';
@@ -8,8 +8,6 @@ import { checkNull, floatingInputStyle, floatingLabelStyle } from '../utils.js';
 interface AcquisitionProps {
   endpoint_url: string;
 }
-
-const EndpointSelect = WithEndpoint(Form.Select);
 
 const minimumFramesPerTimeframe: { [key: string]: number } = {
   histogram_128: 350,
@@ -74,18 +72,13 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
     { name: 'Step scan', value: 'step scan', tooltip: tooltips.acquisition.step_scan },
     { name: 'Continuous', value: 'continuous mode', tooltip: tooltips.acquisition.continuous_mode }
   ];
-  // your manual use of endpoint.put rather than the WithEndpoint components makes me sad :()
-  const handleTriggerModeChange = (value: string) => {
-    setTriggerModeValue(value);
-    const sendVal = {['device']: value};
-    acquisitionEndpoint.put(sendVal, 'config/trigger');
-  }
+  const updateTriggerModeValue = ({ selectedValue }: { selectedValue: string }) => {
+    setTriggerModeValue(selectedValue);
+  };
 
-  const handleAdTriggerModeChange = (value: string) => {
-    setAdTriggerModeValue(value);
-    const sendVal = {['trigger_mode']: value};
-    acquisitionEndpoint.put(sendVal, 'config/trigger');
-  }
+  const updateAdTriggerModeValue = ({ selectedValue }: { selectedValue: string }) => {
+    setAdTriggerModeValue(selectedValue);
+  };
 
   const est_duration = (((acquisitionData?.config?.trigger?.frames_per_timeframe ?? 0) * (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0)) / 1000000);
 
@@ -114,8 +107,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   <EndpointSelect
                     endpoint={acquisitionEndpoint}
                     fullpath="config/bin_mode"
-                    variant="outline-secondary"
-                    buttonText={acquisitionData?.config?.bin_mode}
                     style={floatingInputStyle}
                     disabled={isAcquiring}>
                       {(binmode_metadata?.allowed_values ?? ['?']).map(
@@ -130,20 +121,22 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             <Row className="mt-3">
               <ButtonGroup>
                 {triggerModeRadios.map((radio, idx) => (
-                  <OverlayTrigger placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
-                    <ToggleButton
-                      key={`triggerRadios-${idx}`}
+                  <OverlayTrigger key={`triggerRadios-${idx}`} placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
+                    <EndpointButton
+                      endpoint={acquisitionEndpoint}
+                      fullpath="config/trigger/device"
+                      value={radio.value}
+                      post_method={updateTriggerModeValue}
+                      post_args={{ selectedValue: radio.value }}
                       className='equal-width-buttongroup'
                       id={`radio-${idx}`}
-                      type="radio"
+                      type="button"
                       variant='outline-primary'
-                      name="triggerModeRadio"
-                      value={radio.value}
-                      checked={triggerModeValue === radio.value}
-                      onChange={(e) => handleTriggerModeChange(e.currentTarget.value)}
+                      active={triggerModeValue === radio.value}
+                      aria-pressed={triggerModeValue === radio.value}
                     >
                       {radio.name}
-                    </ToggleButton>
+                    </EndpointButton>
                   </OverlayTrigger>
                 ))}
               </ButtonGroup>
@@ -151,21 +144,23 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             <Row>
               <ButtonGroup className="mt-3">
                 {adTriggerModeRadios.map((radio, idx) => (
-                  <OverlayTrigger placement="top" overlay={radio.tooltip}>
-                    <ToggleButton
-                      key={`adTriggerRadios-${idx}`}
+                  <OverlayTrigger key={`adTriggerRadios-${idx}`} placement="top" overlay={radio.tooltip}>
+                    <EndpointButton
+                      endpoint={acquisitionEndpoint}
+                      fullpath="config/trigger/trigger_mode"
+                      value={radio.value}
+                      post_method={updateAdTriggerModeValue}
+                      post_args={{ selectedValue: radio.value }}
                       className='equal-width-buttongroup'
                       id={`ad-trigger-radio-${idx}`}
-                      type="radio"
+                      type="button"
                       variant='outline-secondary'
-                      name="adTriggerModeRadio"
-                      value={radio.value}
-                      checked={adTriggerModeValue === radio.value}
-                      onChange={(e) => handleAdTriggerModeChange(e.currentTarget.value)}
+                      active={adTriggerModeValue === radio.value}
+                      aria-pressed={adTriggerModeValue === radio.value}
                       disabled={triggerModeValue==='software'}
                     >
                       {radio.name}
-                    </ToggleButton>
+                    </EndpointButton>
                   </OverlayTrigger>
                 ))}
               </ButtonGroup>
@@ -244,8 +239,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <EndpointSelect
                         endpoint={acquisitionEndpoint}
                         fullpath="config/trigger/frame_multiplier"
-                        variant="outline-secondary"
-                        buttonText={formatMultiplierLabel(acquisitionData?.config?.trigger?.frame_multiplier)}
                         style={floatingInputStyle}
                         disabled={isAcquiring || (triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode')}>
                           {(frameMultiplier_metadata?.allowed_values ?? ['?']).map(
@@ -275,8 +268,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <EndpointSelect
                         endpoint={readoutEndpoint}
                         fullpath="trigger/polarity"
-                        variant="outline-secondary"
-                        buttonText={readoutEndpoint.data?.trigger?.polarity}
                         style={floatingInputStyle}
                         disabled={isAcquiring || triggerModeValue==='software'}>
                           {(triggerPolarityOptions?.allowed_values ?? ['?']).map(

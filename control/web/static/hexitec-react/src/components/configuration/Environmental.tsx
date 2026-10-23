@@ -1,6 +1,6 @@
 import { Row, Col, Card, Form, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint, type AdapterEndpoint, EndpointButton, EndpointInput } from '@dssg/odin-react';;
+import { EndpointSelect, type AdapterEndpoint, EndpointButton, EndpointInput } from '@dssg/odin-react';;
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
 import type { ProxyParams } from '../../EndpointTypes';
 
@@ -8,8 +8,6 @@ interface EnvironmentalProps {
   proxyEndpoint: AdapterEndpoint<ProxyParams>;
   isCustom: boolean;
 }
-
-const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function Environmental({
   proxyEndpoint, isCustom
@@ -109,7 +107,6 @@ export default function Environmental({
                       <EndpointSelect
                         endpoint={proxyEndpoint}
                         fullpath="loki/application/peltier/mode"
-                        variant="outline-secondary"
                         style={floatingInputStyle}
                         disabled={!isCustom}
                       >

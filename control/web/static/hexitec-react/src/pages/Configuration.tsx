@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Container, Row, Col, Form, FloatingLabel, OverlayTrigger } from 'react-bootstrap';
-import { useAdapterEndpoint, WithEndpoint, EndpointButton, TitleCard } from '@dssg/odin-react';;
+import { useAdapterEndpoint, EndpointCheckbox, EndpointSelect, EndpointButton, TitleCard } from '@dssg/odin-react';;
 import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../EndpointTypes';
 import { floatingInputStyle } from '../utils.js';
 import { tooltips } from '../tooltips';
@@ -12,9 +12,6 @@ import DetectorControls from '../components/configuration/DetectorControls';
 interface ConfigurationProps {
   endpoint_url: string;
 }
-
-const EndpointFormSelect = WithEndpoint(Form.Select);
-const EndpointCheck = WithEndpoint(Form.Check);
 
 function Configuration({ endpoint_url }: ConfigurationProps) {
   const proxyEndpoint = useAdapterEndpoint<ProxyParams>('proxy', endpoint_url, 1000);
@@ -49,18 +46,18 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
               </Col>
               <Col xs={6}>
                 <FloatingLabel label="Choose a profile">
-                  <EndpointFormSelect
+                  <EndpointSelect
                     endpoint={configEndpoint}
                     fullpath="current_profile"
                     style={floatingInputStyle}>
                       {availableProfiles?.map((profile: string) => (
                         <option label={profile} value={profile}>{profile}</option>
                       ))}
-                  </EndpointFormSelect>
+                  </EndpointSelect>
                 </FloatingLabel>
               </Col>
               <Col className="d-flex align-items-center">
-                <EndpointCheck
+                <EndpointCheckbox
                   endpoint={acquisitionEndpoint}
                   fullpath="config/config_edit_mode"
                   label="Enable editing"

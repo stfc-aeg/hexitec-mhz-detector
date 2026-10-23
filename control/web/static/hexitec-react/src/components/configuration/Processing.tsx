@@ -1,6 +1,6 @@
 import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint, type AdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointCheckbox, EndpointSelect, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';;
 import { floatingInputStyle } from '../../utils.js';
 import { OverlayTrigger } from 'react-bootstrap';
 import { tooltips } from '../../tooltips';
@@ -12,9 +12,6 @@ interface ProcessingProps {
   isCustom: boolean;
 }
 
-const EndpointFormControl = WithEndpoint(Form.Control);
-const EndpointCheck = WithEndpoint(Form.Check);
-const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function Processing( {histogramEndpoint, acquisitionEndpoint, isCustom }: ProcessingProps) {
 
@@ -70,7 +67,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
             <Form.Label><b>Charge-sharing Options</b></Form.Label>
             <Row>
               <Col>
-                <EndpointCheck
+                <EndpointCheckbox
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/positive_edge"
                   type="switch"
@@ -79,7 +76,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                 />
               </Col>
               <Col>
-                <EndpointCheck
+                <EndpointCheckbox
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/sum_enable"
                   type="switch"
@@ -90,7 +87,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
             </Row>
             <Row className="mb-3">
               <Col>
-                <EndpointCheck
+                <EndpointCheckbox
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/negative_neighbour"
                   type="switch"
@@ -99,7 +96,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                 />
               </Col>
               <Col>
-                <EndpointCheck
+                <EndpointCheckbox
                   endpoint={histogramEndpoint}
                   fullpath="config/charge_sharing/position_adjust"
                   type="switch"
@@ -152,7 +149,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                           <Row>
                             {histogramMetadata?.config?.clustering?.types && clusterTypeOrder.map((typeKey: string) => (
                               <Col sm={6} md={4} key={typeKey}>
-                                <EndpointCheck
+                                <EndpointCheckbox
                                   endpoint={histogramEndpoint}
                                   fullpath={`config/clustering/types/${typeKey}`}
                                   type="switch"
@@ -179,7 +176,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
               <Row className="mb-3">
                 <OverlayTrigger placement="top" overlay={tooltips.processing.baseline_toggle}>
                   <Col>
-                    <EndpointCheck
+                    <EndpointCheckbox
                       endpoint={acquisitionEndpoint}
                       fullpath="config/baseline/toggle"
                       label="On"
@@ -189,7 +186,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   </Col>
                 </OverlayTrigger>
                 <Col>
-                  <EndpointCheck
+                  <EndpointCheckbox
                     endpoint={histogramEndpoint}
                     fullpath="config/baseline/dither"
                     label="Dither"
@@ -207,7 +204,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
               <InputGroup>
                 <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Main</InputGroup.Text>
                 <FloatingLabel label="Negative">
-                  <EndpointFormControl
+                  <EndpointInput
                     endpoint={histogramEndpoint}
                     fullpath="config/thresholds/main/neg"
                     style={floatingInputStyle}
@@ -215,7 +212,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   />
                 </FloatingLabel>
                 <FloatingLabel label="Positive">
-                  <EndpointFormControl
+                  <EndpointInput
                     endpoint={histogramEndpoint}
                     fullpath="config/thresholds/main/pos"
                     style={floatingInputStyle}
@@ -230,7 +227,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                     <InputGroup>
                       <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Low</InputGroup.Text>
                       <FloatingLabel label="Negative">
-                        <EndpointFormControl
+                        <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/low/neg"
                           style={floatingInputStyle}
@@ -238,7 +235,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                         />
                       </FloatingLabel>
                       <FloatingLabel label="Positive">
-                        <EndpointFormControl
+                        <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/low/pos"
                           style={floatingInputStyle}
@@ -249,7 +246,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                     <InputGroup>
                       <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Absolute</InputGroup.Text>
                       <FloatingLabel label="Low">
-                        <EndpointFormControl
+                        <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/absolute/low"
                           style={floatingInputStyle}
@@ -257,7 +254,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                         />
                       </FloatingLabel>
                       <FloatingLabel label="High">
-                        <EndpointFormControl
+                        <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/absolute/high"
                           style={floatingInputStyle}

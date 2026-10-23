@@ -1,6 +1,6 @@
-import { WithEndpoint, EndpointButton } from '@dssg/odin-react';;
+import { EndpointSelect, EndpointButton } from '@dssg/odin-react';;
 import type { AdapterEndpoint } from '@dssg/odin-react';;
-import { Form, InputGroup } from 'react-bootstrap';
+import { InputGroup } from 'react-bootstrap';
 
 // Convenience component for picking a file to send to an endpoint
 // This component does assume the histogrammer component as all config files are loaded there
@@ -16,8 +16,6 @@ interface FilePickerProps {
   disabled?: boolean; 
 }
 
-const EndpointSelect = WithEndpoint(Form.Select);
-
 export function FilePicker({ endpoint, fullpath, buttonText, select_options, defaultLabel="Select file...", loadButton=true, loadPath, disabled=false}: FilePickerProps) {
   const options = Array.isArray(select_options) ? select_options : [];
 
@@ -26,7 +24,6 @@ export function FilePicker({ endpoint, fullpath, buttonText, select_options, def
       <EndpointSelect
         endpoint={endpoint}
         fullpath={fullpath}
-        variant='outline-secondary'
         defaultValue=""
         disabled={disabled}
       >
@@ -46,7 +43,6 @@ export function FilePicker({ endpoint, fullpath, buttonText, select_options, def
           endpoint={endpoint}
           fullpath={loadPath ?? fullpath}
           value={buttonText}
-          variant='primary'
           disabled={buttonText === "" || disabled}
         >
           Load file

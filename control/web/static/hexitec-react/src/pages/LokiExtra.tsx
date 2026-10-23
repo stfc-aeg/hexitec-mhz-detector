@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EndpointButton, EndpointCheckbox, EndpointDropdown, TitleCard, WithEndpoint, OdinGraph, useAdapterEndpoint } from '@dssg/odin-react';
+import { EndpointButton, EndpointCheckbox, EndpointDropdown, EndpointSelect, TitleCard, OdinGraph, useAdapterEndpoint } from '@dssg/odin-react';
 import { Col, Container, Form, InputGroup, Row, Stack, Dropdown, Spinner, FloatingLabel } from 'react-bootstrap';
 // import Plot from 'react-plotly.js';
 import type { ProxyParams } from '../EndpointTypes';
@@ -8,8 +8,6 @@ import {floatingInputStyle, floatingLabelStyle} from '../utils.js';
 interface LokiExtraProps {
   endpoint_url: string;
 }
-
-const EndpointSelect = WithEndpoint(Form.Select);
 
 function LokiExtra({ endpoint_url }: LokiExtraProps) {
   const proxyEndpoint = useAdapterEndpoint<ProxyParams>('proxy', endpoint_url, 1000);

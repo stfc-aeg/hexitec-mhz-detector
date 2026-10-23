@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Row, Col, Button, InputGroup } from 'react-bootstrap';
+import { EndpointButton, type AdapterEndpoint } from '@dssg/odin-react';;
+import { Form, Row, Col, InputGroup } from 'react-bootstrap';
+
+type Region2D = [[number, number], [number, number]];
 
 interface RegionSelectionInputProps {
   imageWidth: number;   // e.g. 80
   imageHeight: number;  // e.g. 80
-  value?: [[number, number], [number, number]]; // initial region from endpoint
-  onApply: (region: [[number, number], [number, number]] | null) => void;
+  value?: Region2D | [] | null; // initial region from endpoint
+  endpoint: AdapterEndpoint;
+  fullpath: string;
 }
 
 export function RegionSelectionInput({
   imageWidth,
   imageHeight,
   value,
-  onApply,
+  endpoint,
+  fullpath,
 }: RegionSelectionInputProps) {
   const [x1, setX1] = useState(0);
   const [y1, setY1] = useState(0);
@@ -23,8 +28,15 @@ export function RegionSelectionInput({
 
   // Sync with endpoint value
   useEffect(() => {
-    if (!value) return;
     if (isEditing) return;
+    if (!value || value.length === 0) {
+      setX1(0);
+      setY1(0);
+      setX2(imageWidth);
+      setY2(imageHeight);
+      setChanged(false);
+      return;
+    }
     setX1(value[0][0] * imageWidth);
     setX2(value[0][1] * imageWidth);
     setY1(value[1][0] * imageHeight);
@@ -34,7 +46,7 @@ export function RegionSelectionInput({
 
   // Check if local values differ from endpoint
   useEffect(() => {
-    if (!value) {
+    if (!value || value.length === 0) {
       setChanged(x1 !== 0 || x2 !== imageWidth || y1 !== 0 || y2 !== imageHeight);
       return;
     }
@@ -47,24 +59,22 @@ export function RegionSelectionInput({
     );
   }, [x1, x2, y1, y2, value, imageWidth, imageHeight]);
 
-  const applyRegion = () => {
+  const getNormalizedRegion = (): Region2D => {
     const xMin = Math.max(0, Math.min(x1, x2));
     const xMax = Math.min(imageWidth, Math.max(x1, x2));
     const yMin = Math.max(0, Math.min(y1, y2));
     const yMax = Math.min(imageHeight, Math.max(y1, y2));
 
-    const region: [[number, number], [number, number]] = [
+    const region: Region2D = [
       [xMin / imageWidth, xMax / imageWidth],
       [yMin / imageHeight, yMax / imageHeight],
     ];
-    setIsEditing(false);
-    onApply(region);
+    return region;
   };
 
   const clearRegion = () => {
     setX1(0); setY1(0);
     setX2(imageWidth); setY2(imageHeight);
-    onApply(null);
   };
 
   const changedStyle: React.CSSProperties = {
@@ -145,17 +155,27 @@ export function RegionSelectionInput({
       </Row>
 
       <div className="d-flex gap-2">
-        <Button
+        <EndpointButton
+          endpoint={endpoint}
+          fullpath={fullpath}
+          value={getNormalizedRegion()}
+          post_method={() => setIsEditing(false)}
           className="btn-sm"
           variant={changed ? "primary" : "outline-secondary"}
           disabled={!changed}
-          onClick={applyRegion}
         >
           Apply
-        </Button>
-        <Button className="btn-sm btn-secondary" onClick={clearRegion}>
+        </EndpointButton>
+        <EndpointButton
+          endpoint={endpoint}
+          fullpath={fullpath}
+          value={[]}
+          pre_method={clearRegion}
+          post_method={() => setIsEditing(false)}
+          className="btn-sm btn-secondary"
+        >
           Clear
-        </Button>
+        </EndpointButton>
       </div>
     </div>
   );

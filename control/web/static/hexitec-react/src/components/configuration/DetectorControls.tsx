@@ -1,6 +1,6 @@
-import { Row, Col, Card, Form, Button, FloatingLabel } from 'react-bootstrap';
+import { Row, Col, Card, Button, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint, type AdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointSelect, type AdapterEndpoint } from '@dssg/odin-react';;
 import { floatingInputStyle } from '../../utils';
 import type { ProxyParams } from '../../EndpointTypes';
 
@@ -8,8 +8,6 @@ interface DetectorControlsProps {
   proxyEndpoint: AdapterEndpoint<ProxyParams>;
   isCustom: boolean;
 }
-
-const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorControlsProps) {
 
@@ -27,24 +25,16 @@ export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorCo
           so the options are 7, 14, and 21 with unit femtofarads fF*/}
           <Col>
             <FloatingLabel label="Feedback Gain Stage">
-              <Form.Select
-                value={lokiData?.feedback_capacitance?.toString() ?? ''}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                  const numericValue = Number(e.currentTarget.value);
-                  if (!Number.isNaN(numericValue)) {
-                    proxyEndpoint.put(
-                      { feedback_capacitance: numericValue },
-                      'loki/application/asic_settings'
-                    );
-                  }
-                }}
+              <EndpointSelect
+                endpoint={proxyEndpoint}
+                fullpath="loki/application/asic_settings/feedback_capacitance"
                 disabled={!isCustom}
                 style={floatingInputStyle}
               >
                 <option value="7">7fF (High)</option>
                 <option value="14">14fF (Medium)</option>
                 <option value="21">21fF (Low)</option>
-              </Form.Select>
+              </EndpointSelect>
             </FloatingLabel>
           </Col>
         </Row>
@@ -55,7 +45,6 @@ export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorCo
               <EndpointSelect
                 endpoint={proxyEndpoint}
                 fullpath="loki/application/asic_settings/negative_range_lowhigh"
-                variant="outline-secondary"
                 style={floatingInputStyle}
                 disabled={!isCustom}
               >

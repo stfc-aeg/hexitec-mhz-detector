@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Button, Row, Col } from 'react-bootstrap';
+import { EndpointButton, type AdapterEndpoint } from '@dssg/odin-react';;
+import { Form, Row, Col } from 'react-bootstrap';
 
 interface MinMaxInputProps {
   label?: string;
   value: [number, number];
-  onApply: (value: [number, number]) => void;
+  endpoint: AdapterEndpoint;
+  fullpath: string;
   minLabel?: string;
   maxLabel?: string;
   disabled?: boolean;
@@ -13,7 +15,8 @@ interface MinMaxInputProps {
 export function MinMaxInput({
   label,
   value,
-  onApply,
+  endpoint,
+  fullpath,
   minLabel = 'Min',
   maxLabel = 'Max',
   disabled = false,
@@ -34,17 +37,12 @@ export function MinMaxInput({
     setChanged(localMin !== value[0] || localMax !== value[1]);
   }, [localMin, localMax, value]);
 
-  const apply = () => {
-    onApply([localMin, localMax]);
-    setIsEditing(false);
-  }
-
   const changedStyle: React.CSSProperties = {
     backgroundColor: "var(--bs-highlight-bg)",
   };
 
   return (
-    <div className="mb-2">
+    <Form className="mb-2" onSubmit={(event) => event.preventDefault()}>
       <Row className="mb-1">
         <Col className="text-left">
           <div className="fw-semibold">
@@ -69,12 +67,6 @@ export function MinMaxInput({
               setLocalMin(Number(e.target.value))
             }}
             onFocus={() => setIsEditing(true)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                apply();
-              }
-            }}
             disabled={disabled}
           />
         </Col>
@@ -95,18 +87,17 @@ export function MinMaxInput({
               setLocalMax(Number(e.target.value))
             }}
             onFocus={() => setIsEditing(true)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                apply();
-              }
-            }}
             disabled={disabled}
           />
         </Col>
 
         <Col xs={4}>
-          <Button
+          <EndpointButton
+            endpoint={endpoint}
+            fullpath={fullpath}
+            value={[localMin, localMax]}
+            post_method={() => setIsEditing(false)}
+            type="submit"
             className="w-100 h-100"
             variant={changed ? "primary" : "outline-secondary"}
             disabled={!changed || disabled}
@@ -114,12 +105,11 @@ export function MinMaxInput({
               borderTopLeftRadius: 0,
               borderBottomLeftRadius: 0,
             }}
-            onClick={() => apply() }
           >
             Apply
-          </Button>
+          </EndpointButton>
         </Col>
       </Row>
-    </div>
+    </Form>
   );
 }

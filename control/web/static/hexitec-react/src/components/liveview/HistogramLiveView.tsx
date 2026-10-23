@@ -1,5 +1,4 @@
-import { EndpointButton, EndpointCheckbox, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from '@dssg/odin-react';;
-import React from 'react';
+import { EndpointButton, EndpointInput, EndpointCheckbox, EndpointSelect, TitleCard, useAdapterEndpoint, type ParamNode } from '@dssg/odin-react';;
 import { Col, Container, Form, OverlayTrigger, Row } from 'react-bootstrap';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import type { AcquisitionTypes } from '../../EndpointTypes';
@@ -39,7 +38,7 @@ interface LiveViewTypes extends ParamNode {
           frames_per_histogram: number;
           last_update: string;
           num_bins: number;
-          region: [[number, number],[number, number]];
+          region: [[number, number],[number, number]] | [];
           scale: number;
           value_range: [number, number];
           occupancy_percent: number;
@@ -56,9 +55,6 @@ interface LiveViewTypes extends ParamNode {
       }
     };
 }
-
-// const EndpointButton = WithEndpoint(Button);
-const EndpointFormControl = WithEndpoint(Form.Control);
 
 interface HistogramLiveViewProps {
   endpoint_url: string;
@@ -85,17 +81,14 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   // function to send histogram region selection
   const handleHistSelection = (coords: [[number, number], [number, number]] | null) => {
     if (!coords) {
-      liveViewEndPoint.put(
-        { energy_range: [] }, imgPath
-      );
-      return;
+      return { energy_range: [] };
     };
 
     // y-axis is maximised so can be ignored
     const [xMinNorm, xMaxNorm] = coords[0];
     const numBins = liveViewData?.image['num_bins'];
 
-    if (!numBins) return;
+    if (!numBins) return undefined;
 
       // Get current range so selection works within existing range instead of overriding it
       const currentRange = liveViewData?.image?.energy_range;
@@ -115,10 +108,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
       if (binMin > binMax) {
         [binMin, binMax] = [binMax, binMin];
       }
-      liveViewEndPoint.put(
-        { energy_range: [binMin, binMax] },
-        imgPath
-      );
+      return { energy_range: [binMin, binMax] };
   };
 
   const getOccupancyStyle = (
@@ -167,7 +157,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
         </Col>
         <Col xs={3}>
           <FloatingLabel label="Frames per hist (for preview)">
-            <EndpointFormControl
+            <EndpointInput
               endpoint={acquisitionEndpoint}
               fullpath="state/preview/frames_per_hist"
               style={floatingInputStyle}
@@ -210,10 +200,9 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                   </Col>
                   <Col>
                     <FloatingLabel label="Autoclip %">
-                      <EndpointFormControl
+                      <EndpointInput
                         endpoint={liveViewEndPoint}
                         fullpath={`${imgPath}/autoclip_percent`}
-                        variant='outline-primary'
                         style={{width:'30%'}}
                       />
                     </FloatingLabel>
@@ -221,13 +210,10 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 </Row>
                 <MinMaxInput
                   label="Value Range"
+                  endpoint={liveViewEndPoint}
+                  fullpath={`${imgPath}/value_range`}
                   disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
                   value={liveViewData?.image?.value_range ?? [0,1000]}
-                  onApply={(range) => {
-                    liveViewEndPoint.put(
-                      { value_range: range }, imgPath
-                    );
-                  }}
                 />
                 <Row>
                   <Col xs={7}>
@@ -256,19 +242,17 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 />
                 <FloatingLabel
                   label="Colourmap" className="mt-1">
-                  <Form.Select
+                  <EndpointSelect
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/colour`}
                     style={floatingInputStyle}
-                    value={liveViewData?.image?.colour || 'Select a colour'}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
-                      const selectedColour = e.currentTarget.value;
-                      liveViewEndPoint.put({colour: selectedColour}, `${imgPath}`);
-                    }}>
+                  >
                     {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
                       <option key={index} value={effect}>
                         {effect}
                       </option>
                     ))}
-                  </Form.Select>
+                  </EndpointSelect>
                 </FloatingLabel>
               </div>
             </div>
@@ -314,7 +298,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       imageHeight={80}
                       imageWidth={80}
                       value={liveViewData?.image?.region || undefined}
-                      onApply={(region) => liveViewEndPoint.put({ 'region': region}, imgPath)}
+                      endpoint={liveViewEndPoint}
+                      fullpath={`${imgPath}/region`}
                     />
                   </Row>
                 </OverlayTrigger>
@@ -339,6 +324,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                 <ClickableImage
                   endpoint={liveViewEndPoint}
                   imgPath={`_image/${name}/histogram`}
+                  coordsPath={imgPath}
                   onSelection={handleHistSelection}
                   maximiseAxis={'y'}
                   rectOutlineColour='black'
@@ -349,15 +335,12 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
               <Col>
               <OverlayTrigger placement="bottom-end" overlay={tooltips.liveview.energybin_range}>
                 <Row>
-                    <MinMaxInput
-                      label={`Manual Energy Bin Range ${energyRange}`}
-                      value={liveViewData?.image?.energy_range || [0, 0]}
-                      onApply={(range) => {
-                        liveViewEndPoint.put(
-                          { energy_range: range }, imgPath
-                        );
-                      }}
-                    />
+                  <MinMaxInput
+                    label={`Manual Energy Bin Range ${energyRange}`}
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/energy_range`}
+                    value={liveViewData?.image?.energy_range || [0, 0]}
+                  />
                 </Row>
               </OverlayTrigger>
                 <Row>
