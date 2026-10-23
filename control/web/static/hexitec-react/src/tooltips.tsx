@@ -32,6 +32,16 @@ export const tooltips = {
         <strong>Continuous Mode.</strong> On trigger, frames are continuously assigned to one timeframe; the next trigger increments the timeframe.
       </Tooltip>
     ),
+    endless_acquisition: (
+      <Tooltip id="tooltip-endless-acquisition">
+        <strong>No frame target.</strong> The acquisition runs until stopped manually, with no frame target.
+      </Tooltip>
+    ),
+    multiple_file_acquisition: (
+      <Tooltip id="tooltip-multiple-file">
+        <strong>Multiple Output Files.</strong> Specified number of timeframes are written to each file. Name appended with incrementing number.
+      </Tooltip>
+    ),
     est_duration: (
       <Tooltip id="tooltip-duration">
         <strong>Duration.</strong> With hardware triggering, the duration is estimated per-trigger.

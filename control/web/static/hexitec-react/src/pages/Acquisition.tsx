@@ -61,6 +61,8 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const acquisitionProgress = acquisitionData?.state?.acquisition?.progress_task?.progress;
   const acquisitionProgressLabel = acquisitionProgress?.toString() + '%'
 
+  const multiple_file_mode = acquisitionEndpoint?.data?.config?.trigger?.multiple_files?.enable;
+
   const acquisitionButtonDisabled = rateTooHigh && !isAcquiring;
   const acquisitionButtonVariant = isAcquiring ? 'danger' : rateTooHigh ? 'danger' : 'primary';
   const triggerModeRadios = [
@@ -173,26 +175,36 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 <Row>
                   <Col>
                     <EndpointCheckbox
+                      type="switch"
                       endpoint={acquisitionEndpoint}
-                      fullpath={"config/trigger/freerun"}
-                      label="Endless Acquisition"
+                      fullpath={"state/acquisition/freerun"}
+                      label={(
+                        <OverlayTrigger placement="top" overlay={tooltips.acquisition.endless_acquisition}>
+                          <span>Endless Acquisition</span>
+                        </OverlayTrigger>
+                      )}
                     />
                   </Col>
                   <Col>
                     <EndpointCheckbox
+                      type="switch"
                       endpoint={acquisitionEndpoint}
                       fullpath={"config/trigger/multiple_files/enable"}
-                      label="Multiple-file Acquisition"
+                      label={(
+                        <OverlayTrigger placement="top" overlay={tooltips.acquisition.multiple_file_acquisition}>
+                          <span>Multiple-file Acquisition</span>
+                        </OverlayTrigger>
+                      )}
                     />
                   </Col>
                 </Row>
                 <Row>
                   <Col>
-                    <FloatingLabel label={acquisitionEndpoint?.data?.config?.trigger?.multiple_files?.enable ? "Timeframes per file" : "Timeframes to write"}>
+                    <FloatingLabel label={multiple_file_mode ? "Timeframes per file" : "Timeframes to write"}>
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
                         style={floatingInputStyle}
-                        disabled={triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode'}
+                        disabled={(triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode') || (!multiple_file_mode && acquisitionEndpoint?.data?.state?.acquisition?.freerun)}
                       />
                     </FloatingLabel>
                   </Col>
@@ -202,7 +214,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                         endpoint={acquisitionEndpoint}
                         fullpath="config/trigger/multiple_files/number_of_files"
                         style={floatingInputStyle}
-                        disabled={!(acquisitionEndpoint?.data?.config?.trigger?.multiple_files?.enable)}
+                        disabled={!(multiple_file_mode)}
                       />
                     </FloatingLabel>
                   </Col>

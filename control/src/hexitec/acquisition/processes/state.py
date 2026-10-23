@@ -29,6 +29,8 @@ class State():
         self.preview_frames_per_hist = 1000000
         self.is_acquiring = False
 
+        self.freerun = False
+
         self.acquisition_progress_task_enable = False
         self.acquisition_progress_task_interval = 0.5
         self.acquisition_progress = 0.0
@@ -45,6 +47,7 @@ class State():
             },
             'acquisition': {
                 'toggle': (lambda: self.is_acquiring, self.toggle_acquisition),
+                'freerun': (lambda: self.freerun, self.toggle_freerun),
                 "progress_task": {
                     "interval": (lambda: self.acquisition_progress_task_interval, self.set_progress_task_interval),
                     "progress": (lambda: self.acquisition_progress, None)
@@ -84,6 +87,10 @@ class State():
     def _register_configuration(self, configuration):
         """Get a reference to the configuration class."""
         self.configuration = configuration
+
+    def toggle_freerun(self, toggle):
+        """Enable or disable 'freerun' acquisition: acquisition runs until stopped manually."""
+        self.freerun = bool(toggle)
 
     def toggle_preview(self, toggle):
         if self.is_acquiring and toggle:
@@ -148,7 +155,10 @@ class State():
                 )
             return
 
-        frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
+        if self.freerun:
+            frame_target = -1
+        else:
+            frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
 
         self.is_acquiring = True
         self.acquisition_progress = 0

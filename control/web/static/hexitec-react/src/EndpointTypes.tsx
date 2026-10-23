@@ -367,6 +367,10 @@ export interface AcquisitionTypes extends ParamNode{
       number_of_timeframes: number;
       timeframes_per_trigger: number;
       trigger_mode: string;
+      multiple_files: {
+        enable: boolean;
+        number_of_files: number;
+      }
     };
   };
   state: {
@@ -374,6 +378,7 @@ export interface AcquisitionTypes extends ParamNode{
       add_timestamp: boolean;
       file_name: string;
       file_path: string;
+      freerun: boolean;
       toggle: boolean;
       progress_task: {
         interval: number;
