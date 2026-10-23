@@ -203,7 +203,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
                       <EndpointInput
                         endpoint={liveViewEndPoint}
                         fullpath={`${imgPath}/autoclip_percent`}
-                        style={{width:'30%'}}
                       />
                     </FloatingLabel>
                   </Col>
