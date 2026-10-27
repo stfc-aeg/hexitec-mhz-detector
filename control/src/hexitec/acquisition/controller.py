@@ -148,4 +148,5 @@ class AcquisitionController(BaseController):
         logging.debug("Cleaning up AcquisitionController")
         # Stop background task
         self.state.acquisition_progress_task_enable = False
+        self.state.single_frame_preview_progress_enable = False
         logging.debug(f"Stopped acquisition progress task")

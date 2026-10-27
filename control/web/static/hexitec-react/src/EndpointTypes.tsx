@@ -387,6 +387,7 @@ export interface AcquisitionTypes extends ParamNode{
     };
     preview: {
       frames_per_hist: number;
+      single_frame: boolean;
       toggle: boolean;
     };
   };

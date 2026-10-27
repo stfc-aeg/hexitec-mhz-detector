@@ -35,6 +35,11 @@ class State():
         self.acquisition_progress_task_interval = 0.5
         self.acquisition_progress = 0.0
 
+        self.enable_single_frame_preview = False
+        self.single_frame_preview_progress_enable = False
+        self.single_frame_preview_frame_count = 0
+        self.single_frame_preview_generation = 0
+
         # File settings (as convenience functions for munir)
         self.file_name = default_filename
         self.file_path = default_filepath
@@ -43,7 +48,8 @@ class State():
         self.tree = ParameterTree({
             'preview': {
                 'toggle': (lambda: self.is_previewing, self.toggle_preview),
-                'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist)
+                'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist),
+                'single_frame': (lambda: self.enable_single_frame_preview, self.toggle_single_frame_preview)
             },
             'acquisition': {
                 'toggle': (lambda: self.is_acquiring, self.toggle_acquisition),
@@ -103,21 +109,51 @@ class State():
         else:
             self._stop_preview()
 
+    def toggle_single_frame_preview(self, enable):
+        """Enable or disable single-frame-preview mode. Disabled is normal start/stop preview mode.
+        :param enable: boolean for enable (true) or disable (false).
+        """
+        self.enable_single_frame_preview = bool(enable)
+
     def _start_preview(self):
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
-        icc_set(self.munir, f'subsystems/{self.munir_subsystem}/args/num_frames', 0)
-        self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, 0)
+        target = 1 if self.enable_single_frame_preview else 0
+        # hist_target = 1 if self.enable_single_frame_preview else -1
+        preview_generation = None
+
+        if self.enable_single_frame_preview:
+            self.single_frame_preview_generation += 1
+            preview_generation = self.single_frame_preview_generation
+            self.single_frame_preview_frame_count = icc_get(
+                self.liveview, "histview/mhz/image/frame_count"
+            )
+
+        icc_set(self.munir, f'subsystems/{self.munir_subsystem}/args/num_frames', target)
+        self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, target)
         icc_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.preview_frames_per_hist)
 
         icc_set(self.histogrammer, "acquisition/mode", "software")
-        icc_set(self.histogrammer, "acquisition/num_histograms", 20_000_000)
+        icc_set(self.histogrammer, "acquisition/num_histograms", target)
         icc_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
         icc_set(self.histogrammer, "acquisition/run", True)
 
-    def _stop_preview(self):
+        # Function to wait for the frame to be written, then stop the preview
+        if self.enable_single_frame_preview:
+            self.single_frame_preview_progress_enable = True
+            self._stop_single_frame_preview(
+                preview_generation, self.single_frame_preview_frame_count
+            )
+
+    def _stop_preview(self, expected_generation=None):
         """Stops the preview mode, returning the system to an idle state."""
+        if expected_generation is not None and expected_generation != self.single_frame_preview_generation:
+            return
+
+        self.single_frame_preview_generation += 1
+        self.is_previewing = False
+        self.single_frame_preview_progress_enable = False
         icc_set(self.histogrammer, "acquisition/run", False)
         # Reset settings
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
@@ -160,6 +196,9 @@ class State():
         else:
             frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
 
+        # If multiple files are enabled in configuration, this will be more than 1. Otherwise, 1.
+        number_of_files = self.configuration.number_of_files
+
         self.is_acquiring = True
         self.acquisition_progress = 0
 
@@ -199,6 +238,8 @@ class State():
 
         # For liveview occupancy
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.configuration.frames_per_timeframe)
+
+        # Multiple file acquisition logic goes here
 
         # Configure how data should be sent
         icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", frame_target)
@@ -246,3 +287,23 @@ class State():
             time.sleep(self.acquisition_progress_task_interval)
         
         logging.debug("Stopping acquisition progress background task.")
+
+    @run_on_executor
+    def _stop_single_frame_preview(self, preview_generation, starting_frame_count):
+        """Wait for the histogrammer and liveview to process a single-frame preview."""
+        while (
+            self.is_previewing
+            and self.single_frame_preview_progress_enable
+            and preview_generation == self.single_frame_preview_generation
+        ):
+            histogrammer_running = icc_get(self.histogrammer, "acquisition/run")
+            if not histogrammer_running:
+                frame_count = icc_get(
+                    self.liveview, "histview/mhz/image/frame_count"
+                )
+                if frame_count > starting_frame_count:
+                    logging.debug("Liveview processed single-frame preview, stopping preview mode.")
+                    self._stop_preview(expected_generation=preview_generation)
+                    return
+
+            time.sleep(self.acquisition_progress_task_interval)

@@ -77,6 +77,8 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour;
 
   const lastUpdate = liveViewData?.image?.last_update;
+  const isPreviewing = acquisitionEndpoint.data?.state?.preview?.toggle ?? false;
+  const singleFramePreview = acquisitionEndpoint.data?.state?.preview?.single_frame ?? false;
 
   // function to send histogram region selection
   const handleHistSelection = (coords: [[number, number], [number, number]] | null) => {
@@ -148,12 +150,21 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
             className="h-100"
             endpoint={acquisitionEndpoint}
             fullpath="state/preview/toggle"
-            value={acquisitionEndpoint.data?.state?.preview?.toggle ? false : true}
-            variant={acquisitionEndpoint.data?.state?.preview?.toggle ? 'danger' : 'primary'}
+            value={isPreviewing ? false : true}
+            variant={isPreviewing ? 'danger' : 'primary'}
             disabled={acquisitionEndpoint.data?.state?.acquisition?.toggle}
             >
-              {acquisitionEndpoint.data?.state?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
+              {singleFramePreview && isPreviewing ? 'Cancel preview frame' : singleFramePreview ? 'Get Preview Frame' : isPreviewing ? 'Disable preview' : 'Enable preview'}
           </EndpointButton>
+        </Col>
+        <Col xs={2}>
+          <EndpointCheckbox
+            type="switch"
+            endpoint={acquisitionEndpoint}
+            fullpath="state/preview/single_frame"
+            label="Single-frame Preview"
+            disabled={isPreviewing}
+          />
         </Col>
         <Col xs={3}>
           <FloatingLabel label="Frames per hist (for preview)">
