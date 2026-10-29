@@ -383,6 +383,7 @@ export interface AcquisitionTypes extends ParamNode{
       progress_task: {
         interval: number;
         progress: number;
+        frames_written: number;
       }
     };
     preview: {

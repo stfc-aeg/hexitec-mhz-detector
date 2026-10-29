@@ -57,6 +57,8 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const isAcquiring = acquisitionData?.state?.acquisition?.toggle;
   const acquisitionProgress = acquisitionData?.state?.acquisition?.progress_task?.progress;
+  const isFreerun = acquisitionData?.state?.acquisition?.freerun ?? false;
+  const framesWritten = acquisitionData?.state?.acquisition?.progress_task?.frames_written ?? 0;
   const acquisitionProgressLabel = acquisitionProgress?.toString() + '%'
 
   const multiple_file_mode = acquisitionEndpoint?.data?.config?.trigger?.multiple_files?.enable;
@@ -198,7 +200,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label={multiple_file_mode ? "Timeframes per file" : "Timeframes to write"}>
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
-                        style={floatingInputStyle}
                         disabled={(triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode') || (!multiple_file_mode && acquisitionEndpoint?.data?.state?.acquisition?.freerun)}
                       />
                     </FloatingLabel>
@@ -208,7 +209,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <EndpointInput
                         endpoint={acquisitionEndpoint}
                         fullpath="config/trigger/multiple_files/number_of_files"
-                        style={floatingInputStyle}
                         disabled={!(multiple_file_mode)}
                       />
                     </FloatingLabel>
@@ -220,14 +220,10 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       placement="top" overlay={tooltips.acquisition.low_frames_per_timeframe}
                       trigger={framesPerTimeframeTooLow ? undefined : []}
                     >
-                      <FloatingLabel label="Frames per timeframe">
+                      <FloatingLabel label="Frames per timeframe" className={framesPerTimeframeTooLow ? 'border border-2 border-warning' : undefined}>
                         <EndpointInput
                           endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_pre_multiplier"
                           type="number"
-                          style={{
-                            ...floatingInputStyle,
-                            ...(framesPerTimeframeTooLow ? { border: '2px solid #ffc107' } : {})
-                          }}
                           disabled={triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode'}
                         />
                       </FloatingLabel>
@@ -256,7 +252,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="config/trigger/timeframes_per_trigger"
                         type="number"
-                        style={floatingInputStyle}
                         disabled={triggerModeValue==='software' || !(adTriggerModeValue==='burst mode')}
                       />
                     </FloatingLabel>
@@ -302,14 +297,20 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   <Col>
                     {/* If in software, this is a predictable outcome. 
                     In hardware mode, it's basically a minimum as triggers may have gaps inbetween */}
-                    <OverlayTrigger placement="top" overlay={tooltips.acquisition.est_duration}>
-                      <FloatingLabel label="Est. Duration (s)">
+                    <OverlayTrigger
+                      placement="top"
+                      overlay={tooltips.acquisition.est_duration}
+                      trigger={isFreerun ? [] : undefined}
+                    >
+                      <FloatingLabel label={isFreerun ? 'Duration' : 'Est. Duration (s)'}>
                         <Form.Control
                           type="text"
                           value={
-                            triggerModeValue === 'software'
-                              ? est_duration.toString()
-                              : est_duration.toString() + ' minimum'
+                            isFreerun
+                              ? 'Until stopped'
+                              : triggerModeValue === 'software'
+                                ? est_duration.toString()
+                                : est_duration.toString() + ' minimum'
                           }
                           readOnly
                           style={floatingLabelStyle}
@@ -338,10 +339,12 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 </Row>
                 <Row>
                   <Col>
-                    <FloatingLabel label="Total Storage">
+                    <FloatingLabel label={isFreerun ? 'Data Rate' : 'Total Storage'}>
                       <Form.Control
                         type="text"
-                        value={checkNull((acquisitionData?.config?.estimated_data_rate ?? 0) * est_duration) + ' GB'}
+                        value={isFreerun
+                          ? checkNull(estimatedDataRate) + ' GB/s'
+                          : checkNull(estimatedDataRate * est_duration) + ' GB'}
                         readOnly
                         style={floatingLabelStyle}
                         className={rateTooHigh ? 'border border-danger text-danger bg-danger bg-opacity-10' : ''}
@@ -366,7 +369,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     label="File Name (without .h5 extension)">
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_name"
-                        style={floatingInputStyle}
                       />
                   </FloatingLabel>
                 </Col>
@@ -387,7 +389,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     label="File Path">
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_path"
-                        style={floatingInputStyle}
                       />
                   </FloatingLabel>
                 </Col>
@@ -396,9 +397,12 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 <Col>
                   <Form.Label>Acquisition Progress</Form.Label>
                   <ProgressBar
-                    now={acquisitionProgress ?? 0}
-                    label={acquisitionProgressLabel}
-                    variant={acquisitionProgress === 100 ? 'success' : undefined}
+                    now={isFreerun ? 100 : acquisitionProgress ?? 0}
+                    label={isFreerun ? `${formatDisplayNumber(framesWritten)} frames written` : acquisitionProgressLabel}
+                    variant={!isFreerun && acquisitionProgress === 100 ? 'success' : undefined}
+                    striped={isFreerun && isAcquiring}
+                    animated={isFreerun && isAcquiring}
+                    style={{ height: '1.75rem', fontSize: '1rem' }}
                   />
                 </Col>
               </Row>

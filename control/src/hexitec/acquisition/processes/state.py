@@ -31,9 +31,11 @@ class State():
 
         self.freerun = False
 
+        self.frame_target = 1
         self.acquisition_progress_task_enable = False
         self.acquisition_progress_task_interval = 0.5
         self.acquisition_progress = 0.0
+        self.frames_written = 0
 
         self.enable_single_frame_preview = False
         self.single_frame_preview_progress_enable = False
@@ -54,9 +56,10 @@ class State():
             'acquisition': {
                 'toggle': (lambda: self.is_acquiring, self.toggle_acquisition),
                 'freerun': (lambda: self.freerun, self.toggle_freerun),
-                "progress_task": {
-                    "interval": (lambda: self.acquisition_progress_task_interval, self.set_progress_task_interval),
-                    "progress": (lambda: self.acquisition_progress, None)
+                'progress_task': {
+                    'interval': (lambda: self.acquisition_progress_task_interval, self.set_progress_task_interval),
+                    'progress': (lambda: self.acquisition_progress, None),
+                    'frames_written': (lambda: self.frames_written, None)
                 },
                 'file_name': (lambda: self.file_name, self.set_file_name),
                 'file_path': (lambda: self.file_path, self.set_file_path),
@@ -192,9 +195,9 @@ class State():
             return
 
         if self.freerun:
-            frame_target = -1
+            self.frame_target = 0
         else:
-            frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
+            self.frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
 
         # If multiple files are enabled in configuration, this will be more than 1. Otherwise, 1.
         number_of_files = self.configuration.number_of_files
@@ -241,8 +244,9 @@ class State():
 
         # Multiple file acquisition logic goes here
 
-        # Configure how data should be sent
-        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", frame_target)
+        # Targets
+        icc_set(self.histogrammer, "acquisition/num_histograms", self.frame_target)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.frame_target)
 
         # Start listening for data
         icc_set(self.munir, "execute", {self.munir_subsystem: True})
@@ -273,7 +277,13 @@ class State():
             munir_status = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
             frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
 
-            self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
+            self.frames_written = frames_received
+
+            # For endless acquisitions, does not matter if acquisition progress ever changes
+            if self.frame_target > 0:
+                self.acquisition_progress = round((frames_received / self.frame_target) * 100, 2)
+            else:
+                self.acquisition_progress = 0
 
             if self.acquisition_progress >= 100:
                 # Force a wait of ~1 frame's worth of time to ensure synchronicity
