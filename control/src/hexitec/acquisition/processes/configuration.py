@@ -84,7 +84,7 @@ class Configuration():
                                            {'min': 1}),
                 'multiple_files': {
                     'enable': (lambda: self.enable_multiple_files, self.toggle_multiple_files),
-                    'number_of_files': (lambda: self.number_of_files, self.set_number_of_files)
+                    'number_of_files': (lambda: self.number_of_files, self.set_number_of_files, {'min': 1})
                 }
             },
             'baseline': {

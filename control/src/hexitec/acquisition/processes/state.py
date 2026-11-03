@@ -2,6 +2,7 @@
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
 from hexitec.util.iac import icc_get, icc_set
+from odin_data.control.ipc_message import IpcMessage
 import time
 from datetime import datetime
 
@@ -199,9 +200,6 @@ class State():
         else:
             self.frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
 
-        # If multiple files are enabled in configuration, this will be more than 1. Otherwise, 1.
-        number_of_files = self.configuration.number_of_files
-
         self.is_acquiring = True
         self.acquisition_progress = 0
 
@@ -242,7 +240,20 @@ class State():
         # For liveview occupancy
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.configuration.frames_per_timeframe)
 
-        # Multiple file acquisition logic goes here
+        # The target is number_of_timeframes * number_of_files
+        # If number_of_files is 1, this gives you 1 file. Otherwise, you get number_of_files files
+        file_writer_config = {
+            "hdf": {
+                "process": {
+                    "frames_per_block": self.configuration.number_of_timeframes,
+                    "blocks_per_file": 1,
+                }
+            }
+        }
+        response = self.munir_odindata_controller.set_config(file_writer_config)
+        if response.get("msg_type") != IpcMessage.ACK:
+            self.is_acquiring = False
+            raise self.AcquisitionError(f"Could not configure HDF file splitting: {response}")
 
         # Targets
         icc_set(self.histogrammer, "acquisition/num_histograms", self.frame_target)
