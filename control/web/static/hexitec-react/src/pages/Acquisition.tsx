@@ -1,5 +1,5 @@
 import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, useAdapterEndpoint } from '@dssg/odin-react';;
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row } from 'react-bootstrap';
 import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';
 import { tooltips } from '../tooltips';
@@ -25,8 +25,26 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const acquisitionData = acquisitionEndpoint?.data;
 
-  const [triggerModeValue, setTriggerModeValue] = useState('software');
-  const [adTriggerModeValue, setAdTriggerModeValue] = useState('burst mode');
+  const [triggerModeValue, setTriggerModeValue] = useState(acquisitionEndpoint.data?.config?.trigger?.device ?? 'software');
+  const [adTriggerModeValue, setAdTriggerModeValue] = useState(acquisitionEndpoint.data?.config?.trigger?.trigger_mode ?? 'burst mode');
+
+  // These values need to populate correctly to indicate the actual state of the system
+  // As radio and states, they require a little more work to ensure they are in sync
+  // The initial poll might be undefined and then updated on next render, this does not always work
+  useEffect(() => {
+    const device = acquisitionData?.config?.trigger?.device;
+    const triggerMode = acquisitionData?.config?.trigger?.trigger_mode;
+
+    if (device !== undefined) {
+      setTriggerModeValue(device);
+    }
+    if (triggerMode !== undefined) {
+      setAdTriggerModeValue(triggerMode);
+    }
+  }, [
+    acquisitionData?.config?.trigger?.device,
+    acquisitionData?.config?.trigger?.trigger_mode
+  ]);
 
   const hists_per_acquisition = (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0) * (acquisitionData?.config?.trigger?.multiple_files?.number_of_files ?? 0)
 
@@ -209,7 +227,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <EndpointInput
                         endpoint={acquisitionEndpoint}
                         fullpath="config/trigger/multiple_files/number_of_files"
-                        disabled={!(multiple_file_mode)}
+                        disabled={!(multiple_file_mode) || acquisitionEndpoint?.data?.state?.acquisition?.freerun}
                       />
                     </FloatingLabel>
                   </Col>

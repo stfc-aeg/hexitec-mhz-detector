@@ -195,6 +195,12 @@ class State():
                 )
             return
 
+        if self.configuration.device == "hardware":
+            icc_set(self.readout, "trigger/enable", True)
+            icc_set(self.histogrammer, "acquisition/mode", self.configuration.device)
+            icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", True)
+            icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", False)
+
         if self.freerun:
             self.frame_target = 0
         else:
@@ -273,6 +279,8 @@ class State():
 
         # Back to software for the purpose of previewing
         icc_set(self.readout, "trigger/enable", False)
+        icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", True)
+        icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", False)
 
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
 
