@@ -1,14 +1,14 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { OdinApp, useAdapterEndpoint } from '@dssg/odin-react';;
-import Acquisition from './pages/Acquisition';
+import Acquisition from './components/acquisition/Acquisition';
 import { HistogramLiveView } from './components/liveview/HistogramLiveView';
 
 import { UserLevelContext } from './components/UserAware';
 import type { HexitecParamTree } from './components/admonitor/MonitorOverlay';
-import Configuration from './pages/Configuration';
+import Configuration from './components/configuration/Configuration';
 
-import Sequencer from './pages/Sequencer';
-import LokiExtra from './pages/LokiExtra';
+import Sequencer from './components/Sequencer';
+import LokiExtra from './components/LokiExtra';
 
 function App() {
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;

@@ -1,9 +1,10 @@
 import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, useAdapterEndpoint } from '@dssg/odin-react';;
 import { useEffect, useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row } from 'react-bootstrap';
-import type { AcquisitionTypes, ReadoutTypes } from '../EndpointTypes';
-import { tooltips } from '../tooltips';
-import { checkNull, floatingInputStyle, floatingLabelStyle } from '../utils.js';
+import type { AcquisitionTypes, ReadoutTypes } from '../../EndpointTypes.js';
+import { tooltips } from '../../tooltips.js';
+import { floatingInputStyle } from '../../utils.js';
+import AcquisitionSummary from './AcquisitionSummary.js';
 
 interface AcquisitionProps {
   endpoint_url: string;
@@ -45,8 +46,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
     acquisitionData?.config?.trigger?.device,
     acquisitionData?.config?.trigger?.trigger_mode
   ]);
-
-  const hists_per_acquisition = (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0) * (acquisitionData?.config?.trigger?.multiple_files?.number_of_files ?? 0)
 
   const formatDisplayNumber = (value: unknown) => {
     if (value === null || value === undefined || value === '') {
@@ -99,8 +98,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
   const updateAdTriggerModeValue = ({ selectedValue }: { selectedValue: string }) => {
     setAdTriggerModeValue(selectedValue);
   };
-
-  const est_duration = (((acquisitionData?.config?.trigger?.frames_per_timeframe ?? 0) * (acquisitionData?.config?.trigger?.number_of_timeframes ?? 0)) / 1000000);
 
   // need to map histogram bin modes to numbers
   // labels are in form histogram_X where X is number of bins, but we only want '<number> bins' for dropdown
@@ -218,7 +215,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     <FloatingLabel label={multiple_file_mode ? "Timeframes per file" : "Timeframes to write"}>
                       <EndpointInput
                         endpoint={acquisitionEndpoint} fullpath="config/trigger/number_of_timeframes"
-                        disabled={(triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode') || (!multiple_file_mode && acquisitionEndpoint?.data?.state?.acquisition?.freerun)}
+                        disabled={(!multiple_file_mode && acquisitionEndpoint?.data?.state?.acquisition?.freerun)}
                       />
                     </FloatingLabel>
                   </Col>
@@ -294,84 +291,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 </Row>
               </Col>
             </Row>
-            <Row className="mt-3">
-              <label><strong>Summary</strong></label>
-            </Row>
-            <Row className="mt-3">
-              <Col sm={6}>
-                <Row>
-                  <Col>
-                    <FloatingLabel label="Histograms per Acquisition">
-                      <Form.Control
-                        type="text"
-                        value={formatDisplayNumber(hists_per_acquisition)}
-                        readOnly
-                        style={floatingLabelStyle}
-                      />
-                    </FloatingLabel>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col>
-                    {/* If in software, this is a predictable outcome. 
-                    In hardware mode, it's basically a minimum as triggers may have gaps inbetween */}
-                    <OverlayTrigger
-                      placement="top"
-                      overlay={tooltips.acquisition.est_duration}
-                      trigger={isFreerun ? [] : undefined}
-                    >
-                      <FloatingLabel label={isFreerun ? 'Duration' : 'Est. Duration (s)'}>
-                        <Form.Control
-                          type="text"
-                          value={
-                            isFreerun
-                              ? 'Until stopped'
-                              : triggerModeValue === 'software'
-                                ? est_duration.toString()
-                                : est_duration.toString() + ' minimum'
-                          }
-                          readOnly
-                          style={floatingLabelStyle}
-                        />
-                      </FloatingLabel>
-                    </OverlayTrigger>
-                  </Col>
-                </Row>
-              </Col>
-              <Col sm={6}>
-                <Row>
-                  <Col>
-                    <FloatingLabel label="Frames per histogram">
-                      <Form.Control
-                        type="text"
-                        value={
-                          triggerModeValue === 'hardware' && adTriggerModeValue === 'continuous'
-                            ? '-'
-                            : formatDisplayNumber(acquisitionData?.config?.trigger?.frames_per_timeframe)
-                        }
-                        readOnly
-                        style={floatingLabelStyle}
-                      />
-                    </FloatingLabel>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col>
-                    <FloatingLabel label={isFreerun ? 'Data Rate' : 'Total Storage'}>
-                      <Form.Control
-                        type="text"
-                        value={isFreerun
-                          ? checkNull(estimatedDataRate) + ' GB/s'
-                          : checkNull(estimatedDataRate * est_duration) + ' GB'}
-                        readOnly
-                        style={floatingLabelStyle}
-                        className={rateTooHigh ? 'border border-danger text-danger bg-danger bg-opacity-10' : ''}
-                      />
-                    </FloatingLabel>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
+            <AcquisitionSummary acquisitionEndpoint={acquisitionEndpoint} />
           </TitleCard>
         </Col>
 

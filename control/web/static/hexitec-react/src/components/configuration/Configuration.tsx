@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Container, Row, Col, Form, FloatingLabel, OverlayTrigger } from 'react-bootstrap';
 import { useAdapterEndpoint, EndpointCheckbox, EndpointSelect, EndpointButton, TitleCard } from '@dssg/odin-react';;
-import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../EndpointTypes';
-import { floatingInputStyle } from '../utils.js';
-import { tooltips } from '../tooltips';
-import Environmental from '../components/configuration/Environmental';
-import Processing from '../components/configuration/Processing';
-import FileUploads from '../components/configuration/FileUploads';
-import DetectorControls from '../components/configuration/DetectorControls';
+import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../../EndpointTypes.js';
+import { floatingInputStyle } from '../../utils.js';
+import { tooltips } from '../../tooltips.js';
+import Environmental from './Environmental.js';
+import Processing from './Processing.js';
+import FileUploads from './FileUploads.js';
+import DetectorControls from './DetectorControls.js';
 
 interface ConfigurationProps {
   endpoint_url: string;
