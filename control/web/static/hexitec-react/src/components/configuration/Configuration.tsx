@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Container, Row, Col, Form, FloatingLabel, OverlayTrigger } from 'react-bootstrap';
+import { Button, Container, Row, Col, Form, FloatingLabel, Modal, OverlayTrigger } from 'react-bootstrap';
 import { useAdapterEndpoint, EndpointCheckbox, EndpointSelect, EndpointButton, TitleCard } from '@dssg/odin-react';;
 import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../../EndpointTypes.js';
 import { floatingInputStyle } from '../../utils.js';
@@ -21,82 +21,96 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
 
   const availableProfiles = configEndpoint.data?.available_profiles ?? [''];
   const isCustomProfile = acquisitionEndpoint.data?.config?.config_edit_mode ?? false;
-  const [customName, setCustomName] = useState('new_config');
-  const invalidCustomName = customName === '';
+  const [customName, setCustomName] = useState('');
+  const [showSaveProfileModal, setShowSaveProfileModal] = useState(false);
+  const invalidCustomName = customName.trim() === '';
 
   const isAcquiring = (acquisitionEndpoint.data?.state?.acquisition?.toggle || acquisitionEndpoint.data?.state?.preview?.toggle) ?? false;
   const configDisabled = isAcquiring || !isCustomProfile;
   const disabledTooltip = isAcquiring ? tooltips.acquisition.disabled_acquiring : tooltips.acquisition.disabled_edit;
+  const closeSaveProfileModal = () => {
+    setShowSaveProfileModal(false);
+    setCustomName('');
+  };
 
   return (
     <Container>
       <TitleCard title={<strong>Configuration Profile Management</strong>}>
-        <Row className="mt-2">
-          <Col sm={12} md={6}>
-            <Row>
-              <Col>
-                <EndpointButton
-                  endpoint={configEndpoint}
-                  fullpath="available_profiles"
-                  variant='outline-primary'
-                  style={{height:'100%'}}
-                >
-                  Refresh Profiles
-                </EndpointButton>
-              </Col>
-              <Col xs={6}>
-                <FloatingLabel label="Choose a profile">
-                  <EndpointSelect
-                    endpoint={configEndpoint}
-                    fullpath="current_profile"
-                    style={floatingInputStyle}>
-                      {availableProfiles?.map((profile: string) => (
-                        <option label={profile} value={profile}>{profile}</option>
-                      ))}
-                  </EndpointSelect>
-                </FloatingLabel>
-              </Col>
-              <Col className="d-flex align-items-center">
-                <EndpointCheckbox
-                  endpoint={acquisitionEndpoint}
-                  fullpath="config/config_edit_mode"
-                  label="Enable editing"
-                  style={{height:'100%'}}
-                />
-              </Col>
-            </Row>
+        <Row className="mt-2 justify-content-center align-items-center gy-2">
+          <Col xs={12} sm="auto" className="d-flex justify-content-center">
+            <EndpointButton
+              endpoint={configEndpoint}
+              fullpath="available_profiles"
+              variant='outline-primary'
+            >
+              Refresh Profiles
+            </EndpointButton>
           </Col>
-          <Col>
-            <Row>
-              <Col>
-                <FloatingLabel label="Custom profile name">
-                  <Form.Control
-                    type="text"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.currentTarget.value)}
-                    style={invalidCustomName ? {
-                      ...floatingInputStyle,
-                      border: '2px solid red'
-                    } : floatingInputStyle}
-                    placeholder="Enter custom profile name"
-                    disabled={!isCustomProfile}
-                  />
-                </FloatingLabel>
-              </Col>
-              <Col>
-                <EndpointButton
-                  endpoint={configEndpoint}
-                  fullpath="create_profile"
-                  value={customName}
-                  disabled={!isCustomProfile || invalidCustomName}
-                >
-                  Create new configuration profile
-                </EndpointButton>
-              </Col>
-            </Row>
+          <Col xs={12} sm={4} md={3}>
+            <FloatingLabel label="Choose a profile">
+              <EndpointSelect
+                endpoint={configEndpoint}
+                fullpath="current_profile"
+                style={floatingInputStyle}>
+                  {availableProfiles?.map((profile: string) => (
+                    <option label={profile} value={profile}>{profile}</option>
+                  ))}
+              </EndpointSelect>
+            </FloatingLabel>
+          </Col>
+          <Col xs={12} sm="auto" className="d-flex justify-content-center">
+            <EndpointCheckbox
+              endpoint={acquisitionEndpoint}
+              fullpath="config/config_edit_mode"
+              type="switch"
+              label="Enable editing"
+            />
+          </Col>
+          <Col xs={12} sm="auto" className="d-flex justify-content-center">
+            <Button
+              variant="outline-primary"
+              disabled={!isCustomProfile}
+              onClick={() => setShowSaveProfileModal(true)}
+            >
+              Save Configuration as Profile
+            </Button>
           </Col>
         </Row>
       </TitleCard>
+
+      <Modal show={showSaveProfileModal} onHide={closeSaveProfileModal} centered size="sm">
+        <Modal.Header closeButton>
+          <Modal.Title>Save Configuration Profile</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <FloatingLabel label="Profile Name (no extension)">
+            <Form.Control
+              autoFocus
+              type="text"
+              value={customName}
+              onChange={(e) => setCustomName(e.currentTarget.value)}
+              style={invalidCustomName ? {
+                ...floatingInputStyle,
+                border: '2px solid red'
+              } : floatingInputStyle}
+            />
+          </FloatingLabel>
+        </Modal.Body>
+        <Modal.Footer className="justify-content-center">
+          <Button variant="secondary" onClick={closeSaveProfileModal}>
+            Cancel
+          </Button>
+          <EndpointButton
+            endpoint={configEndpoint}
+            fullpath="create_profile"
+            value={customName.trim()}
+            post_method={closeSaveProfileModal}
+            disabled={!isCustomProfile || invalidCustomName}
+          >
+            Save
+          </EndpointButton>
+        </Modal.Footer>
+      </Modal>
       
       <div style={{ position: 'relative' }}>
         {configDisabled && (
