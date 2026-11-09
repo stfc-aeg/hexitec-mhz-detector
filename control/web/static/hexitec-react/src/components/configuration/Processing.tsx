@@ -18,6 +18,8 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
   const histogramMetadata = histogramEndpoint.metadata;
   const autoTrigModeOptions = histogramMetadata?.config?.clustering?.auto_trig_mode?.allowed_values;
   const modeOptions = histogramMetadata?.config?.clustering?.mode?.allowed_values;
+  const baselineMaskOptions = histogramMetadata?.config?.baseline?.mask?.allowed_values;
+  const baselineDivideOptions = histogramMetadata?.config?.baseline?.divide?.allowed_values;
 
   const acquisitionData = acquisitionEndpoint?.data;
 
@@ -62,120 +64,13 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
     <Card className="mt-3">
       <Card.Header><strong>Processing</strong></Card.Header>
       <Card.Body>
-        <Row>
-          <Col>
-            <Form.Label><b>Charge-sharing Options</b></Form.Label>
-            <Row>
-              <Col>
-                <EndpointCheckbox
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/positive_edge"
-                  type="switch"
-                  label="Positive Edge"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-              <Col>
-                <EndpointCheckbox
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/sum_enable"
-                  type="switch"
-                  label="Sum Enable"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-            </Row>
-            <Row className="mb-3">
-              <Col>
-                <EndpointCheckbox
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/negative_neighbour"
-                  type="switch"
-                  label="Negative Neighbour"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-              <Col>
-                <EndpointCheckbox
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/position_adjust"
-                  type="switch"
-                  label="Position Adjust"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-        <Row>
-          <Col>
-            <Form.Label><b>Clustering</b></Form.Label>
-            <Row>
-              <Col>
-                <Row>
-                  <Col>
-                    <FloatingLabel label="Auto Trigger Mode">
-                      <EndpointSelect
-                        endpoint={histogramEndpoint}
-                        fullpath="config/clustering/auto_trig_mode"
-                        disabled={!isCustom || isAcquiring}
-                        >
-                          {autoTrigModeOptions?.map((option: string) => (
-                            <option value={option} key={option}>{option}</option>
-                          ))}
-                      </EndpointSelect>
-                    </FloatingLabel>
-                  </Col>
-                  <Col>
-                    <FloatingLabel label="Mode">
-                      <EndpointSelect
-                        endpoint={histogramEndpoint}
-                        fullpath="config/clustering/mode"
-                        disabled={!isCustom || isAcquiring}
-                        >
-                          {modeOptions?.map((option: string) => (
-                            <option value={option} key={option}>{option}</option>
-                          ))}
-                      </EndpointSelect>
-                    </FloatingLabel>
-                  </Col>
-                </Row>
-                <Row className="mt-2">
-                  <Col>
-                    <Accordion defaultActiveKey="1">
-                      <Accordion.Item eventKey="0">
-                        <Accordion.Header>Cluster types</Accordion.Header>
-                        <Accordion.Body>
-                          <Row>
-                            {histogramMetadata?.config?.clustering?.types && clusterTypeOrder.map((typeKey: string) => (
-                              <Col sm={6} md={4} key={typeKey}>
-                                <EndpointCheckbox
-                                  endpoint={histogramEndpoint}
-                                  fullpath={`config/clustering/types/${typeKey}`}
-                                  type="switch"
-                                  label={clusterTypeLabels[typeKey] || typeKey}
-                                  disabled={!isCustom || isAcquiring}
-                                />
-                              </Col>
-                            ))}
-                          </Row>
-                        </Accordion.Body>
-                      </Accordion.Item>
-                    </Accordion>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-
         <UserAware userLevel="power">
-          <Row className="mt-3">
+          <Row>
             <Col>
-              <Form.Label><b>Dark Tracking / Baseline Load</b></Form.Label>
+              <Form.Label><b>Baseline Tracking</b></Form.Label>
               <Row className="mb-3">
                 <OverlayTrigger placement="top" overlay={tooltips.processing.baseline_toggle}>
-                  <Col>
+                  <Col xs={4}>
                     <EndpointCheckbox
                       endpoint={acquisitionEndpoint}
                       fullpath="config/baseline/toggle"
@@ -185,6 +80,38 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                     />
                   </Col>
                 </OverlayTrigger>
+              </Row>
+              <Row>
+                <Col>
+                  <FloatingLabel label="Baseline Mask">
+                    <EndpointSelect
+                      endpoint={histogramEndpoint}
+                      fullpath="config/baseline/mask"
+                      disabled={!isCustom || isAcquiring}
+                    >
+                      {baselineMaskOptions?.map((option: string) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </EndpointSelect>
+                  </FloatingLabel>
+                </Col>
+                <Col>
+                  <FloatingLabel label="Baseline Divide">
+                    <EndpointSelect
+                      endpoint={histogramEndpoint}
+                      fullpath="config/baseline/divide"
+                      disabled={!isCustom || isAcquiring}
+                    >
+                      {baselineDivideOptions?.map((option: number) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </EndpointSelect>
+                  </FloatingLabel>
+                </Col>
                 <Col>
                   <EndpointCheckbox
                     endpoint={histogramEndpoint}
@@ -197,8 +124,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
               </Row>
             </Col>
           </Row>
-
-          <Row className="mb-3">
+          <Row className="mt-3">
             <Col>
               <Form.Label><b>Thresholds Global</b></Form.Label>
               <InputGroup>
@@ -268,6 +194,112 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
             </Col>
           </Row>
         </UserAware>
+        <Row className="mt-3">
+          <Col>
+            <Form.Label><b>Clustering</b></Form.Label>
+            <Row>
+              <Col>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Mode">
+                      <EndpointSelect
+                        endpoint={histogramEndpoint}
+                        fullpath="config/clustering/mode"
+                        disabled={!isCustom || isAcquiring}
+                        >
+                          {modeOptions?.map((option: string) => (
+                            <option value={option} key={option}>{option}</option>
+                          ))}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel label="Auto Trigger Mode">
+                      <EndpointSelect
+                        endpoint={histogramEndpoint}
+                        fullpath="config/clustering/auto_trig_mode"
+                        disabled={!isCustom || isAcquiring}
+                        >
+                          {autoTrigModeOptions?.map((option: string) => (
+                            <option value={option} key={option}>{option}</option>
+                          ))}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row className="mt-2">
+                  <Col>
+                    <Accordion defaultActiveKey="1">
+                      <Accordion.Item eventKey="0">
+                        <Accordion.Header>Cluster types</Accordion.Header>
+                        <Accordion.Body>
+                          <Row>
+                            {histogramMetadata?.config?.clustering?.types && clusterTypeOrder.map((typeKey: string) => (
+                              <Col sm={6} md={4} key={typeKey}>
+                                <EndpointCheckbox
+                                  endpoint={histogramEndpoint}
+                                  fullpath={`config/clustering/types/${typeKey}`}
+                                  type="switch"
+                                  label={clusterTypeLabels[typeKey] || typeKey}
+                                  disabled={!isCustom || isAcquiring}
+                                />
+                              </Col>
+                            ))}
+                          </Row>
+                        </Accordion.Body>
+                      </Accordion.Item>
+                    </Accordion>
+                  </Col>
+                </Row>
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+        <Row className="mt-3">
+          <Col>
+            <Form.Label><b>Charge-sharing Options</b></Form.Label>
+            <Row>
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/positive_edge"
+                  type="switch"
+                  label="Positive Edge"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/sum_enable"
+                  type="switch"
+                  label="Sum Enable"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+            </Row>
+            <Row className="mb-3">
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/negative_neighbour"
+                  type="switch"
+                  label="Negative Neighbour"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/position_adjust"
+                  type="switch"
+                  label="Position Adjust"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+            </Row>
+          </Col>
+        </Row>
       </Card.Body>
     </Card>
   );

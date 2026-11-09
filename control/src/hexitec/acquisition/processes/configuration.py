@@ -48,13 +48,7 @@ class Configuration():
 
         self.data_rate = self.calculate_estimated_data_rate()
 
-        # There is no true 'on/off' setting for this, but a set of commands that do about the same
-        self.baseline_settings = {
-            'enabled': False,
-            'prev_mask': None,
-            'prev_auto_trig': None,
-            'prev_cluster_mode': None
-        }
+        self.baseline_tracking_enabled = False
 
         self.running_histogrammer = False
 
@@ -88,7 +82,7 @@ class Configuration():
                 }
             },
             'baseline': {
-                'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
+                'toggle': (lambda: self.baseline_tracking_enabled, self.toggle_baseline)
             },
             'estimated_data_rate': (lambda: self.data_rate, None),
             'config_edit_mode': (lambda: self.edit_mode, self.toggle_editing,
@@ -282,26 +276,16 @@ class Configuration():
         return self.data_rate
 
     def toggle_baseline(self, value: bool):
-        """Toggle the baseline correction on or off through a set of commands for the same result.
-        clustermode is set to auto, baseline mask is set to fixed, then auto trig mode set to 1 in 2/4
-        The user should be warned that this may lead to frame dropping due to auto trig mode
-        :param value: boolean deciding whether to enable (True) or disable (False) baseline correction
-        """
+        """Apply the standard histogrammer preset for dark tracking on or off."""
         if value:
-            self.baseline_settings['enabled'] = True
-            self.baseline_settings['prev_mask'] = icc_get(self.histogrammer, "config/baseline/mask")
-            self.baseline_settings['prev_auto_trig'] = icc_get(self.histogrammer, "config/clustering/auto_trig_mode")
-            self.baseline_settings['prev_cluster_mode'] = icc_get(self.histogrammer, "config/clustering/mode")
-
+            icc_set(self.histogrammer, "config/baseline/mask", "MAIN")
+            icc_set(self.histogrammer, "config/baseline/divide", 512)
+        else:
             icc_set(self.histogrammer, "config/baseline/mask", "FIXED")
             icc_set(self.histogrammer, "config/clustering/mode", "AUTO")
-            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", 'ONEIN2')
-        else:
-            self.baseline_settings['enabled'] = False
+            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", "ONEIN8")
 
-            icc_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
-            icc_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
-            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
+        self.baseline_tracking_enabled = value
 
     def _sync_bin_mode(self):
         munir_num_bins = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")

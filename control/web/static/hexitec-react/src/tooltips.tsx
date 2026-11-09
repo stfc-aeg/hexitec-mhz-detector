@@ -71,7 +71,7 @@ export const tooltips = {
     ),
     baseline_toggle: (
       <Tooltip id="tooltip-baseline-toggle">
-        <strong>Dark Tracking Toggle.</strong> Enabling this may lead to some dropped frames due to the settings it requires.
+        <strong>Dark Tracking Toggle.</strong> Set the baseline tracking on or off. OFF changes the mask to Fixed, and clustering modes to AUTO/ONEIN8. ON changes the mask to Main and divide to 512.
       </Tooltip>
     )
   },
