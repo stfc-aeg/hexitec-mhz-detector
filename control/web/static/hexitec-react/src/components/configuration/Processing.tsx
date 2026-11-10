@@ -1,7 +1,6 @@
 import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { EndpointCheckbox, EndpointSelect, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';;
-import { floatingInputStyle } from '../../utils.js';
+import { EndpointCheckbox, EndpointSelect, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';
 import { OverlayTrigger } from 'react-bootstrap';
 import { tooltips } from '../../tooltips';
 import type { AcquisitionTypes, HistogramTypes } from '../../EndpointTypes';
@@ -133,7 +132,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   <EndpointInput
                     endpoint={histogramEndpoint}
                     fullpath="config/thresholds/main/neg"
-                    style={floatingInputStyle}
                     disabled={!isCustom || isAcquiring}
                   />
                 </FloatingLabel>
@@ -141,7 +139,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                   <EndpointInput
                     endpoint={histogramEndpoint}
                     fullpath="config/thresholds/main/pos"
-                    style={floatingInputStyle}
                     disabled={!isCustom || isAcquiring}
                   />
                 </FloatingLabel>
@@ -156,7 +153,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                         <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/low/neg"
-                          style={floatingInputStyle}
                           disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>
@@ -164,7 +160,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                         <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/low/pos"
-                          style={floatingInputStyle}
                           disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>
@@ -175,7 +170,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                         <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/absolute/low"
-                          style={floatingInputStyle}
                           disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>
@@ -183,7 +177,6 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                         <EndpointInput
                           endpoint={histogramEndpoint}
                           fullpath="config/thresholds/absolute/high"
-                          style={floatingInputStyle}
                           disabled={!isCustom || isAcquiring}
                         />
                       </FloatingLabel>

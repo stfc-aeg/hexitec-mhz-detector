@@ -1,7 +1,7 @@
 import { Row, Col, Card, Form, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
 import { EndpointSelect, type AdapterEndpoint, EndpointButton, EndpointInput } from '@dssg/odin-react';;
-import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
+import { checkNull, checkNullNoDp, floatingLabelStyle } from '../../utils.js';
 import type { ProxyParams } from '../../EndpointTypes';
 
 interface EnvironmentalProps {
@@ -107,7 +107,6 @@ export default function Environmental({
                       <EndpointSelect
                         endpoint={proxyEndpoint}
                         fullpath="loki/application/peltier/mode"
-                        style={floatingInputStyle}
                         disabled={!isCustom}
                       >
                         {peltierModes.map((selection) => (
@@ -121,7 +120,6 @@ export default function Environmental({
                       <EndpointInput
                         endpoint={proxyEndpoint}
                         fullpath="loki/application/peltier/temperature"
-                        style={floatingInputStyle}
                         disabled={!isCustom}
                       />
                     </FloatingLabel>

@@ -29,7 +29,6 @@ export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorCo
                 endpoint={proxyEndpoint}
                 fullpath="loki/application/asic_settings/feedback_capacitance"
                 disabled={!isCustom}
-                style={floatingInputStyle}
               >
                 <option value="7">7fF (High)</option>
                 <option value="14">14fF (Medium)</option>
@@ -45,7 +44,6 @@ export default function DetectorControls({ proxyEndpoint, isCustom }: DetectorCo
               <EndpointSelect
                 endpoint={proxyEndpoint}
                 fullpath="loki/application/asic_settings/negative_range_lowhigh"
-                style={floatingInputStyle}
                 disabled={!isCustom}
               >
                 <option value={"low"}>{negativeRangeOptions?.low} (Low)</option>

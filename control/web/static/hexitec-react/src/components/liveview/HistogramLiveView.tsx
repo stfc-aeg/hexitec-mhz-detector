@@ -169,7 +169,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
             <EndpointInput
               endpoint={acquisitionEndpoint}
               fullpath="state/preview/frames_per_hist"
-              style={floatingInputStyle}
             />
           </FloatingLabel>
         </Col>
@@ -351,7 +350,6 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
               <EndpointSelect
                 endpoint={liveViewEndPoint}
                 fullpath={`${imgPath}/colour`}
-                style={floatingInputStyle}
               >
                 {(colour_metadata?.allowed_values || ['?']).map((effect: string, index: number) => (
                   <option key={index} value={effect}>

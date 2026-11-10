@@ -50,8 +50,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
             <FloatingLabel label="Choose a profile">
               <EndpointSelect
                 endpoint={configEndpoint}
-                fullpath="current_profile"
-                style={floatingInputStyle}>
+                fullpath="current_profile">
                   {availableProfiles?.map((profile: string) => (
                     <option label={profile} value={profile}>{profile}</option>
                   ))}

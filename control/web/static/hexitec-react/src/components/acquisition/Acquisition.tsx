@@ -124,7 +124,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   <EndpointSelect
                     endpoint={acquisitionEndpoint}
                     fullpath="config/bin_mode"
-                    style={floatingInputStyle}
                     disabled={isAcquiring}>
                       {(binmode_metadata?.allowed_values ?? ['?']).map(
                         (selection, index) => (
@@ -250,7 +249,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <EndpointSelect
                         endpoint={acquisitionEndpoint}
                         fullpath="config/trigger/frame_multiplier"
-                        style={floatingInputStyle}
                         disabled={isAcquiring || (triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode')}>
                           {(frameMultiplier_metadata?.allowed_values ?? ['?']).map(
                             (selection, index) => (
@@ -278,7 +276,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       <EndpointSelect
                         endpoint={readoutEndpoint}
                         fullpath="trigger/polarity"
-                        style={floatingInputStyle}
                         disabled={isAcquiring || triggerModeValue==='software'}>
                           {(triggerPolarityOptions?.allowed_values ?? ['?']).map(
                             (selection, index) => (
