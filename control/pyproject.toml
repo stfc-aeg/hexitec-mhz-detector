@@ -16,7 +16,7 @@ dependencies = [
    "munir @ git+https://github.com/stfc-aeg/munir@0.1.0",
    "requests",
    "python-statemachine==2.6.0",
-   "mhz-readout @ git+https://github.com/stfc-aeg/MHz-Readout-Processor@v2.0.0",
+   "mhz-readout @ git+https://github.com/stfc-aeg/MHz-Readout-Processor@v2.0.1",
    "histogrammer @ git+https://github.com/stfc-aeg/odin-histogrammer@v2.0.1",
    "odin-sequencer @ git+https://github.com/stfc-aeg/odin-sequencer@0.4.1",
    "opencv-python>=4.12.0.88",

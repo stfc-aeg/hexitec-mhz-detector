@@ -103,14 +103,6 @@ class AcquisitionController(BaseController):
 
             # Connect histogrammer and setup UDP
             icc_set(self.histogrammer, "device/connect", True)
-            # Currently histogrammer does not respect config, this will be fixed later
-            icc_set(self.histogrammer, "udp/accelerator/rx_ip", self.options.get('accel_rx_ip', '10.0.100.8'))
-            icc_set(self.histogrammer, "udp/accelerator/tx_ip", self.options.get('accel_tx_ip', '10.0.101.109'))
-            icc_set(self.histogrammer, "udp/destination/ip", self.options.get('dest_ip', '10.0.101.8'))
-            icc_set(self.histogrammer, "udp/source/ip", self.options.get('source_ip', '10.0.100.108'))
-            icc_set(self.histogrammer, "udp/source/port", int(self.options.get('source_port', 61648)))
-            icc_set(self.histogrammer, "udp/accelerator/port", int(self.options.get('accel_port', 61649)))
-
             icc_set(self.histogrammer, "udp/setup", True)
 
             # self._handle_default_settings()
