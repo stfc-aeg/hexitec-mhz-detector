@@ -21,6 +21,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
   const baselineDivideOptions = histogramMetadata?.config?.baseline?.divide?.allowed_values;
 
   const acquisitionData = acquisitionEndpoint?.data;
+  const clusteringMode = histogramEndpoint.data?.config?.clustering?.mode;
 
   // If an acquisition is happening, the histogrammer will not let you change settings
   // The UI should make it obvious this is what is occurring
@@ -211,7 +212,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                       <EndpointSelect
                         endpoint={histogramEndpoint}
                         fullpath="config/clustering/auto_trig_mode"
-                        disabled={!isCustom || isAcquiring}
+                        disabled={!isCustom || isAcquiring || clusteringMode !== 'AUTO'}
                         >
                           {autoTrigModeOptions?.map((option: string) => (
                             <option value={option} key={option}>{option}</option>
@@ -234,7 +235,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                                   fullpath={`config/clustering/types/${typeKey}`}
                                   type="switch"
                                   label={clusterTypeLabels[typeKey] || typeKey}
-                                  disabled={!isCustom || isAcquiring}
+                                  disabled={!isCustom || isAcquiring || clusteringMode === 'INDEPENDANT'}
                                 />
                               </Col>
                             ))}

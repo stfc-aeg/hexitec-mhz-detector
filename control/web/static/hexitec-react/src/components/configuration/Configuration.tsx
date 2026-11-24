@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Container, Row, Col, Form, FloatingLabel, Modal, OverlayTrigger } from 'react-bootstrap';
-import { useAdapterEndpoint, EndpointCheckbox, EndpointSelect, EndpointButton, TitleCard } from '@dssg/odin-react';;
+import { useAdapterEndpoint, EndpointSelect, EndpointButton, TitleCard } from '@dssg/odin-react';;
 import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../../EndpointTypes.js';
 import { floatingInputStyle } from '../../utils.js';
 import { tooltips } from '../../tooltips.js';
@@ -36,7 +36,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
   return (
     <Container>
       <TitleCard title={<strong>Configuration Profile Management</strong>}>
-        <Row className="mt-2 justify-content-center align-items-center gy-2">
+        <Row className="justify-content-center align-items-center gy-2">
           <Col xs={12} sm="auto" className="d-flex justify-content-center">
             <EndpointButton
               endpoint={configEndpoint}
@@ -58,12 +58,14 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
             </FloatingLabel>
           </Col>
           <Col xs={12} sm="auto" className="d-flex justify-content-center">
-            <EndpointCheckbox
+            <EndpointButton
               endpoint={acquisitionEndpoint}
               fullpath="config/config_edit_mode"
-              type="switch"
-              label="Enable editing"
-            />
+              value={!isCustomProfile}
+              variant={isCustomProfile ? 'danger' : 'primary'}
+            >
+              {isCustomProfile ? 'Disable configuration editing' : 'Enable configuration editing'}
+            </EndpointButton>
           </Col>
           <Col xs={12} sm="auto" className="d-flex justify-content-center">
             <Button

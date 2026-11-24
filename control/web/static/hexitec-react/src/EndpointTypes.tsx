@@ -425,6 +425,9 @@ export type LokiApplicationData = {
     enable: boolean;
     mode: string;
     modes_available: string[];
+    pid_target_sensor?: 'DIODE' | 'BLOCK';
+    pid_target_sensors_available?: ('DIODE' | 'BLOCK')[];
+    pid_state?: string | null;
   }
   asic_settings: {
     feedback_capacitance: number;
