@@ -42,10 +42,6 @@ class Configuration():
 
         self.readout_max_frames = 2**32 - 1  # Max value for 32-bit unsigned int
 
-        # By default, 10^0 = 1
-        self.frames_pre_mult = self.frames_per_timeframe
-        self.frame_mult = 1
-
         self.data_rate = self.calculate_estimated_data_rate()
 
         self.baseline_tracking_enabled = False
@@ -65,13 +61,8 @@ class Configuration():
                            {'allowed_values': self.device_options}),
                 'trigger_mode': (lambda: self.trigger_mode, self.change_trigger_mode, 
                                  {'allowed_values': ["burst mode", "step scan", "continuous mode"]}),
-                'frames_pre_multiplier': (lambda: self.frames_pre_mult, 
-                                          lambda frames: self.set_mult_frames_per_timeframe(frames, self.frame_mult),
+                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe,
                                          {'min': 1, 'max': self.readout_max_frames}),
-                'frame_multiplier': (lambda: self.frame_mult,
-                                     lambda mult: self.set_mult_frames_per_timeframe(self.frames_pre_mult, mult),
-                                     {'allowed_values': [1, 1_000, 1_000_000, 1_000_000_000]}),
-                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
                 'timeframes_per_trigger': (lambda: self.timeframes_per_trigger, self.set_timeframes_per_trigger,
@@ -182,6 +173,9 @@ class Configuration():
         Additionally verify the minimum allowed frame count against the bin mode.
         :param frames: positive integer number of frames.
         """
+        frames = int(frames)
+        if frames < 1:
+            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
         if frames > self.readout_max_frames:
             raise self.AcquisitionError(f"Frames per timeframe must be less than or equal to {self.readout_max_frames}.")
 
@@ -203,21 +197,6 @@ class Configuration():
         # 1024	        366	                2731
         # 2048	        183	                5461
         # 4096	        92                  10923
-
-    def set_mult_frames_per_timeframe(self, frames: int, mult: int):
-        """Calculate the number of frames per timeframe/histogram using scientific notation format.
-        This value is used in the same way no matter the mode, except in continuous mode where it is not used.
-        :param frames: positive integer representing the number of frames per timeframe pre-multiplier
-        :param mult: positive integer representing the power of 10 to which the frames should be raised
-        """
-        if frames < 1:
-            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
-
-        calculation = int(frames * mult)
-
-        self.set_frames_per_timeframe(calculation)
-        self.frame_mult = int(mult)
-        self.frames_pre_mult = int(frames)
 
     def set_number_of_timeframes(self, timeframes: int):
         """Set the number of timeframes to be acquired per file.
@@ -245,10 +224,6 @@ class Configuration():
             self.timeframes_per_trigger = timeframes
         except ICCError as err:
             raise self.AcquisitionError(f"Could not set timeframes per trigger: {err}")
-
-                # 'multiple_files': {
-                #     'enable': (lambda: self.enable_multiple_files, self.toggle_multiple_files),
-                #     'number_of_files': (lambda: self.number_of_files, self.set_number_of_files)
 
     def toggle_multiple_files(self, enable):
         """Set if multiple files are to be used during the acquisition."""

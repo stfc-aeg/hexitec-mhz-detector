@@ -362,8 +362,6 @@ export interface AcquisitionTypes extends ParamNode{
     trigger: {
       device: string;
       frames_per_timeframe: number;
-      frames_pre_multiplier: number;
-      frame_multiplier: string;
       number_of_timeframes: number;
       timeframes_per_trigger: number;
       trigger_mode: string;
@@ -374,6 +372,12 @@ export interface AcquisitionTypes extends ParamNode{
     };
   };
   state: {
+    reboot: {
+      readout_reboot: null;
+      loki_reboot: null;
+      loki_reboot_in_progress: boolean;
+      loki_reboot_error: string;
+    };
     acquisition: {
       add_timestamp: boolean;
       file_name: string;

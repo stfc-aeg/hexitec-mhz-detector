@@ -1,7 +1,7 @@
 """A class to manage the state of the acquisition process, such as previewing, acquisition, and similar functions."""
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
-from hexitec.util.iac import icc_get, icc_set
+from hexitec.util.iac import iac_set, icc_get, icc_set
 from odin_data.control.ipc_message import IpcMessage
 import time
 from datetime import datetime
@@ -21,6 +21,7 @@ class State():
         self.histogrammer = adapters["histogram"].controller
         self.readout = adapters["readout"].controller
         self.liveview = adapters["liveview"].controller
+        self.proxy = adapters["proxy"]
 
         self.AcquisitionError = AcquisitionError
 
@@ -47,8 +48,16 @@ class State():
         self.file_name = default_filename
         self.file_path = default_filepath
         self.file_timestamp = False
+        self.loki_reboot_in_progress = False
+        self.loki_reboot_error = ""
 
         self.tree = ParameterTree({
+            'reboot': {
+                'readout_reboot': (None, self.reboot_readout_processor),
+                'loki_reboot': (None, self.reboot_loki_asic),
+                'loki_reboot_in_progress': (lambda: self.loki_reboot_in_progress, None),
+                'loki_reboot_error': (lambda: self.loki_reboot_error, None),
+            },
             'preview': {
                 'toggle': (lambda: self.is_previewing, self.toggle_preview),
                 'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist),
@@ -67,6 +76,43 @@ class State():
                 'add_timestamp': (lambda: self.file_timestamp, self.toggle_file_timestamp)
             }
         })
+
+    def _ensure_reboot_allowed(self):
+        if self.is_acquiring or self.is_previewing:
+            raise self.AcquisitionError("Cannot reboot hardware during acquisition or preview.")
+        if self.loki_reboot_in_progress:
+            raise self.AcquisitionError("Cannot reboot hardware while LOKI is reinitializing.")
+
+    def reboot_readout_processor(self, reboot: bool):
+        """Reset the ReadoutProcessor through its status parameter tree."""
+        if not reboot:
+            return
+
+        self._ensure_reboot_allowed()
+        try:
+            icc_set(self.readout, "status", {"reset": True})
+        except Exception as error:
+            raise self.AcquisitionError(f"ReadoutProcessor reset failed: {error}") from error
+
+    def reboot_loki_asic(self, reboot: bool):
+        """Request ASIC reinitialization without blocking the acquisition API request."""
+        if not reboot:
+            return
+
+        self._ensure_reboot_allowed()
+        self.loki_reboot_error = ""
+        self.loki_reboot_in_progress = True
+        self._reboot_loki_asic()
+
+    @run_on_executor
+    def _reboot_loki_asic(self):
+        try:
+            iac_set(self.proxy, "loki/application/system_state", {"ENABLE_STATE": "ASIC_DONE"})
+        except Exception as error:
+            logging.exception("LOKI ASIC reinitialization failed")
+            self.loki_reboot_error = str(error)
+        finally:
+            self.loki_reboot_in_progress = False
 
     def set_file_name(self, filename: str):
         """Set the name of the file to be saved through munir arguments.
@@ -200,6 +246,8 @@ class State():
             icc_set(self.histogrammer, "acquisition/mode", self.configuration.device)
             icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", True)
             icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", False)
+        else:
+            icc_set(self.histogrammer, "acquisition/mode", self.configuration.device)
 
         if self.freerun:
             self.frame_target = 0
@@ -248,10 +296,15 @@ class State():
 
         # The target is number_of_timeframes * number_of_files
         # If number_of_files is 1, this gives you 1 file. Otherwise, you get number_of_files files
+        if (self.freerun and not self.configuration.enable_multiple_files):
+            frames_per_block = 1_000_000_000
+            # Arbitrarily high number for freerun without many files
+        else:
+            frames_per_block = self.configuration.number_of_timeframes
         file_writer_config = {
             "hdf": {
                 "process": {
-                    "frames_per_block": self.configuration.number_of_timeframes,
+                    "frames_per_block": frames_per_block,
                     "blocks_per_file": 1,
                 }
             }

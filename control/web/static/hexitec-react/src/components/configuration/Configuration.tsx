@@ -151,6 +151,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
             />
             <DetectorControls
               proxyEndpoint={proxyEndpoint}
+              acquisitionEndpoint={acquisitionEndpoint}
               isCustom={isCustomProfile}
             />
           </Col>

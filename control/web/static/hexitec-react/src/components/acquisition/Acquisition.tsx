@@ -1,9 +1,8 @@
-import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, useAdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, EndpointRangeInput, useAdapterEndpoint } from '@dssg/odin-react';;
 import { useEffect, useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row } from 'react-bootstrap';
 import type { AcquisitionTypes, ReadoutTypes } from '../../EndpointTypes.js';
 import { tooltips } from '../../tooltips.js';
-import { floatingInputStyle } from '../../utils.js';
 import AcquisitionSummary from './AcquisitionSummary.js';
 
 interface AcquisitionProps {
@@ -56,8 +55,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
     return Number.isFinite(numericValue) ? numericValue.toLocaleString() : String(value);
   };
 
-  const formatMultiplierLabel = (value: unknown) => `x${formatDisplayNumber(value)}`;
-
   const estimatedDataRate = acquisitionData?.config?.estimated_data_rate ?? 0;
   const rateTooHigh = estimatedDataRate > 12.5;
   const framesPerTimeframe = acquisitionData?.config?.trigger?.frames_per_timeframe;
@@ -68,8 +65,6 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
 
   const acquisitionMetadata = acquisitionEndpoint?.metadata;
   const binmode_metadata = acquisitionMetadata?.config?.bin_mode;
-  const frameMultiplier_metadata = acquisitionMetadata?.config?.trigger?.frame_multiplier;
-
   const triggerPolarityOptions = readoutEndpoint.metadata?.trigger?.polarity;
 
   const isAcquiring = acquisitionData?.state?.acquisition?.toggle;
@@ -229,34 +224,25 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                   </Col>
                 </Row>
                 <Row className="mt-2">
-                  <Col xs={6}>
+                  <Col>
                     <OverlayTrigger
                       placement="top" overlay={tooltips.acquisition.low_frames_per_timeframe}
                       trigger={framesPerTimeframeTooLow ? undefined : []}
                     >
-                      <FloatingLabel label="Frames per timeframe" className={framesPerTimeframeTooLow ? 'border border-2 border-warning' : undefined}>
-                        <EndpointInput
-                          endpoint={acquisitionEndpoint} fullpath="config/trigger/frames_pre_multiplier"
-                          type="number"
-                          disabled={triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode'}
+                      <div className={framesPerTimeframeTooLow ? 'border border-2 border-warning' : undefined}>
+                        <EndpointRangeInput
+                          endpoint={acquisitionEndpoint}
+                          title="Frames per timeframe"
+                          fullpath="config/trigger/frames_per_timeframe"
+                          ranges={{ "x1": 1, "x1,000": 1_000, "x1,000,000": 1_000_000, "x1,000,000,000": 1_000_000_000 }}
+                          defaultRange="x1"
+                          min={1}
+                          max={2 ** 32 - 1}
+                          step={1}
+                          disabled={isAcquiring || (triggerModeValue === 'hardware' && adTriggerModeValue === 'continuous mode')}
                         />
-                      </FloatingLabel>
+                      </div>
                     </OverlayTrigger>
-                  </Col>
-                  <Col>
-                    <FloatingLabel
-                      label="Frame multiplier">
-                      <EndpointSelect
-                        endpoint={acquisitionEndpoint}
-                        fullpath="config/trigger/frame_multiplier"
-                        disabled={isAcquiring || (triggerModeValue==='hardware' && adTriggerModeValue==='continuous mode')}>
-                          {(frameMultiplier_metadata?.allowed_values ?? ['?']).map(
-                            (selection, index) => (
-                              <option value={selection} key={index}>{formatMultiplierLabel(selection)}</option>
-                            )
-                          )}
-                      </EndpointSelect>
-                     </FloatingLabel>
                   </Col>
                 </Row>
                 <Row>
