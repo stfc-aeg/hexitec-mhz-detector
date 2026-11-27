@@ -1,4 +1,4 @@
-import { EndpointButton, EndpointInput, EndpointCheckbox, EndpointSelect, TitleCard, useAdapterEndpoint, type ParamNode } from '@dssg/odin-react';;
+import { EndpointButton, EndpointInput, EndpointCheckbox, EndpointSelect, TitleCard, useAdapterEndpoint, type ParamNode } from '@dssg/odin-react';
 import { Col, Container, Form, Row } from 'react-bootstrap';
 import { AppOverlayTrigger } from '../../tooltipcontext';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
