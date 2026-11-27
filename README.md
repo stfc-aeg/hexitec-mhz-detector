@@ -27,7 +27,6 @@ pip install pybind11
 cd control ; pip install .
 cd web/static ; wget https://github.com/stfc-aeg/hexitec-mhz-detector/releases/download/0.5.0/app_build.tgz
 tar -xvzf app_build.tgz
-cd control/
 ```
 
 # Start the application
