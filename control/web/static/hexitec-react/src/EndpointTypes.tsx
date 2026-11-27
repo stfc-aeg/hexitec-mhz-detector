@@ -1,4 +1,4 @@
-import type { ParamNode } from '@dssg/odin-react';;
+import type { ParamNode } from '@dssg/odin-react';
 
 export interface MetadataType<T> {
   value: T;
@@ -362,26 +362,37 @@ export interface AcquisitionTypes extends ParamNode{
     trigger: {
       device: string;
       frames_per_timeframe: number;
-      frames_pre_multiplier: number;
-      frame_multiplier: string;
       number_of_timeframes: number;
       timeframes_per_trigger: number;
       trigger_mode: string;
+      multiple_files: {
+        enable: boolean;
+        number_of_files: number;
+      }
     };
   };
   state: {
+    reboot: {
+      readout_reboot: null;
+      loki_reboot: null;
+      loki_reboot_in_progress: boolean;
+      loki_reboot_error: string;
+    };
     acquisition: {
       add_timestamp: boolean;
       file_name: string;
       file_path: string;
+      freerun: boolean;
       toggle: boolean;
       progress_task: {
         interval: number;
         progress: number;
+        frames_written: number;
       }
     };
     preview: {
       frames_per_hist: number;
+      single_frame: boolean;
       toggle: boolean;
     };
   };
@@ -418,6 +429,9 @@ export type LokiApplicationData = {
     enable: boolean;
     mode: string;
     modes_available: string[];
+    pid_target_sensor?: 'DIODE' | 'BLOCK';
+    pid_target_sensors_available?: ('DIODE' | 'BLOCK')[];
+    pid_state?: string | null;
   }
   asic_settings: {
     feedback_capacitance: number;

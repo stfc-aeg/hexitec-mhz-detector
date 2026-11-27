@@ -32,6 +32,7 @@ class HistogramLiveViewProcessor:
         self.num_bins = dimensions[2]
 
         self.last_update = "never"
+        self.frame_count = 0
 
         self.frames_per_histogram = -1
 
@@ -192,7 +193,7 @@ class HistogramLiveViewProcessor:
 
             # Encode 2D image
             flags = [cv2.IMWRITE_JPEG_QUALITY, 85]  # Faster JPEG encoding
-            _, buffer_2d = cv2.imencode('.jpg', colour_data, flags)
+            encoded_2d, buffer_2d = cv2.imencode('.jpg', colour_data, flags)
 
             # Get region/full image if no region
             region_data = self.extract_region(data_3d)
@@ -229,7 +230,9 @@ class HistogramLiveViewProcessor:
             plt.close(fig)
             
             # Encode histogram image
-            _, buffer_hist = cv2.imencode('.jpg', histData, flags)
+            encoded_hist, buffer_hist = cv2.imencode('.jpg', histData, flags)
+            if not encoded_2d or not encoded_hist:
+                raise ValueError("Could not encode liveview preview images")
             
             # Queue both images
             while not self.image_queue.empty():
@@ -238,9 +241,13 @@ class HistogramLiveViewProcessor:
                 'counts': np.array(buffer_2d).tobytes(),
                 'histogram': np.array(buffer_hist).tobytes()
             })
+            self.frame_count += 1
             # Last update: now
             self.last_update = datetime.now().strftime('%H:%M:%S')
-            self.pipe_child.send({"last_update": self.last_update})
+            self.pipe_child.send({
+                "last_update": self.last_update,
+                "frame_count": self.frame_count
+            })
 
             # Calculate occupancy
             if self.frames_per_histogram > 0:

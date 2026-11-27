@@ -11,9 +11,10 @@ mapping = {
     'thres_main_neg_default' : 'histogram/config/thresholds/main/neg',
     'thres_main_pos_default' : 'histogram/config/thresholds/main/pos',
 
-    'baseline_divide'      : 'histogram/config/baseline/divide',
-    'baseline_dither'      : 'histogram/config/baseline/dither',
-    'dark_tracking_enable' : 'acquisition/config/baseline/toggle',
+    "dark_tracking_enable" : "acquisition/config/baseline/toggle",
+    "baseline_divide"      : "histogram/config/baseline/divide",
+    "baseline_dither"      : "histogram/config/baseline/dither",
+    "baseline_mask"        : "histogram/config/baseline/mask",
 
     'auto_trigger_mode': 'histogram/config/clustering/auto_trig_mode',
     'cluster_mode'     : 'histogram/config/clustering/mode',

@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { EndpointButton, EndpointCheckbox, EndpointDropdown, TitleCard, WithEndpoint, OdinGraph, useAdapterEndpoint } from '@dssg/odin-react';
+import { EndpointButton, EndpointCheckbox, EndpointDropdown, EndpointSelect, TitleCard, OdinGraph, useAdapterEndpoint } from '@dssg/odin-react';
 import { Col, Container, Form, InputGroup, Row, Stack, Dropdown, Spinner, FloatingLabel } from 'react-bootstrap';
 // import Plot from 'react-plotly.js';
 import type { ProxyParams } from '../EndpointTypes';
-import {floatingInputStyle, floatingLabelStyle} from '../utils.js';
+import {floatingLabelStyle} from '../utils.js';
 
 interface LokiExtraProps {
   endpoint_url: string;
 }
-
-const EndpointSelect = WithEndpoint(Form.Select);
 
 function LokiExtra({ endpoint_url }: LokiExtraProps) {
   const proxyEndpoint = useAdapterEndpoint<ProxyParams>('proxy', endpoint_url, 1000);
@@ -53,13 +51,16 @@ function LokiExtra({ endpoint_url }: LokiExtraProps) {
           </Row>
           <Row>
             <Col hidden={image_request_state}>
-              <OdinGraph
-                title="HEXITEC-MHz Sensor SPI Readback"
-			          type='heatmap'
-			          data={asicSettings?.segment_readout?.SEGMENT_DATA ?? [0]}
-			          colorscale='Viridis'
-			          layout={{height:900}}
-              />
+              <div style={{ width: 'min(100%, 900px)', aspectRatio: '1 / 1', marginInline: 'auto' }}>
+                <OdinGraph
+                  title="HEXITEC-MHz Sensor SPI Readback"
+                  type='heatmap'
+                  data={asicSettings?.segment_readout?.SEGMENT_DATA ?? [0]}
+                  colorscale='Viridis'
+                  layout={{ autosize: true }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
             </Col>
           </Row>
           </TitleCard>
@@ -127,7 +128,6 @@ function LokiExtra({ endpoint_url }: LokiExtraProps) {
                       endpoint={proxyEndpoint}
                       fullpath="loki/application/asic_settings/calibration_pattern/MODE"
                       value={calibrationPattern?.MODE ?? ''}
-                      style={floatingInputStyle}
                     >
                       {calibrationModes.map((mode) => (
                         <option value={mode} key={mode}>{mode}</option>
@@ -141,7 +141,6 @@ function LokiExtra({ endpoint_url }: LokiExtraProps) {
                       endpoint={proxyEndpoint}
                       fullpath="loki/application/asic_settings/calibration_pattern/MODES/PRESET/SELECT"
                       value={preset?.SELECT ?? ''}
-                      style={floatingInputStyle}
                     >
                       {(preset?.AVAIL ?? []).map((presetName) => (
                         <option value={presetName} key={presetName}>{presetName}</option>

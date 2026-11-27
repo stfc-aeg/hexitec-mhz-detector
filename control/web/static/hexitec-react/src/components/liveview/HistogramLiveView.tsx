@@ -1,14 +1,12 @@
-import { EndpointButton, EndpointCheckbox, TitleCard, useAdapterEndpoint, WithEndpoint, type ParamNode } from '@dssg/odin-react';;
-import React from 'react';
-import { Col, Container, Form, OverlayTrigger, Row } from 'react-bootstrap';
+import { EndpointButton, EndpointInput, EndpointCheckbox, EndpointSelect, TitleCard, useAdapterEndpoint, type ParamNode } from '@dssg/odin-react';
+import { Col, Container, Form, Row } from 'react-bootstrap';
+import { AppOverlayTrigger } from '../../tooltipcontext';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import type { AcquisitionTypes } from '../../EndpointTypes';
 import { tooltips } from '../../tooltips';
-import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils';
+import { checkNull, floatingLabelStyle } from '../../utils';
 import { MinMaxInput } from '../MinMaxInput';
 import { ClickableImage } from './ClickableImage';
-import { ColourScale } from './ColourScale';
-
 import { RegionSelectionInput } from './RegionSelection';
 
 export interface HistogramRegion extends ParamNode {
@@ -39,7 +37,7 @@ interface LiveViewTypes extends ParamNode {
           frames_per_histogram: number;
           last_update: string;
           num_bins: number;
-          region: [[number, number],[number, number]];
+          region: [[number, number],[number, number]] | [];
           scale: number;
           value_range: [number, number];
           occupancy_percent: number;
@@ -56,9 +54,6 @@ interface LiveViewTypes extends ParamNode {
       }
     };
 }
-
-// const EndpointButton = WithEndpoint(Button);
-const EndpointFormControl = WithEndpoint(Form.Control);
 
 interface HistogramLiveViewProps {
   endpoint_url: string;
@@ -81,21 +76,20 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
   const colour_metadata = liveViewMetadata?.histview?.[name]?.image?.colour;
 
   const lastUpdate = liveViewData?.image?.last_update;
+  const isPreviewing = acquisitionEndpoint.data?.state?.preview?.toggle ?? false;
+  const singleFramePreview = acquisitionEndpoint.data?.state?.preview?.single_frame ?? false;
 
   // function to send histogram region selection
   const handleHistSelection = (coords: [[number, number], [number, number]] | null) => {
     if (!coords) {
-      liveViewEndPoint.put(
-        { energy_range: [] }, imgPath
-      );
-      return;
+      return { energy_range: [] };
     };
 
     // y-axis is maximised so can be ignored
     const [xMinNorm, xMaxNorm] = coords[0];
     const numBins = liveViewData?.image['num_bins'];
 
-    if (!numBins) return;
+    if (!numBins) return undefined;
 
       // Get current range so selection works within existing range instead of overriding it
       const currentRange = liveViewData?.image?.energy_range;
@@ -115,10 +109,7 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
       if (binMin > binMax) {
         [binMin, binMax] = [binMax, binMin];
       }
-      liveViewEndPoint.put(
-        { energy_range: [binMin, binMax] },
-        imgPath
-      );
+      return { energy_range: [binMin, binMax] };
   };
 
   const getOccupancyStyle = (
@@ -158,19 +149,27 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
             className="h-100"
             endpoint={acquisitionEndpoint}
             fullpath="state/preview/toggle"
-            value={acquisitionEndpoint.data?.state?.preview?.toggle ? false : true}
-            variant={acquisitionEndpoint.data?.state?.preview?.toggle ? 'danger' : 'primary'}
+            value={isPreviewing ? false : true}
+            variant={isPreviewing ? 'danger' : 'primary'}
             disabled={acquisitionEndpoint.data?.state?.acquisition?.toggle}
             >
-              {acquisitionEndpoint.data?.state?.preview?.toggle ? 'Disable preview' : 'Enable preview'}
+              {singleFramePreview && isPreviewing ? 'Cancel preview frame' : singleFramePreview ? 'Get Preview Frame' : isPreviewing ? 'Disable preview' : 'Enable preview'}
           </EndpointButton>
+        </Col>
+        <Col xs={2} className="d-flex align-items-center">
+          <EndpointCheckbox
+            type="switch"
+            endpoint={acquisitionEndpoint}
+            fullpath="state/preview/single_frame"
+            label="Single-frame Preview"
+            disabled={isPreviewing}
+          />
         </Col>
         <Col xs={3}>
           <FloatingLabel label="Frames per hist (for preview)">
-            <EndpointFormControl
+            <EndpointInput
               endpoint={acquisitionEndpoint}
               fullpath="state/preview/frames_per_hist"
-              style={floatingInputStyle}
             />
           </FloatingLabel>
         </Col>
@@ -188,192 +187,182 @@ export function HistogramLiveView({ endpoint_url, name }: HistogramLiveViewProps
           </Col>
         </Row>
 
-        {/* Main Content */}
-        <Row>
-          {/* Left Column - Image and Controls */}
-          <Col xs={12} md={3} className="mb-3 justify-content-center">
-            <div className="d-flex">
-
-              {/* Color scale */}
-              <div className="me-3">
-                <Row>
-                  <Col>
-                    <EndpointButton
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${imgPath}/autoclip`}
-                      value={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? false : true}
-                      variant={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'danger' :'primary'}
-                      className="mb-3"
-                    >
-                      {liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip ? 'Disable autoclip' : 'Enable autoclip'}
-                    </EndpointButton>
-                  </Col>
-                  <Col>
-                    <FloatingLabel label="Autoclip %">
-                      <EndpointFormControl
-                        endpoint={liveViewEndPoint}
-                        fullpath={`${imgPath}/autoclip_percent`}
-                        variant='outline-primary'
-                        style={{width:'30%'}}
-                      />
-                    </FloatingLabel>
-                  </Col>
-                </Row>
-                <MinMaxInput
-                  label="Value Range"
-                  disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
-                  value={liveViewData?.image?.value_range ?? [0,1000]}
-                  onApply={(range) => {
-                    liveViewEndPoint.put(
-                      { value_range: range }, imgPath
-                    );
-                  }}
-                />
-                <Row>
-                  <Col xs={7}>
-                    <EndpointButton
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${imgPath}/value_range`}
-                      value={[]}
-                      variant='outline-primary'
-                      disabled={liveViewEndPoint?.data?.histview?.[name]?.image?.autoclip}
-                    >
-                      Reset Value Range
-                    </EndpointButton>
-                  </Col>
-                  <Col>
-                    <EndpointCheckbox
-                      endpoint={liveViewEndPoint} fullpath={`${imgPath}/use_log_scaling`}
-                      label="Use Log Scaling"
-                    />
-                  </Col>
-                </Row>
-                
-                <ColourScale 
-                  min={liveViewData?.image?.value_range[0] ?? 0}
-                  max={liveViewData?.image?.value_range[1] ?? 1000}
-                  colormap={liveViewData?.image?.colour || 'bone'}
-                />
-                <FloatingLabel
-                  label="Colourmap" className="mt-1">
-                  <Form.Select
-                    style={floatingInputStyle}
-                    value={liveViewData?.image?.colour || 'Select a colour'}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
-                      const selectedColour = e.currentTarget.value;
-                      liveViewEndPoint.put({colour: selectedColour}, `${imgPath}`);
-                    }}>
-                    {(colour_metadata?.allowed_values || ['?']).map((effect:string, index:number) => (
-                      <option key={index} value={effect}>
-                        {effect}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </FloatingLabel>
-              </div>
+        {/* Histograms and controls */}
+        <Row className="g-3">
+          <Col xs={12} md={6}>
+            <div className="mb-2">
+              <h3 className="h6 fw-bold mb-1">3D Histogram</h3>
             </div>
-          </Col>
-          <Col md={9}>
-            <Row className="mb-3">
-              <Col> {/* Counts map and histogram */}
-                <div style={{position:'relative', width: '100%'}}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: -20,
-                      top: 0,
-                      bottom: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      fontSize: '1rem',
-                      color: 'rgba(0,0,0,0.75)',
-                      pointerEvents: 'none'
-                    }}>
-                      <span>80</span>
-                      <span>0</span>
-                  </div>
-                  <ClickableImage
-                    endpoint={liveViewEndPoint}
-                    imgPath={`_image/${name}/counts`}
-                    coordsPath={`histview/${name}/image/`}
-                    coordsParam={'region'}
-                    region={liveViewData?.image?.region ?? null}
-                  />
-                </div>
-                <Row>
-                  <Col xs={12} className="text-end">
-                    <label className="text-muted">80</label>
-                  </Col>
-                </Row>
-              </Col>
-              <Col>
-                <OverlayTrigger placement="top" overlay={tooltips.liveview.region_selection}>
-                  <Row>
-                    <RegionSelectionInput
-                      imageHeight={80}
-                      imageWidth={80}
-                      value={liveViewData?.image?.region || undefined}
-                      onApply={(region) => liveViewEndPoint.put({ 'region': region}, imgPath)}
-                    />
-                  </Row>
-                </OverlayTrigger>
-                <Row className="mt-3">
-                  <Col>
-                    <FloatingLabel label="Occupancy %">
-                      <Form.Control
-                        value={checkNull(liveViewData?.image?.occupancy_percent ?? 0)}
-                        disabled
-                        style={getOccupancyStyle(
-                          liveViewData?.image?.occupancy_percent,
-                          liveViewData?.image?.occupancy_threshold
-                        )}
-                      />
-                    </FloatingLabel>
-                  </Col>
-                </Row>
+            <div style={{ position: 'relative', width: '100%' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: -20,
+                  top: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  fontSize: '1rem',
+                  color: 'rgba(0,0,0,0.75)',
+                  pointerEvents: 'none'
+                }}>
+                <span>80</span>
+                <span>0</span>
+              </div>
+              <ClickableImage
+                endpoint={liveViewEndPoint}
+                imgPath={`_image/${name}/counts`}
+                coordsPath={`histview/${name}/image/`}
+                coordsParam={'region'}
+                region={liveViewData?.image?.region ?? null}
+              />
+            </div>
+            <Row>
+              <Col xs={12} className="text-end">
+                <label className="text-muted">80</label>
               </Col>
             </Row>
-            <Row>
-              <Col> 
-                <ClickableImage
-                  endpoint={liveViewEndPoint}
-                  imgPath={`_image/${name}/histogram`}
-                  onSelection={handleHistSelection}
-                  maximiseAxis={'y'}
-                  rectOutlineColour='black'
-                  rectRgbaProperties='rgba(50,50,50,0.05)'
-                  rectDisappears={true}
-                />
-              </Col>
+          </Col>
+          <Col xs={12} md={6}>
+            <div className="mb-2">
+              <h3 className="h6 fw-bold mb-1">2D Histogram</h3>
+            </div>
+            <ClickableImage
+              endpoint={liveViewEndPoint}
+              imgPath={`_image/${name}/histogram`}
+              coordsPath={imgPath}
+              onSelection={handleHistSelection}
+              maximiseAxis={'y'}
+              rectOutlineColour='black'
+              rectRgbaProperties='rgba(50,50,50,0.05)'
+              rectDisappears={true}
+            />
+            <Row className="mt-3">
+              <AppOverlayTrigger placement="bottom-end" overlay={tooltips.liveview.energybin_range}>
+                <Col>
+                  <MinMaxInput
+                    label={`Manual Energy Bin Range ${energyRange}`}
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/energy_range`}
+                    value={liveViewData?.image?.energy_range || [0, 0]}
+                  />
+                </Col>
+              </AppOverlayTrigger>
+                <Col xs="auto" className="d-flex align-items-end mb-2">
+                  <EndpointButton
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/energy_range`}
+                    value={[]}
+                    variant='outline-primary'
+                  >
+                    Reset Energy Range
+                  </EndpointButton>
+                </Col>
+            </Row>
+            <AppOverlayTrigger placement="top" overlay={tooltips.liveview.region_selection}>
+              <Row className="mt-2">
+                <Col>
+                  <RegionSelectionInput
+                    imageHeight={80}
+                    imageWidth={80}
+                    value={liveViewData?.image?.region || undefined}
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/region`}
+                  />
+                </Col>
+              </Row>
+            </AppOverlayTrigger>
+            <Row className="mt-3">
               <Col>
-              <OverlayTrigger placement="bottom-end" overlay={tooltips.liveview.energybin_range}>
-                <Row>
-                    <MinMaxInput
-                      label={`Manual Energy Bin Range ${energyRange}`}
-                      value={liveViewData?.image?.energy_range || [0, 0]}
-                      onApply={(range) => {
-                        liveViewEndPoint.put(
-                          { energy_range: range }, imgPath
-                        );
-                      }}
-                    />
-                </Row>
-              </OverlayTrigger>
-                <Row>
-                  <Col className="justify-content-end">
-                    <EndpointButton
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${imgPath}/energy_range`}
-                      value={[]}
-                      variant='outline-primary'
-                    >
-                      Reset Energy Range
-                    </EndpointButton>
-                  </Col>
-                </Row>
+                <FloatingLabel label="Occupancy %">
+                  <Form.Control
+                    value={checkNull(liveViewData?.image?.occupancy_percent ?? 0)}
+                    disabled
+                    style={getOccupancyStyle(
+                      liveViewData?.image?.occupancy_percent,
+                      liveViewData?.image?.occupancy_threshold
+                    )}
+                  />
+                </FloatingLabel>
               </Col>
-            </Row>     
+            </Row>
+          </Col>
+        </Row>
+        {/* Display Controls */}
+        <Row className="g-3 mt-3 align-items-start">
+          <AppOverlayTrigger placement="top" overlay={tooltips.liveview.autoclip}>
+            <Col xs={12} md={4}>
+              <div className="mb-2">
+                <h3 className="h6 fw-bold mb-1">Autoclip</h3>
+              </div>
+              <FloatingLabel label="Autoclip %">
+                <EndpointInput
+                  endpoint={liveViewEndPoint}
+                  fullpath={`${imgPath}/autoclip_percent`}
+                />
+              </FloatingLabel>
+              <EndpointButton
+                endpoint={liveViewEndPoint}
+                fullpath={`${imgPath}/autoclip`}
+                value={liveViewData?.image?.autoclip ? false : true}
+                variant={liveViewData?.image?.autoclip ? 'danger' : 'primary'}
+                className="w-100 mt-2"
+              >
+                {liveViewData?.image?.autoclip ? 'Disable autoclip' : 'Enable autoclip'}
+              </EndpointButton>
+            </Col>
+          </AppOverlayTrigger>
+          <AppOverlayTrigger placement="top" overlay={tooltips.liveview.value_range}>
+            <Col xs={12} md={5}>
+              <div>
+                <MinMaxInput
+                  label="Value Range"
+                  endpoint={liveViewEndPoint}
+                  fullpath={`${imgPath}/value_range`}
+                  disabled={liveViewData?.image?.autoclip}
+                  value={liveViewData?.image?.value_range ?? [0, 1000]}
+                />
+              </div>
+              <Row className="g-2 mt-1">
+                <Col xs={6}>
+                  <EndpointButton
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/value_range`}
+                    value={[]}
+                    variant='outline-primary'
+                    className="w-100"
+                    disabled={liveViewData?.image?.autoclip}
+                  >
+                    Reset Value Range
+                  </EndpointButton>
+                </Col>
+                <Col xs={6} className="d-flex align-items-center">
+                  <EndpointCheckbox
+                    endpoint={liveViewEndPoint}
+                    fullpath={`${imgPath}/use_log_scaling`}
+                    label="Use Log Scaling"
+                  />
+                </Col>
+              </Row>
+            </Col>
+          </AppOverlayTrigger>
+          <Col xs={12} md={3}>
+            <div className="mb-2">
+              <h3 className="h6 fw-bold mb-1">Colourmap</h3>
+            </div>
+            <FloatingLabel label="Colourmap">
+              <EndpointSelect
+                endpoint={liveViewEndPoint}
+                fullpath={`${imgPath}/colour`}
+              >
+                {(colour_metadata?.allowed_values || ['?']).map((effect: string, index: number) => (
+                  <option key={index} value={effect}>
+                    {effect}
+                  </option>
+                ))}
+              </EndpointSelect>
+            </FloatingLabel>
           </Col>
         </Row>
       </Container>

@@ -95,7 +95,8 @@ class HistogramLiveViewController(BaseController):
                     ),
                     "autoclip": (lambda p=processor: p.autoclip, partial(self.set_autoclip, processor=processor)),
                     "autoclip_percent": (lambda p=processor: p.autoclip_percent, partial(self.set_autoclip_percent, processor=processor)),
-                    "last_update": (lambda p=processor: p.last_update, None)
+                    "last_update": (lambda p=processor: p.last_update, None),
+                    "frame_count": (lambda p=processor: p.frame_count, None)
                 }
             }
             self.tree['_image'].update({

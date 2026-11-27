@@ -1,7 +1,8 @@
 """A class to manage the state of the acquisition process, such as previewing, acquisition, and similar functions."""
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 import logging
-from hexitec.util.iac import icc_get, icc_set
+from hexitec.util.iac import iac_set, icc_get, icc_set
+from odin_data.control.ipc_message import IpcMessage
 import time
 from datetime import datetime
 
@@ -20,6 +21,7 @@ class State():
         self.histogrammer = adapters["histogram"].controller
         self.readout = adapters["readout"].controller
         self.liveview = adapters["liveview"].controller
+        self.proxy = adapters["proxy"]
 
         self.AcquisitionError = AcquisitionError
 
@@ -29,31 +31,88 @@ class State():
         self.preview_frames_per_hist = 1000000
         self.is_acquiring = False
 
+        self.freerun = False
+
+        self.frame_target = 1
         self.acquisition_progress_task_enable = False
         self.acquisition_progress_task_interval = 0.5
         self.acquisition_progress = 0.0
+        self.frames_written = 0
+
+        self.enable_single_frame_preview = False
+        self.single_frame_preview_progress_enable = False
+        self.single_frame_preview_frame_count = 0
+        self.single_frame_preview_generation = 0
 
         # File settings (as convenience functions for munir)
         self.file_name = default_filename
         self.file_path = default_filepath
         self.file_timestamp = False
+        self.loki_reboot_in_progress = False
+        self.loki_reboot_error = ""
 
         self.tree = ParameterTree({
+            'reboot': {
+                'readout_reboot': (None, self.reboot_readout_processor),
+                'loki_reboot': (None, self.reboot_loki_asic),
+                'loki_reboot_in_progress': (lambda: self.loki_reboot_in_progress, None),
+                'loki_reboot_error': (lambda: self.loki_reboot_error, None),
+            },
             'preview': {
                 'toggle': (lambda: self.is_previewing, self.toggle_preview),
-                'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist)
+                'frames_per_hist': (lambda: self.preview_frames_per_hist, self.set_preview_frames_per_hist),
+                'single_frame': (lambda: self.enable_single_frame_preview, self.toggle_single_frame_preview)
             },
             'acquisition': {
                 'toggle': (lambda: self.is_acquiring, self.toggle_acquisition),
-                "progress_task": {
-                    "interval": (lambda: self.acquisition_progress_task_interval, self.set_progress_task_interval),
-                    "progress": (lambda: self.acquisition_progress, None)
+                'freerun': (lambda: self.freerun, self.toggle_freerun),
+                'progress_task': {
+                    'interval': (lambda: self.acquisition_progress_task_interval, self.set_progress_task_interval),
+                    'progress': (lambda: self.acquisition_progress, None),
+                    'frames_written': (lambda: self.frames_written, None)
                 },
                 'file_name': (lambda: self.file_name, self.set_file_name),
                 'file_path': (lambda: self.file_path, self.set_file_path),
                 'add_timestamp': (lambda: self.file_timestamp, self.toggle_file_timestamp)
             }
         })
+
+    def _ensure_reboot_allowed(self):
+        if self.is_acquiring or self.is_previewing:
+            raise self.AcquisitionError("Cannot reboot hardware during acquisition or preview.")
+        if self.loki_reboot_in_progress:
+            raise self.AcquisitionError("Cannot reboot hardware while LOKI is reinitializing.")
+
+    def reboot_readout_processor(self, reboot: bool):
+        """Reset the ReadoutProcessor through its status parameter tree."""
+        if not reboot:
+            return
+
+        self._ensure_reboot_allowed()
+        try:
+            icc_set(self.readout, "status", {"reset": True})
+        except Exception as error:
+            raise self.AcquisitionError(f"ReadoutProcessor reset failed: {error}") from error
+
+    def reboot_loki_asic(self, reboot: bool):
+        """Request ASIC reinitialization without blocking the acquisition API request."""
+        if not reboot:
+            return
+
+        self._ensure_reboot_allowed()
+        self.loki_reboot_error = ""
+        self.loki_reboot_in_progress = True
+        self._reboot_loki_asic()
+
+    @run_on_executor
+    def _reboot_loki_asic(self):
+        try:
+            iac_set(self.proxy, "loki/application/system_state", {"ENABLE_STATE": "ASIC_DONE"})
+        except Exception as error:
+            logging.exception("LOKI ASIC reinitialization failed")
+            self.loki_reboot_error = str(error)
+        finally:
+            self.loki_reboot_in_progress = False
 
     def set_file_name(self, filename: str):
         """Set the name of the file to be saved through munir arguments.
@@ -85,6 +144,10 @@ class State():
         """Get a reference to the configuration class."""
         self.configuration = configuration
 
+    def toggle_freerun(self, toggle):
+        """Enable or disable 'freerun' acquisition: acquisition runs until stopped manually."""
+        self.freerun = bool(toggle)
+
     def toggle_preview(self, toggle):
         if self.is_acquiring and toggle:
             logging.warning("Cannot enable preview mode while acquiring. Please stop acquisition first.")
@@ -96,21 +159,51 @@ class State():
         else:
             self._stop_preview()
 
+    def toggle_single_frame_preview(self, enable):
+        """Enable or disable single-frame-preview mode. Disabled is normal start/stop preview mode.
+        :param enable: boolean for enable (true) or disable (false).
+        """
+        self.enable_single_frame_preview = bool(enable)
+
     def _start_preview(self):
         """Starts 'preview mode', which runs the histogrammer through software and saves no data."""
-        icc_set(self.munir, f'subsystems/{self.munir_subsystem}/args/num_frames', 0)
-        self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, 0)
+        target = 1 if self.enable_single_frame_preview else 0
+        # hist_target = 1 if self.enable_single_frame_preview else -1
+        preview_generation = None
+
+        if self.enable_single_frame_preview:
+            self.single_frame_preview_generation += 1
+            preview_generation = self.single_frame_preview_generation
+            self.single_frame_preview_frame_count = icc_get(
+                self.liveview, "histview/mhz/image/frame_count"
+            )
+
+        icc_set(self.munir, f'subsystems/{self.munir_subsystem}/args/num_frames', target)
+        self.munir_odindata_controller.create_acquisition(self.file_name, self.file_path, target)
         icc_set(self.munir, f"subsystems/{self.munir_subsystem}", {"start_lv_frames": True})
 
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.preview_frames_per_hist)
 
         icc_set(self.histogrammer, "acquisition/mode", "software")
-        icc_set(self.histogrammer, "acquisition/num_histograms", 20_000_000)
+        icc_set(self.histogrammer, "acquisition/num_histograms", target)
         icc_set(self.histogrammer, "acquisition/frames_per_histogram", self.preview_frames_per_hist)
         icc_set(self.histogrammer, "acquisition/run", True)
 
-    def _stop_preview(self):
+        # Function to wait for the frame to be written, then stop the preview
+        if self.enable_single_frame_preview:
+            self.single_frame_preview_progress_enable = True
+            self._stop_single_frame_preview(
+                preview_generation, self.single_frame_preview_frame_count
+            )
+
+    def _stop_preview(self, expected_generation=None):
         """Stops the preview mode, returning the system to an idle state."""
+        if expected_generation is not None and expected_generation != self.single_frame_preview_generation:
+            return
+
+        self.single_frame_preview_generation += 1
+        self.is_previewing = False
+        self.single_frame_preview_progress_enable = False
         icc_set(self.histogrammer, "acquisition/run", False)
         # Reset settings
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
@@ -147,6 +240,19 @@ class State():
                 f"Estimated data rate of {data_rate:.2f} GB/s exceeds 100 Gb/s Ethernet limit. Please increase frames per histogram or reduce number of bins."
                 )
             return
+
+        if self.configuration.device == "hardware":
+            icc_set(self.readout, "trigger/enable", True)
+            icc_set(self.histogrammer, "acquisition/mode", self.configuration.device)
+            icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", True)
+            icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", False)
+        else:
+            icc_set(self.histogrammer, "acquisition/mode", self.configuration.device)
+
+        if self.freerun:
+            self.frame_target = 0
+        else:
+            self.frame_target = self.configuration.number_of_timeframes * self.configuration.number_of_files
 
         self.is_acquiring = True
         self.acquisition_progress = 0
@@ -188,8 +294,29 @@ class State():
         # For liveview occupancy
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", self.configuration.frames_per_timeframe)
 
-        # Configure how data should be sent
-        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.configuration.number_of_timeframes)
+        # The target is number_of_timeframes * number_of_files
+        # If number_of_files is 1, this gives you 1 file. Otherwise, you get number_of_files files
+        if (self.freerun and not self.configuration.enable_multiple_files):
+            frames_per_block = 1_000_000_000
+            # Arbitrarily high number for freerun without many files
+        else:
+            frames_per_block = self.configuration.number_of_timeframes
+        file_writer_config = {
+            "hdf": {
+                "process": {
+                    "frames_per_block": frames_per_block,
+                    "blocks_per_file": 1,
+                }
+            }
+        }
+        response = self.munir_odindata_controller.set_config(file_writer_config)
+        if response.get("msg_type") != IpcMessage.ACK:
+            self.is_acquiring = False
+            raise self.AcquisitionError(f"Could not configure HDF file splitting: {response}")
+
+        # Targets
+        icc_set(self.histogrammer, "acquisition/num_histograms", self.frame_target)
+        icc_set(self.munir, f"subsystems/{self.munir_subsystem}/args/num_frames", self.frame_target)
 
         # Start listening for data
         icc_set(self.munir, "execute", {self.munir_subsystem: True})
@@ -205,6 +332,8 @@ class State():
 
         # Back to software for the purpose of previewing
         icc_set(self.readout, "trigger/enable", False)
+        icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", True)
+        icc_set(self.readout, "status/counter_resets/time_frame_counter_rst", False)
 
         icc_set(self.liveview, "histview/mhz/image/frames_per_histogram", -1)
 
@@ -220,7 +349,13 @@ class State():
             munir_status = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")
             frames_received = munir_status[0].get("hdf", {}).get("frames_written", 0)
 
-            self.acquisition_progress = round((frames_received / self.configuration.number_of_timeframes) * 100, 2)
+            self.frames_written = frames_received
+
+            # For endless acquisitions, does not matter if acquisition progress ever changes
+            if self.frame_target > 0:
+                self.acquisition_progress = round((frames_received / self.frame_target) * 100, 2)
+            else:
+                self.acquisition_progress = 0
 
             if self.acquisition_progress >= 100:
                 # Force a wait of ~1 frame's worth of time to ensure synchronicity
@@ -234,3 +369,23 @@ class State():
             time.sleep(self.acquisition_progress_task_interval)
         
         logging.debug("Stopping acquisition progress background task.")
+
+    @run_on_executor
+    def _stop_single_frame_preview(self, preview_generation, starting_frame_count):
+        """Wait for the histogrammer and liveview to process a single-frame preview."""
+        while (
+            self.is_previewing
+            and self.single_frame_preview_progress_enable
+            and preview_generation == self.single_frame_preview_generation
+        ):
+            histogrammer_running = icc_get(self.histogrammer, "acquisition/run")
+            if not histogrammer_running:
+                frame_count = icc_get(
+                    self.liveview, "histview/mhz/image/frame_count"
+                )
+                if frame_count > starting_frame_count:
+                    logging.debug("Liveview processed single-frame preview, stopping preview mode.")
+                    self._stop_preview(expected_generation=preview_generation)
+                    return
+
+            time.sleep(self.acquisition_progress_task_interval)

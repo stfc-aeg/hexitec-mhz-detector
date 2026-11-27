@@ -36,21 +36,15 @@ class Configuration():
         self.number_of_timeframes = int(icc_get(self.histogrammer, "acquisition/num_histograms"))
         self.timeframes_per_trigger = int(icc_get(self.readout, "trigger/frame_limits/hist_in_trigger"))
 
-        self.readout_max_frames = 2**32 - 1  # Max value for 32-bit unsigned int
+        self.enable_multiple_files = False
+        self.number_of_files = 1
+        self.timeframes_per_file = self.number_of_timeframes
 
-        # By default, 10^0 = 1
-        self.frames_pre_mult = self.frames_per_timeframe
-        self.frame_mult = 1
+        self.readout_max_frames = 2**32 - 1  # Max value for 32-bit unsigned int
 
         self.data_rate = self.calculate_estimated_data_rate()
 
-        # There is no true 'on/off' setting for this, but a set of commands that do about the same
-        self.baseline_settings = {
-            'enabled': False,
-            'prev_mask': None,
-            'prev_auto_trig': None,
-            'prev_cluster_mode': None
-        }
+        self.baseline_tracking_enabled = False
 
         self.running_histogrammer = False
 
@@ -67,20 +61,19 @@ class Configuration():
                            {'allowed_values': self.device_options}),
                 'trigger_mode': (lambda: self.trigger_mode, self.change_trigger_mode, 
                                  {'allowed_values': ["burst mode", "step scan", "continuous mode"]}),
-                'frames_pre_multiplier': (lambda: self.frames_pre_mult, 
-                                          lambda frames: self.set_mult_frames_per_timeframe(frames, self.frame_mult),
+                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe,
                                          {'min': 1, 'max': self.readout_max_frames}),
-                'frame_multiplier': (lambda: self.frame_mult,
-                                     lambda mult: self.set_mult_frames_per_timeframe(self.frames_pre_mult, mult),
-                                     {'allowed_values': [1, 1_000, 1_000_000, 1_000_000_000]}),
-                'frames_per_timeframe': (lambda: self.frames_per_timeframe, self.set_frames_per_timeframe),
                 'number_of_timeframes': (lambda: self.number_of_timeframes, self.set_number_of_timeframes,
                                          {'min': 1}),
                 'timeframes_per_trigger': (lambda: self.timeframes_per_trigger, self.set_timeframes_per_trigger,
-                                           {'min': 1})
+                                           {'min': 1}),
+                'multiple_files': {
+                    'enable': (lambda: self.enable_multiple_files, self.toggle_multiple_files),
+                    'number_of_files': (lambda: self.number_of_files, self.set_number_of_files, {'min': 1})
+                }
             },
             'baseline': {
-                'toggle': (lambda: self.baseline_settings['enabled'], self.toggle_baseline)
+                'toggle': (lambda: self.baseline_tracking_enabled, self.toggle_baseline)
             },
             'estimated_data_rate': (lambda: self.data_rate, None),
             'config_edit_mode': (lambda: self.edit_mode, self.toggle_editing,
@@ -180,6 +173,9 @@ class Configuration():
         Additionally verify the minimum allowed frame count against the bin mode.
         :param frames: positive integer number of frames.
         """
+        frames = int(frames)
+        if frames < 1:
+            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
         if frames > self.readout_max_frames:
             raise self.AcquisitionError(f"Frames per timeframe must be less than or equal to {self.readout_max_frames}.")
 
@@ -202,24 +198,10 @@ class Configuration():
         # 2048	        183	                5461
         # 4096	        92                  10923
 
-    def set_mult_frames_per_timeframe(self, frames: int, mult: int):
-        """Calculate the number of frames per timeframe/histogram using scientific notation format.
-        This value is used in the same way no matter the mode, except in continuous mode where it is not used.
-        :param frames: positive integer representing the number of frames per timeframe pre-multiplier
-        :param mult: positive integer representing the power of 10 to which the frames should be raised
-        """
-        if frames < 1:
-            raise self.AcquisitionError("Frames per timeframe must be a positive integer.")
-
-        calculation = int(frames * mult)
-
-        self.set_frames_per_timeframe(calculation)
-        self.frame_mult = int(mult)
-        self.frames_pre_mult = int(frames)
-
     def set_number_of_timeframes(self, timeframes: int):
-        """Set the number of timeframes to be acquired.
+        """Set the number of timeframes to be acquired per file.
         Not all the values set will be used each time, depending on hardware/software mode.
+        Normally there is one file, but multiple-file acquisitions
         :param timeframes: integer representing timeframes to be captured duing acquisition
         """
         try:
@@ -243,6 +225,20 @@ class Configuration():
         except ICCError as err:
             raise self.AcquisitionError(f"Could not set timeframes per trigger: {err}")
 
+    def toggle_multiple_files(self, enable):
+        """Set if multiple files are to be used during the acquisition."""
+        enable = bool(enable)
+        # Number of files is 1 if multiple-file-acquisition is disabled
+        if not enable:
+            self.set_number_of_files(1)
+        self.enable_multiple_files = enable
+
+    def set_number_of_files(self, number):
+        """Set the number of files for a multiple_file acquisition."""
+        if not self.enable_multiple_files:
+            raise self.AcquisitionError("Number of files should be set only when multiple-file acquisition is enabled.")
+        self.number_of_files = int(number)
+
     def calculate_estimated_data_rate(self):
         """Calculate the estimated data rate based on the current configuration."""
         bin_mode = self.bin_mode
@@ -255,26 +251,16 @@ class Configuration():
         return self.data_rate
 
     def toggle_baseline(self, value: bool):
-        """Toggle the baseline correction on or off through a set of commands for the same result.
-        clustermode is set to auto, baseline mask is set to fixed, then auto trig mode set to 1 in 2/4
-        The user should be warned that this may lead to frame dropping due to auto trig mode
-        :param value: boolean deciding whether to enable (True) or disable (False) baseline correction
-        """
+        """Apply the standard histogrammer preset for dark tracking on or off."""
         if value:
-            self.baseline_settings['enabled'] = True
-            self.baseline_settings['prev_mask'] = icc_get(self.histogrammer, "config/baseline/mask")
-            self.baseline_settings['prev_auto_trig'] = icc_get(self.histogrammer, "config/clustering/auto_trig_mode")
-            self.baseline_settings['prev_cluster_mode'] = icc_get(self.histogrammer, "config/clustering/mode")
-
+            icc_set(self.histogrammer, "config/baseline/mask", "MAIN")
+            icc_set(self.histogrammer, "config/baseline/divide", 512)
+        else:
             icc_set(self.histogrammer, "config/baseline/mask", "FIXED")
             icc_set(self.histogrammer, "config/clustering/mode", "AUTO")
-            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", 'ONEIN2')
-        else:
-            self.baseline_settings['enabled'] = False
+            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", "ONEIN8")
 
-            icc_set(self.histogrammer, "config/baseline/mask", self.baseline_settings['prev_mask'])
-            icc_set(self.histogrammer, "config/clustering/mode", self.baseline_settings['prev_cluster_mode'])
-            icc_set(self.histogrammer, "config/clustering/auto_trig_mode", self.baseline_settings['prev_auto_trig'])
+        self.baseline_tracking_enabled = value
 
     def _sync_bin_mode(self):
         munir_num_bins = icc_get(self.munir, f"subsystems/{self.munir_subsystem}/frame_procs/status")

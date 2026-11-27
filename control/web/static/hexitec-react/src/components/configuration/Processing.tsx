@@ -1,8 +1,7 @@
 import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint, type AdapterEndpoint } from '@dssg/odin-react';;
-import { floatingInputStyle } from '../../utils.js';
-import { OverlayTrigger } from 'react-bootstrap';
+import { EndpointCheckbox, EndpointSelect, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';
+import { AppOverlayTrigger } from '../../tooltipcontext';
 import { tooltips } from '../../tooltips';
 import type { AcquisitionTypes, HistogramTypes } from '../../EndpointTypes';
 
@@ -12,17 +11,17 @@ interface ProcessingProps {
   isCustom: boolean;
 }
 
-const EndpointFormControl = WithEndpoint(Form.Control);
-const EndpointCheck = WithEndpoint(Form.Check);
-const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function Processing( {histogramEndpoint, acquisitionEndpoint, isCustom }: ProcessingProps) {
 
   const histogramMetadata = histogramEndpoint.metadata;
   const autoTrigModeOptions = histogramMetadata?.config?.clustering?.auto_trig_mode?.allowed_values;
   const modeOptions = histogramMetadata?.config?.clustering?.mode?.allowed_values;
+  const baselineMaskOptions = histogramMetadata?.config?.baseline?.mask?.allowed_values;
+  const baselineDivideOptions = histogramMetadata?.config?.baseline?.divide?.allowed_values;
 
   const acquisitionData = acquisitionEndpoint?.data;
+  const clusteringMode = histogramEndpoint.data?.config?.clustering?.mode;
 
   // If an acquisition is happening, the histogrammer will not let you change settings
   // The UI should make it obvious this is what is occurring
@@ -65,70 +64,136 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
     <Card className="mt-3">
       <Card.Header><strong>Processing</strong></Card.Header>
       <Card.Body>
-        <Row>
-          <Col>
-            <Form.Label><b>Charge-sharing Options</b></Form.Label>
-            <Row>
-              <Col>
-                <EndpointCheck
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/positive_edge"
-                  type="switch"
-                  label="Positive Edge"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-              <Col>
-                <EndpointCheck
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/sum_enable"
-                  type="switch"
-                  label="Sum Enable"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-            </Row>
-            <Row className="mb-3">
-              <Col>
-                <EndpointCheck
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/negative_neighbour"
-                  type="switch"
-                  label="Negative Neighbour"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-              <Col>
-                <EndpointCheck
-                  endpoint={histogramEndpoint}
-                  fullpath="config/charge_sharing/position_adjust"
-                  type="switch"
-                  label="Position Adjust"
-                  disabled={!isCustom || isAcquiring}
-                />
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-        <Row>
+        <UserAware userLevel="power">
+          <Row>
+            <Col>
+              <Form.Label><b>Baseline Tracking</b></Form.Label>
+              <Row className="mb-3">
+                <AppOverlayTrigger placement="top" overlay={tooltips.processing.baseline_toggle}>
+                  <Col xs={4}>
+                    <EndpointCheckbox
+                      endpoint={acquisitionEndpoint}
+                      fullpath="config/baseline/toggle"
+                      label="On"
+                      type="switch"
+                      disabled={!isCustom || isAcquiring}
+                    />
+                  </Col>
+                </AppOverlayTrigger>
+              </Row>
+              <Row>
+                <Col>
+                  <FloatingLabel label="Baseline Mask">
+                    <EndpointSelect
+                      endpoint={histogramEndpoint}
+                      fullpath="config/baseline/mask"
+                      disabled={!isCustom || isAcquiring}
+                    >
+                      {baselineMaskOptions?.map((option: string) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </EndpointSelect>
+                  </FloatingLabel>
+                </Col>
+                <Col>
+                  <FloatingLabel label="Baseline Divide">
+                    <EndpointSelect
+                      endpoint={histogramEndpoint}
+                      fullpath="config/baseline/divide"
+                      disabled={!isCustom || isAcquiring}
+                    >
+                      {baselineDivideOptions?.map((option: number) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </EndpointSelect>
+                  </FloatingLabel>
+                </Col>
+                <Col>
+                  <EndpointCheckbox
+                    endpoint={histogramEndpoint}
+                    fullpath="config/baseline/dither"
+                    label="Dither"
+                    type="switch"
+                    disabled={!isCustom || isAcquiring}
+                  />
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+          <Row className="mt-3">
+            <Col>
+              <Form.Label><b>Thresholds Global</b></Form.Label>
+              <InputGroup>
+                <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Main</InputGroup.Text>
+                <FloatingLabel label="Negative">
+                  <EndpointInput
+                    endpoint={histogramEndpoint}
+                    fullpath="config/thresholds/main/neg"
+                    disabled={!isCustom || isAcquiring}
+                  />
+                </FloatingLabel>
+                <FloatingLabel label="Positive">
+                  <EndpointInput
+                    endpoint={histogramEndpoint}
+                    fullpath="config/thresholds/main/pos"
+                    disabled={!isCustom || isAcquiring}
+                  />
+                </FloatingLabel>
+              </InputGroup>
+              <Accordion defaultActiveKey="1">
+                <Accordion.Item eventKey="0">
+                  <Accordion.Header>Low and Absolute Thresholds</Accordion.Header>
+                  <Accordion.Body>
+                    <InputGroup>
+                      <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Low</InputGroup.Text>
+                      <FloatingLabel label="Negative">
+                        <EndpointInput
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/low/neg"
+                          disabled={!isCustom || isAcquiring}
+                        />
+                      </FloatingLabel>
+                      <FloatingLabel label="Positive">
+                        <EndpointInput
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/low/pos"
+                          disabled={!isCustom || isAcquiring}
+                        />
+                      </FloatingLabel>
+                    </InputGroup>
+                    <InputGroup>
+                      <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Absolute</InputGroup.Text>
+                      <FloatingLabel label="Low">
+                        <EndpointInput
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/absolute/low"
+                          disabled={!isCustom || isAcquiring}
+                        />
+                      </FloatingLabel>
+                      <FloatingLabel label="High">
+                        <EndpointInput
+                          endpoint={histogramEndpoint}
+                          fullpath="config/thresholds/absolute/high"
+                          disabled={!isCustom || isAcquiring}
+                        />
+                      </FloatingLabel>
+                    </InputGroup>
+                  </Accordion.Body>
+                </Accordion.Item>
+              </Accordion>
+            </Col>
+          </Row>
+        </UserAware>
+        <Row className="mt-3">
           <Col>
             <Form.Label><b>Clustering</b></Form.Label>
             <Row>
               <Col>
                 <Row>
-                  <Col>
-                    <FloatingLabel label="Auto Trigger Mode">
-                      <EndpointSelect
-                        endpoint={histogramEndpoint}
-                        fullpath="config/clustering/auto_trig_mode"
-                        disabled={!isCustom || isAcquiring}
-                        >
-                          {autoTrigModeOptions?.map((option: string) => (
-                            <option value={option} key={option}>{option}</option>
-                          ))}
-                      </EndpointSelect>
-                    </FloatingLabel>
-                  </Col>
                   <Col>
                     <FloatingLabel label="Mode">
                       <EndpointSelect
@@ -137,6 +202,19 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                         disabled={!isCustom || isAcquiring}
                         >
                           {modeOptions?.map((option: string) => (
+                            <option value={option} key={option}>{option}</option>
+                          ))}
+                      </EndpointSelect>
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel label="Auto Trigger Mode">
+                      <EndpointSelect
+                        endpoint={histogramEndpoint}
+                        fullpath="config/clustering/auto_trig_mode"
+                        disabled={!isCustom || isAcquiring || clusteringMode !== 'AUTO'}
+                        >
+                          {autoTrigModeOptions?.map((option: string) => (
                             <option value={option} key={option}>{option}</option>
                           ))}
                       </EndpointSelect>
@@ -152,12 +230,12 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                           <Row>
                             {histogramMetadata?.config?.clustering?.types && clusterTypeOrder.map((typeKey: string) => (
                               <Col sm={6} md={4} key={typeKey}>
-                                <EndpointCheck
+                                <EndpointCheckbox
                                   endpoint={histogramEndpoint}
                                   fullpath={`config/clustering/types/${typeKey}`}
                                   type="switch"
                                   label={clusterTypeLabels[typeKey] || typeKey}
-                                  disabled={!isCustom || isAcquiring}
+                                  disabled={!isCustom || isAcquiring || clusteringMode === 'INDEPENDANT'}
                                 />
                               </Col>
                             ))}
@@ -171,106 +249,51 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
             </Row>
           </Col>
         </Row>
-
-        <UserAware userLevel="power">
-          <Row className="mt-3">
-            <Col>
-              <Form.Label><b>Dark Tracking / Baseline Load</b></Form.Label>
-              <Row className="mb-3">
-                <OverlayTrigger placement="top" overlay={tooltips.processing.baseline_toggle}>
-                  <Col>
-                    <EndpointCheck
-                      endpoint={acquisitionEndpoint}
-                      fullpath="config/baseline/toggle"
-                      label="On"
-                      type="switch"
-                      disabled={!isCustom || isAcquiring}
-                    />
-                  </Col>
-                </OverlayTrigger>
-                <Col>
-                  <EndpointCheck
-                    endpoint={histogramEndpoint}
-                    fullpath="config/baseline/dither"
-                    label="Dither"
-                    type="switch"
-                    disabled={!isCustom || isAcquiring}
-                  />
-                </Col>
-              </Row>
-            </Col>
-          </Row>
-
-          <Row className="mb-3">
-            <Col>
-              <Form.Label><b>Thresholds Global</b></Form.Label>
-              <InputGroup>
-                <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Main</InputGroup.Text>
-                <FloatingLabel label="Negative">
-                  <EndpointFormControl
-                    endpoint={histogramEndpoint}
-                    fullpath="config/thresholds/main/neg"
-                    style={floatingInputStyle}
-                    disabled={!isCustom || isAcquiring}
-                  />
-                </FloatingLabel>
-                <FloatingLabel label="Positive">
-                  <EndpointFormControl
-                    endpoint={histogramEndpoint}
-                    fullpath="config/thresholds/main/pos"
-                    style={floatingInputStyle}
-                    disabled={!isCustom || isAcquiring}
-                  />
-                </FloatingLabel>
-              </InputGroup>
-              <Accordion defaultActiveKey="1">
-                <Accordion.Item eventKey="0">
-                  <Accordion.Header>Low and Absolute Thresholds</Accordion.Header>
-                  <Accordion.Body>
-                    <InputGroup>
-                      <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Low</InputGroup.Text>
-                      <FloatingLabel label="Negative">
-                        <EndpointFormControl
-                          endpoint={histogramEndpoint}
-                          fullpath="config/thresholds/low/neg"
-                          style={floatingInputStyle}
-                          disabled={!isCustom || isAcquiring}
-                        />
-                      </FloatingLabel>
-                      <FloatingLabel label="Positive">
-                        <EndpointFormControl
-                          endpoint={histogramEndpoint}
-                          fullpath="config/thresholds/low/pos"
-                          style={floatingInputStyle}
-                          disabled={!isCustom || isAcquiring}
-                        />
-                      </FloatingLabel>
-                    </InputGroup>
-                    <InputGroup>
-                      <InputGroup.Text className="fw-semibold justify-content-center" style={{width:'20%'}}>Absolute</InputGroup.Text>
-                      <FloatingLabel label="Low">
-                        <EndpointFormControl
-                          endpoint={histogramEndpoint}
-                          fullpath="config/thresholds/absolute/low"
-                          style={floatingInputStyle}
-                          disabled={!isCustom || isAcquiring}
-                        />
-                      </FloatingLabel>
-                      <FloatingLabel label="High">
-                        <EndpointFormControl
-                          endpoint={histogramEndpoint}
-                          fullpath="config/thresholds/absolute/high"
-                          style={floatingInputStyle}
-                          disabled={!isCustom || isAcquiring}
-                        />
-                      </FloatingLabel>
-                    </InputGroup>
-                  </Accordion.Body>
-                </Accordion.Item>
-              </Accordion>
-            </Col>
-          </Row>
-        </UserAware>
+        <Row className="mt-3">
+          <Col>
+            <Form.Label><b>Charge-sharing Options</b></Form.Label>
+            <Row>
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/positive_edge"
+                  type="switch"
+                  label="Positive Edge"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/sum_enable"
+                  type="switch"
+                  label="Sum Enable"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+            </Row>
+            <Row className="mb-3">
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/negative_neighbour"
+                  type="switch"
+                  label="Negative Neighbour"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+              <Col>
+                <EndpointCheckbox
+                  endpoint={histogramEndpoint}
+                  fullpath="config/charge_sharing/position_adjust"
+                  type="switch"
+                  label="Position Adjust"
+                  disabled={!isCustom || isAcquiring}
+                />
+              </Col>
+            </Row>
+          </Col>
+        </Row>
       </Card.Body>
     </Card>
   );

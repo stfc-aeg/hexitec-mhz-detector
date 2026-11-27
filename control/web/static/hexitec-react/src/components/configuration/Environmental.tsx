@@ -1,15 +1,13 @@
 import { Row, Col, Card, Form, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { WithEndpoint, type AdapterEndpoint, EndpointButton, EndpointInput } from '@dssg/odin-react';;
-import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils.js';
+import { EndpointSelect, type AdapterEndpoint, EndpointButton, EndpointInput, EndpointSlider } from '@dssg/odin-react';
+import { checkNull, floatingLabelStyle } from '../../utils.js';
 import type { ProxyParams } from '../../EndpointTypes';
 
 interface EnvironmentalProps {
   proxyEndpoint: AdapterEndpoint<ProxyParams>;
   isCustom: boolean;
 }
-
-const EndpointSelect = WithEndpoint(Form.Select);
 
 export default function Environmental({
   proxyEndpoint, isCustom
@@ -18,6 +16,27 @@ export default function Environmental({
   const envData = proxyEndpoint.data?.loki?.environment;
 
   const peltierModes = proxyEndpoint?.data?.loki?.application?.peltier?.modes_available ?? [];
+  const peltierMode = lokiData?.peltier?.mode;
+  const peltierProportion = lokiData?.peltier?.proportion;
+  const peltierTargetSensors = lokiData?.peltier?.pid_target_sensors_available ?? [];
+  const peltierTargetSensor = lokiData?.peltier?.pid_target_sensor;
+  const peltierTargetSensorReading = peltierTargetSensor
+    ? envData?.temperature[peltierTargetSensor]
+    : undefined;
+  const peltierPidState = lokiData?.peltier?.pid_state;
+  const peltierPidStatus = peltierPidState == null
+    ? 'null'
+    : peltierPidState || 'Within output range';
+  const manualOutputPercent = peltierProportion === undefined
+    ? 1
+    : Math.min(100, Math.max(1, peltierProportion * 100));
+  const peltierDriveOutput = peltierProportion === undefined || peltierProportion < 0 || peltierProportion > 1
+    ? 'null'
+    : `${(peltierProportion * 100).toFixed(1)}%`;
+  const percentToProportion = ({ value }: { value: unknown }) => {
+    const percent = Number(value);
+    return Math.min(100, Math.max(1, Number.isFinite(percent) ? percent : 1)) / 100;
+  };
 
   return (
     <>
@@ -89,59 +108,130 @@ export default function Environmental({
                   {lokiData?.peltier?.enable ? 'Disable Peltier' : 'Enable Peltier'}
                 </EndpointButton>
               </Col>
-              <UserAware userLevel="power" as={Col}>
-                <FloatingLabel label="Count">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNullNoDp(lokiData?.peltier.count)}
-                  />
-                </FloatingLabel>
-              </UserAware>
             </Row>
 
-            <UserAware userLevel="power" as={Row} className='mb-3'>
-              <Col>
-                <Row>
-                  <Col>
-                    <FloatingLabel label="Peltier Mode">
-                      <EndpointSelect
+            <UserAware userLevel="power">
+              <Row className="mb-3">
+                <Col>
+                  <FloatingLabel label="Peltier Mode">
+                    <EndpointSelect
+                      endpoint={proxyEndpoint}
+                      fullpath="loki/application/peltier/mode"
+                      disabled={!isCustom}
+                    >
+                      {peltierModes.map((selection) => (
+                        <option value={selection} key={selection}>{selection}</option>
+                      ))}
+                    </EndpointSelect>
+                  </FloatingLabel>
+                </Col>
+                <Col>
+                  {peltierMode === 'manual' ? (
+                    <>
+                      <FloatingLabel label="Manual output setpoint (%)">
+                        <EndpointInput
+                          endpoint={proxyEndpoint}
+                          fullpath="loki/application/peltier/proportion"
+                          type="number"
+                          min={1}
+                          max={100}
+                          step={1}
+                          value={manualOutputPercent}
+                          pre_method={percentToProportion}
+                          pre_args={{ value: null }}
+                          disabled={!isCustom}
+                        />
+                      </FloatingLabel>
+                      <EndpointSlider
                         endpoint={proxyEndpoint}
-                        fullpath="loki/application/peltier/mode"
-                        variant="outline-secondary"
-                        style={floatingInputStyle}
+                        fullpath="loki/application/peltier/proportion"
+                        min={1}
+                        max={100}
+                        step={1}
+                        value={manualOutputPercent}
+                        pre_method={percentToProportion}
+                        pre_args={{ value: null }}
+                        showTooltip
+                        aria-label="Manual output setpoint (%)"
                         disabled={!isCustom}
-                      >
-                        {peltierModes.map((selection) => (
-                          <option value={selection} key={selection}>{selection}</option>
-                        ))}
-                      </EndpointSelect>
-                    </FloatingLabel>
-                  </Col>
-                  <Col>
-                    <FloatingLabel label="Setpoint">
+                      />
+                    </>
+                  ) : peltierMode === 'pid' ? (
+                    <FloatingLabel label="PID target temperature (C)">
                       <EndpointInput
                         endpoint={proxyEndpoint}
                         fullpath="loki/application/peltier/temperature"
-                        style={floatingInputStyle}
                         disabled={!isCustom}
+                      />
+                    </FloatingLabel>
+                  ) : null}
+                </Col>
+              </Row>
+              {peltierMode === 'manual' && (
+                <Row className="mb-3">
+                  <Col>
+                    <FloatingLabel label="Predicted temperature (C)">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNull(lokiData?.peltier?.temperature)}
                       />
                     </FloatingLabel>
                   </Col>
                 </Row>
-
-              </Col>
-              <Col>
-                <FloatingLabel label="Temperature">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNull(lokiData?.peltier.temperature)}
-                  />
-                </FloatingLabel>
-              </Col>
+              )}
+              {peltierMode === 'pid' && (
+                <>
+                  <Row className="mb-2">
+                    <Col>
+                      <FloatingLabel label="PID control sensor">
+                        <EndpointSelect
+                          endpoint={proxyEndpoint}
+                          fullpath="loki/application/peltier/pid_target_sensor"
+                          disabled={!isCustom}
+                        >
+                          {peltierTargetSensors.map((sensor) => (
+                            <option value={sensor} key={sensor}>{sensor}</option>
+                          ))}
+                        </EndpointSelect>
+                      </FloatingLabel>
+                    </Col>
+                    <Col>
+                      <FloatingLabel label={`${peltierTargetSensor ?? 'Control sensor'} reading (C)`}>
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={checkNull(peltierTargetSensorReading)}
+                        />
+                      </FloatingLabel>
+                    </Col>
+                  </Row>
+                  <Row className="mb-3">
+                    <Col>
+                      <FloatingLabel label="Controller output (%)">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={peltierDriveOutput}
+                        />
+                      </FloatingLabel>
+                    </Col>
+                    <Col>
+                      <FloatingLabel label="PID status">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={floatingLabelStyle}
+                          value={peltierPidStatus}
+                        />
+                      </FloatingLabel>
+                    </Col>
+                  </Row>
+                </>
+              )}
             </UserAware>
 
           <Row>
@@ -179,7 +269,7 @@ export default function Environmental({
               <Col sm={6}>
                 <Row>
                   <Col>
-                    <FloatingLabel label="Diode Temp.">
+                    <FloatingLabel label="Diode temperature (C)">
                       <Form.Control
                         plaintext
                         readOnly
@@ -191,7 +281,7 @@ export default function Environmental({
                 </Row>
                 <Row>
                   <Col>
-                    <FloatingLabel label="Block Temp.">
+                    <FloatingLabel label="Block temperature (C)">
                       <Form.Control
                         plaintext
                         readOnly
