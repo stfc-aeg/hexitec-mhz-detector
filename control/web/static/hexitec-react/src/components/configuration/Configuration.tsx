@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Container, Row, Col, Form, FloatingLabel, Modal, OverlayTrigger } from 'react-bootstrap';
+import { Button, Container, Row, Col, Form, FloatingLabel, Modal } from 'react-bootstrap';
+import { AppOverlayTrigger } from '../../tooltipcontext';
 import { useAdapterEndpoint, EndpointSelect, EndpointButton, TitleCard } from '@dssg/odin-react';;
 import type { ProxyParams, HistogramTypes, AcquisitionTypes, ConfigTypes } from '../../EndpointTypes.js';
 import { floatingInputStyle } from '../../utils.js';
@@ -115,7 +116,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
       
       <div style={{ position: 'relative' }}>
         {configDisabled && (
-          <OverlayTrigger placement="top" overlay={disabledTooltip}>
+          <AppOverlayTrigger placement="top" overlay={disabledTooltip}>
             <div
               style={{
                 position: 'absolute',
@@ -128,7 +129,7 @@ function Configuration({ endpoint_url }: ConfigurationProps) {
                 pointerEvents: 'auto'
               }}
             />
-          </OverlayTrigger>
+          </AppOverlayTrigger>
         )}
 
         <Row>

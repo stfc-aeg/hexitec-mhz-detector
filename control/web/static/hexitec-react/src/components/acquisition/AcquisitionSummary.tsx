@@ -1,5 +1,6 @@
 import type { useAdapterEndpoint } from '@dssg/odin-react';
-import { Col, FloatingLabel, Form, OverlayTrigger, Row } from 'react-bootstrap';
+import { Col, FloatingLabel, Form, Row } from 'react-bootstrap';
+import { AppOverlayTrigger } from '../../tooltipcontext';
 import type { AcquisitionTypes } from '../../EndpointTypes.js';
 import { tooltips } from '../../tooltips.js';
 import { checkNull, floatingLabelStyle } from '../../utils.js';
@@ -41,12 +42,11 @@ function AcquisitionSummary({ acquisitionEndpoint }: AcquisitionSummaryProps) {
   const isHardwareBurstOrStep = isHardware && (adTriggerMode === 'burst mode' || adTriggerMode === 'step scan');
   const showDurationPerTrigger = isFreerun && isHardwareBurstOrStep;
   const isSoftwareFreerun = isFreerun && !isHardware;
-  const isOpenEnded = isFreerun || isHardwareContinuous;
 
   const histogramsPerAcquisition = numberOfTimeframes * numberOfFiles;
   const estimatedAcquisitionDuration = (histogramsPerAcquisition * framesPerTimeframe) / 1_000_000;
   const estimatedDurationPerTrigger = (framesPerTimeframe * (adTriggerMode === 'burst mode' ? timeframesPerTrigger : 1)) / 1_000_000;
-  const histogramsValue = isOpenEnded
+  const histogramsValue = isFreerun
     ? isSoftwareFreerun && framesPerTimeframe > 0
       ? formatDisplayNumber(1_000_000 / framesPerTimeframe)
       : '-'
@@ -56,15 +56,15 @@ function AcquisitionSummary({ acquisitionEndpoint }: AcquisitionSummaryProps) {
     : formatDisplayNumber(framesPerTimeframe);
   const durationValue = showDurationPerTrigger
     ? estimatedDurationPerTrigger.toString()
-    : isOpenEnded
+    : isFreerun
       ? 'Until stopped'
       : `${estimatedAcquisitionDuration}${isHardware ? ' minimum' : ''}`;
   const durationLabel = showDurationPerTrigger
     ? 'Est. Duration per trigger (s)'
-    : isOpenEnded
+    : isFreerun
       ? 'Duration'
       : 'Est. Duration (s)';
-  const dataRateValue = isOpenEnded
+  const dataRateValue = isFreerun
     ? `${checkNull(estimatedDataRate)} GB/s`
     : `${checkNull(estimatedDataRate * estimatedAcquisitionDuration)} GB`;
 
@@ -89,10 +89,10 @@ function AcquisitionSummary({ acquisitionEndpoint }: AcquisitionSummaryProps) {
           </Row>
           <Row>
             <Col>
-              <OverlayTrigger
+              <AppOverlayTrigger
                 placement="top"
                 overlay={tooltips.acquisition.est_duration}
-                trigger={isOpenEnded ? [] : undefined}
+                trigger={isFreerun ? [] : undefined}
               >
                 <FloatingLabel label={durationLabel}>
                   <Form.Control
@@ -102,7 +102,7 @@ function AcquisitionSummary({ acquisitionEndpoint }: AcquisitionSummaryProps) {
                     style={floatingLabelStyle}
                   />
                 </FloatingLabel>
-              </OverlayTrigger>
+              </AppOverlayTrigger>
             </Col>
           </Row>
         </Col>
@@ -121,7 +121,7 @@ function AcquisitionSummary({ acquisitionEndpoint }: AcquisitionSummaryProps) {
           </Row>
           <Row>
             <Col>
-              <FloatingLabel label={isOpenEnded ? 'Data Rate' : 'Est. Total Storage'}>
+              <FloatingLabel label={isFreerun ? 'Data Rate' : 'Est. Total Storage'}>
                 <Form.Control
                   type="text"
                   value={dataRateValue}

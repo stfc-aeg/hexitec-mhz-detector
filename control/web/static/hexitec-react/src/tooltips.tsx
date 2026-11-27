@@ -61,6 +61,11 @@ export const tooltips = {
       <Tooltip id="tooltip-edit-disabled">
         <strong>Editing disabled.</strong> Enable 'Edit Config' above to make changes to configuration parameters.
       </Tooltip>
+    ),
+    filename: (
+      <Tooltip id="tooltip-edit-disabled">
+        <strong>Name details.</strong> Files with matching names will be overwritten - use the timestamp below to avoid this behaviour. The file name will be appended with _000000 for each file in the acquisition.
+      </Tooltip>
     )
   },
   processing: {
@@ -77,14 +82,24 @@ export const tooltips = {
   },
   liveview: {
     region_selection: (
-        <Tooltip id="tooltip-region-selection">
-            <strong>Region Selection.</strong> The histogram below will only be for the selected region. <em>Click+Drag on the counts map for the same selection. Right-click to clear.</em>
-        </Tooltip>
+      <Tooltip id="tooltip-region-selection" style={{position:"fixed"}}>
+        <strong>Region Selection.</strong> The histogram below will only be for the selected region. <em>Click+Drag on the counts map for the same selection. Right-click to clear.</em>
+      </Tooltip>
     ),
     energybin_range: (
-      <Tooltip id="tooltip-energybin-range">
+      <Tooltip id="tooltip-energybin-range" style={{position:"fixed"}}>
         <strong>Energy Bin Range.</strong> Only values within the selected range of energy bins will appear in the counts map. <em>Click+Drag on the histogram for the same selection. Right-click to clear.</em>
-      </Tooltip> 
+      </Tooltip>
+    ),
+    autoclip: (
+      <Tooltip id="tooltip-autoclip" style={{position:"fixed"}}>
+        <strong>Automatic value range.</strong> Histogram value range is the selected percentage around peak occupancy. Minimum range 5.
+      </Tooltip>
+    ),
+    value_range: (
+      <Tooltip id="tooltip-value-range" style={{position:"fixed"}}>
+        <strong>2D Histogram limits.</strong> Sets the minimum and maximum values displayed by the histogram. Reset to derive the range from the current data. Disabled while autoclip is enabled, since autoclip manages this range automatically.
+      </Tooltip>
     )
   }
 };

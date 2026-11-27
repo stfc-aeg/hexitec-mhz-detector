@@ -1,6 +1,7 @@
 import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, EndpointRangeInput, useAdapterEndpoint } from '@dssg/odin-react';;
 import { useEffect, useState } from 'react';
-import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, OverlayTrigger, ProgressBar, Row } from 'react-bootstrap';
+import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, ProgressBar, Row } from 'react-bootstrap';
+import { AppOverlayTrigger } from '../../tooltipcontext';
 import type { AcquisitionTypes, ReadoutTypes } from '../../EndpointTypes.js';
 import { tooltips } from '../../tooltips.js';
 import AcquisitionSummary from './AcquisitionSummary.js';
@@ -132,7 +133,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
             <Row className="mt-3">
               <ButtonGroup>
                 {triggerModeRadios.map((radio, idx) => (
-                  <OverlayTrigger key={`triggerRadios-${idx}`} placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
+                  <AppOverlayTrigger key={`triggerRadios-${idx}`} placement="top" overlay={radio.value === 'hardware' ? tooltips.acquisition.hardware : tooltips.acquisition.software}>
                     <EndpointButton
                       endpoint={acquisitionEndpoint}
                       fullpath="config/trigger/device"
@@ -148,14 +149,14 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     >
                       {radio.name}
                     </EndpointButton>
-                  </OverlayTrigger>
+                  </AppOverlayTrigger>
                 ))}
               </ButtonGroup>
             </Row>
             <Row>
               <ButtonGroup className="mt-3">
                 {adTriggerModeRadios.map((radio, idx) => (
-                  <OverlayTrigger key={`adTriggerRadios-${idx}`} placement="top" overlay={radio.tooltip}>
+                  <AppOverlayTrigger key={`adTriggerRadios-${idx}`} placement="top" overlay={radio.tooltip}>
                     <EndpointButton
                       endpoint={acquisitionEndpoint}
                       fullpath="config/trigger/trigger_mode"
@@ -172,7 +173,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                     >
                       {radio.name}
                     </EndpointButton>
-                  </OverlayTrigger>
+                  </AppOverlayTrigger>
                 ))}
               </ButtonGroup>
             </Row>
@@ -185,9 +186,9 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       endpoint={acquisitionEndpoint}
                       fullpath={"state/acquisition/freerun"}
                       label={(
-                        <OverlayTrigger placement="top" overlay={tooltips.acquisition.endless_acquisition}>
+                        <AppOverlayTrigger placement="top" overlay={tooltips.acquisition.endless_acquisition}>
                           <span>Endless Acquisition</span>
-                        </OverlayTrigger>
+                        </AppOverlayTrigger>
                       )}
                     />
                   </Col>
@@ -197,9 +198,9 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                       endpoint={acquisitionEndpoint}
                       fullpath={"config/trigger/multiple_files/enable"}
                       label={(
-                        <OverlayTrigger placement="top" overlay={tooltips.acquisition.multiple_file_acquisition}>
+                        <AppOverlayTrigger placement="top" overlay={tooltips.acquisition.multiple_file_acquisition}>
                           <span>Multiple-file Acquisition</span>
-                        </OverlayTrigger>
+                        </AppOverlayTrigger>
                       )}
                     />
                   </Col>
@@ -225,7 +226,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                 </Row>
                 <Row className="mt-2">
                   <Col>
-                    <OverlayTrigger
+                    <AppOverlayTrigger
                       placement="top" overlay={tooltips.acquisition.low_frames_per_timeframe}
                       trigger={framesPerTimeframeTooLow ? undefined : []}
                     >
@@ -242,7 +243,7 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
                           disabled={isAcquiring || (triggerModeValue === 'hardware' && adTriggerModeValue === 'continuous mode')}
                         />
                       </div>
-                    </OverlayTrigger>
+                    </AppOverlayTrigger>
                   </Col>
                 </Row>
                 <Row>
@@ -286,12 +287,14 @@ function Acquisition({ endpoint_url }: AcquisitionProps) {
               {/* File Name */}
               <Row>
                 <Col>
-                  <FloatingLabel 
-                    label="File Name (without .h5 extension)">
-                      <EndpointInput
-                        endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_name"
-                      />
-                  </FloatingLabel>
+                  <AppOverlayTrigger placement="bottom" overlay={tooltips.acquisition.filename}>
+                    <FloatingLabel 
+                      label="File Name (without .h5 extension)">
+                        <EndpointInput
+                          endpoint={acquisitionEndpoint} fullpath="state/acquisition/file_name"
+                        />
+                    </FloatingLabel>
+                  </AppOverlayTrigger>
                 </Col>
               </Row>
               <Row className="mt-2">

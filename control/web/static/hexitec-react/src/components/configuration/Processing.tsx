@@ -1,7 +1,7 @@
 import { Row, Col, Card, Form, InputGroup, FloatingLabel, Accordion } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
 import { EndpointCheckbox, EndpointSelect, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';
-import { OverlayTrigger } from 'react-bootstrap';
+import { AppOverlayTrigger } from '../../tooltipcontext';
 import { tooltips } from '../../tooltips';
 import type { AcquisitionTypes, HistogramTypes } from '../../EndpointTypes';
 
@@ -69,7 +69,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
             <Col>
               <Form.Label><b>Baseline Tracking</b></Form.Label>
               <Row className="mb-3">
-                <OverlayTrigger placement="top" overlay={tooltips.processing.baseline_toggle}>
+                <AppOverlayTrigger placement="top" overlay={tooltips.processing.baseline_toggle}>
                   <Col xs={4}>
                     <EndpointCheckbox
                       endpoint={acquisitionEndpoint}
@@ -79,7 +79,7 @@ export default function Processing( {histogramEndpoint, acquisitionEndpoint, isC
                       disabled={!isCustom || isAcquiring}
                     />
                   </Col>
-                </OverlayTrigger>
+                </AppOverlayTrigger>
               </Row>
               <Row>
                 <Col>
