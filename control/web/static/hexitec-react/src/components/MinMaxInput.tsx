@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { EndpointButton, type AdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointButton, type AdapterEndpoint } from '@dssg/odin-react';
 import { Form, Row, Col } from 'react-bootstrap';
 
 interface MinMaxInputProps {

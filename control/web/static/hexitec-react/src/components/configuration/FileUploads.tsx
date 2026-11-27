@@ -1,7 +1,7 @@
 import { Row, Col, Card, Form, Accordion, FloatingLabel } from 'react-bootstrap';
 import { FilePicker } from '../FilePicker';
 import type { HistogramTypes } from '../../EndpointTypes';
-import { EndpointButton, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointButton, EndpointInput, type AdapterEndpoint } from '@dssg/odin-react';
 
 interface FileUploadsProps {
   histogramEndpoint: AdapterEndpoint<HistogramTypes>;

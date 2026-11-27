@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EndpointButton, type AdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointButton, type AdapterEndpoint } from '@dssg/odin-react';
 import { Form, Row, Col, InputGroup } from 'react-bootstrap';
 
 type Region2D = [[number, number], [number, number]];

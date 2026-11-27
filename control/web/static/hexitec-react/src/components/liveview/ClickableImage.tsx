@@ -1,4 +1,4 @@
-import type { AdapterEndpoint, ParamNode } from '@dssg/odin-react';;
+import type { AdapterEndpoint, ParamNode } from '@dssg/odin-react';
 import { useState, useEffect, useCallback } from 'react';
 
 type Point = [number, number];

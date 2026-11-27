@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Row, Col, Card, FloatingLabel, Form, Button, Alert } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { EndpointButton, EndpointSelect, type AdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointButton, EndpointSelect, type AdapterEndpoint } from '@dssg/odin-react';
 import type { AcquisitionTypes, ProxyParams } from '../../EndpointTypes';
 
 interface DetectorControlsProps {

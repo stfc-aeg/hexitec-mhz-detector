@@ -1,6 +1,6 @@
 import { Row, Col, Card, Form, FloatingLabel } from 'react-bootstrap';
 import { UserAware } from '../UserAware';
-import { EndpointSelect, type AdapterEndpoint, EndpointButton, EndpointInput, EndpointSlider } from '@dssg/odin-react';;
+import { EndpointSelect, type AdapterEndpoint, EndpointButton, EndpointInput, EndpointSlider } from '@dssg/odin-react';
 import { checkNull, floatingLabelStyle } from '../../utils.js';
 import type { ProxyParams } from '../../EndpointTypes';
 

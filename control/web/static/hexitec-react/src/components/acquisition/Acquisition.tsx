@@ -1,4 +1,4 @@
-import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, EndpointRangeInput, useAdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointButton, EndpointCheckbox, EndpointInput, EndpointSelect, TitleCard, EndpointRangeInput, useAdapterEndpoint } from '@dssg/odin-react';
 import { useEffect, useState } from 'react';
 import { ButtonGroup, Card, Col, Container, FloatingLabel, Form, ProgressBar, Row } from 'react-bootstrap';
 import { AppOverlayTrigger } from '../../tooltipcontext';

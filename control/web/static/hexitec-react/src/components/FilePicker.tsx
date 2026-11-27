@@ -1,5 +1,5 @@
-import { EndpointSelect, EndpointButton } from '@dssg/odin-react';;
-import type { AdapterEndpoint } from '@dssg/odin-react';;
+import { EndpointSelect, EndpointButton } from '@dssg/odin-react';
+import type { AdapterEndpoint } from '@dssg/odin-react';
 import { InputGroup } from 'react-bootstrap';
 
 // Convenience component for picking a file to send to an endpoint
