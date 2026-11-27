@@ -22,11 +22,11 @@ function TooltipToggle() {
       variant="outline-primary"
       aria-pressed={enabled}
       onClick={() => setEnabled(!enabled)}
-      className="d-none d-md-block"
+      className="d-none d-lg-block"
       style={{
         position: 'fixed',
         top: '0.75rem',
-        right: '5.5rem',
+        right: '7.5rem',
         zIndex: 1100,
       }}
     >
